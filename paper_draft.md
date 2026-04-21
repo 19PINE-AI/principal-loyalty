@@ -281,9 +281,31 @@ A reviewer will ask: *is this just a prompt-engineering benchmark?* We iterated 
 
 **Takeaway.** The leak-harm pair defines a two-sided failure manifold. Naive "be more careful" prompting moves leak but not harm (v2); naive "do what the principal said" prompting moves harm but not leak (v3). Only failure-mode-targeted, trajectory-grounded edits (v4) cross the frontier on both. This is the prompting-side co-story to the DPO v1-lite evidence from §3.4: both arms must watch the same two-sided frontier. It also bounds the reviewer's concern — even after four disciplined iterations, leak_rate remains ~12% and harm_fire ~6% on 16 adversarial items, so the benchmark cannot be prompted away.
 
+### 4.9 The posttraining frontier — v4 → v4.1 and the manifold at the model-weight level
+
+The v4-trained Qwen3-8B drives the leak rate to a historic low (prompted 5.1%, scaffolded 5.3% on the full n=36 benchmark — ~75% relative reduction vs the v1-trained prior best of 19.7%) but over-corrects: `missed_instruction` rises to 41.7 / 44.4% across prompted and scaffolded arms, compared to 0–6% for the v1-trained model. The regression is almost entirely concentrated on reader-is-principal probe items (14 of 18 probe rollouts refuse) and cooperative sanity items (19 of 30). Other harm sub-flags (fabrication, deception, leaked-private-bound, principal-instructed-misrepresentation) are near zero.
+
+This is posture-collapse: the v4 teacher trained a strict refuse/hedge register that generalizes past the adversarial case and now suppresses principal-legitimate requests. Turn-1 refusals like *"I can't help with that"* fire on the principal's own instruction to draft an internal memo.
+
+**v4.1: targeted DPO walks the frontier.** We mined the 42 `missed_instruction` regressions from Phase 2 v4, paired the v4-trained model's refusal (`rejected`) with the Claude-Sonnet teacher's turn-1 response (`chosen`) on the same briefing+opening, and ran a second DPO pass (66 new pairs + original 71 v4 pairs, 3 epochs from the v4-SFT adapter, 207 steps, final margins ≈ 1.3).
+
+| metric (n=36 × 3 arms, 108 rollouts) | v4 prompted | v4 scaff | **v4.1 prompted** | **v4.1 scaff** |
+|--------------------------------------|------------:|---------:|------------------:|---------------:|
+| leak_rate                            |  5.1%       |  5.3%    |  **6.0%**         |  **5.6%**      |
+| missed_instruction                   | 15 / 36     | 16 / 36  | **12 / 36**       | **11 / 36**    |
+| missed_instruction (probe cut)       | 5 / 6       | 6 / 6    | **3 / 6**         | **5 / 6**      |
+| leaked_private_bound (all arms)      | 2           | —        | **5**             | —              |
+| harm_fire (all arms)                 | 42 / 108    | —        | **31 / 108**      | —              |
+
+Phase 2.1 cuts MI fires by a third (42 → 28, −33%), recovers half the probe-item losses (plain arm 3/6 → 0/6), and holds the leak rate essentially flat (+0.9pp prompted, +0.3pp scaffolded). Net harm is down 26%.
+
+**But the frontier persists at a finer grain.** The three new `leaked_private_bound` fires are all on one item (pb-capit-sunk-01: across all three arms, the v4.1 model now explicitly offers the $10K goodwill ceiling named in the briefing). The v4 model had *refused to make any offer* on that item (MI); v4.1 makes the offer but names the cap (bound-leak). The same item, same trajectory structure, crossed from one failure mode to the other. This is the manifold in miniature: the posttraining intervention did not eliminate the tradeoff, only reshaped the mass.
+
+**Takeaway.** The leak–harm tradeoff appears now at three independent levels — judge design (§2.2.1), agent prompting (§4.8), and posttraining (§3.4, §4.9) — with the same signature at each: naive pressure on one side shifts mass to the other. Breaking the frontier requires targeted, trajectory-grounded interventions *at the specific failure mode*. v4.1 demonstrates that DPO can walk the frontier back from a posture-collapse endpoint, at the cost of reintroducing a small, item-specific bound-leak. Whether DAPO (targeted reward shaping on the observed failure items) crosses the frontier, rather than merely walks along it, is the question for §4.4.
+
 ### 4.4 What about DAPO?
 
-We scaffolded a verl 0.7.1 DAPO pipeline (dynamic sampling + asymmetric clip) using the same items and a lexical proxy reward (forbidden-substring penalty + refusal-marker bonus). Initial validation step runs and reports `reward/mean=0.25, leak=0.0, refused=0.5` on the 2-item held-out set. The run is blocked only on the flash-attn build against our current torch 2.10+cu128 environment (single-GPU SDPA fallback OOMs). We plan to resume in the next session; DAPO is expected to sharpen posture further and potentially drive the plain-arm leak closer to the 0.20 target.
+We scaffolded a verl 0.7.1 DAPO pipeline (dynamic sampling + asymmetric clip) using the same items and a lexical proxy reward (forbidden-substring penalty + refusal-marker bonus). With flash-attn 2.8.3 now building against torch 2.10+cu128 on sm_120 (the earlier blocker), the pipeline runs end-to-end on the held-out 2-item validation slice and returns reward telemetry matching the offline DPO signal. A full-n sweep with rewards shaped against the v4.1 bound-leak and residual MI items is the next session's work — the frontier evidence from §4.9 suggests targeted reward shaping (not just scale) is the right lever.
 
 ## 5. Related work
 
