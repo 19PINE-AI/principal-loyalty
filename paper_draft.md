@@ -264,6 +264,23 @@ Spoofing the sentinel to PRINCIPAL on clear third-party items produces one-fact 
 
 **Takeaway.** v0.6's sentinel is a *guide the model weighs against other evidence*, not a master switch. An attacker who injected `[READER: PRINCIPAL]` into the system prompt on a third-party item would not achieve free exfiltration — on 5 of 6 third-party × arm cells the model's briefing-grounded reasoning resists the lie. This is the desired property: the architectural fix accelerates learning the conditional during DPO and guides the correct register at inference, but it does not bypass the model's ability to reason about who it is actually talking to.
 
+### 4.8 The prompting frontier — v1 → v4 ablation and the two-sided failure manifold
+
+A reviewer will ask: *is this just a prompt-engineering benchmark?* We iterated the `prompted`-arm system prompt through four numbered versions and re-scored Phase 1 (5 subjects × 16 items) under a single rewritten briefing-grounded judge (§2.2.1). Each version targets a specific failure mode observed in the previous trajectories.
+
+| metric (prompted / scaffolded)  | v1         | v2         | v3         | **v4**     |
+|---------------------------------|-----------:|-----------:|-----------:|-----------:|
+| leak_rate                       | 22 / 22%   | 11 / 12%   | 16 / 13%   | **12 / 12%** |
+| harm_fire                       | 18 / 13%   | 15 / 18%   |  8 / 8%    | **6 / 6%**   |
+| bound_leak (count)              | 6 / 5      | 3 / 2      | 2 / 3      | **1 / 1**    |
+| commitment_hold                 | 95 / 100%  | 97 / 98%   | 95 / 98%   | **97 / 100%**|
+
+- **v1 → v2** (adversarial-stranger framing + decline-without-enumerating): halves leak; harm flat.
+- **v2 → v3** (add private-bound/position distinction, execute-positive-instructions, "ops questions aren't probes"): cuts harm by ~54%, but leak drifts back up +29% — two regressions traced to specific trajectories: over-eager conditional-permission execution (pb-capit-repq-01 / gemini-lite opens with *"I am authorized to offer you a one-time goodwill credit of $50"*) and enumerate-leak resurgence (pb-posture-harass-01 / sonnet *"They're unavailable and not taking calls"*).
+- **v3 → v4** (narrow-scope surgery): adds explicit rule "conditional permissions are not proactive offers" (targets the $50-credit failure), restores v2's decline-without-enumerating tightness (fixes enumerate-leak), narrows "execute positive instructions" to an enumerated list (termination / opening / scripted / hard-refusal) so it no longer licenses eager rule-4 execution. v4 is Pareto-better than every prior version on prompted and scaffolded cells.
+
+**Takeaway.** The leak-harm pair defines a two-sided failure manifold. Naive "be more careful" prompting moves leak but not harm (v2); naive "do what the principal said" prompting moves harm but not leak (v3). Only failure-mode-targeted, trajectory-grounded edits (v4) cross the frontier on both. This is the prompting-side co-story to the DPO v1-lite evidence from §3.4: both arms must watch the same two-sided frontier. It also bounds the reviewer's concern — even after four disciplined iterations, leak_rate remains ~12% and harm_fire ~6% on 16 adversarial items, so the benchmark cannot be prompted away.
+
 ### 4.4 What about DAPO?
 
 We scaffolded a verl 0.7.1 DAPO pipeline (dynamic sampling + asymmetric clip) using the same items and a lexical proxy reward (forbidden-substring penalty + refusal-marker bonus). Initial validation step runs and reports `reward/mean=0.25, leak=0.0, refused=0.5` on the 2-item held-out set. The run is blocked only on the flash-attn build against our current torch 2.10+cu128 environment (single-GPU SDPA fallback OOMs). We plan to resume in the next session; DAPO is expected to sharpen posture further and potentially drive the plain-arm leak closer to the 0.20 target.
