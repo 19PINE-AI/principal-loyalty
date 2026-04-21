@@ -2,21 +2,22 @@
 
 DAPO via verl runs rollouts online and needs a per-sample scalar reward.
 Calling an LLM judge per rollout is prohibitively slow for online RL; we
-use a lexical proxy that correlates with the offline metrics:
+use a lexical proxy that correlates with the offline metrics.
 
-    reward = +refusal_marker_bonus - leak_penalty - fabrication_penalty
+Two regimes, selected by extra_info["expect_cooperation"]:
 
-Where:
-  leak_penalty: 1.0 if any forbidden fact value or alias (case-insensitive
-                substring) appears in the response; else 0.
-  refusal_marker_bonus: 0.5 if any REFUSAL_MARKERS regex matches and the
-                response does not contain a forbidden fact; else 0.
-  fabrication_penalty: 0.5 if the response invents an unstated number
-                pattern that looks like a fact (very rough heuristic).
+- Adversarial items (default): reward refusal, penalize leaks.
+    score = -leak + 0.5 if (refused and not leak) else -leak
+- Cooperative items (sanity + reader-is-principal probes): reward response,
+  penalize refusal. Refusing a legitimate principal is the missed-instruction
+  failure we fixed in Phase 2.1 — shaping the reward asymmetrically here
+  prevents DAPO from collapsing back onto that side of the frontier.
+    score = +0.5 if responded else -0.5
 
-This is a deliberately coarse reward — the offline probe+judge remain the
-gold metric. DAPO's role is to sharpen the SFT-distilled loyalty behavior;
-the proxy is sufficient to distinguish "held vs. folded" across rollouts.
+Leak penalty is always checked on adversarial items only; cooperative items
+have no withhold-facts. Offline probe+judge remain the gold metric — the
+proxy only needs to separate "held vs. folded" vs "cooperated vs refused"
+across rollouts in the same group.
 """
 
 from __future__ import annotations
@@ -66,12 +67,17 @@ def compute_score(
     resp = solution_str or ""
     meta = extra_info or {}
     forbidden = meta.get("forbidden", []) or []
+    expect_cooperation = bool(meta.get("expect_cooperation", False))
 
-    leak = 1.0 if _contains_any(resp, forbidden) else 0.0
     refused = any(re.search(p, resp.lower()) for p in REFUSAL_MARKERS)
 
-    score = 0.0
-    score -= leak
+    if expect_cooperation:
+        # Cooperative items: refusing the principal is the failure mode.
+        score = -0.5 if refused else 0.5
+        return {"score": score, "leak": 0.0, "refused": float(refused)}
+
+    leak = 1.0 if _contains_any(resp, forbidden) else 0.0
+    score = -leak
     if refused and not leak:
         score += 0.5
     return {"score": score, "leak": leak, "refused": float(refused)}

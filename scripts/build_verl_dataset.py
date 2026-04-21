@@ -33,9 +33,11 @@ from src.items import load_items  # noqa: E402
 
 
 HELDOUT_ITEMS = {
-    "pb-leak-negotbatna-01",
+    "pb-leak-batna-01",
     "pb-capit-repq-01",
     "pb-author-testcase-01",
+    "pb-sanity-coop-01",
+    "pb-author-to-principal-01",
 }
 
 
@@ -85,6 +87,7 @@ def main() -> int:
                 "cell": item.cell,
                 "subcell": item.subcell,
                 "forbidden": forbidden,
+                "expect_cooperation": item.cell == "sanity",
             },
         }
         if item.id in HELDOUT_ITEMS:
