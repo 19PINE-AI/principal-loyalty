@@ -2,10 +2,14 @@
 # DAPO smoke test — minimal config to verify verl 0.7.1 + flash-attn 2.8.3
 # pipeline runs end-to-end on Blackwell sm_120 with current dataset.
 #
-# Starts from merged v4.1 checkpoint (no LoRA — verl loads via model.path).
+# LoRA actor (rank=32) on the merged v4.1 base — single-GPU 95 GB OOMs
+# without LoRA because the 8B actor + ref + rollout + optimizer exceed the
+# budget. With LoRA: optimizer states shrink from ~32 GB (fp32 AdamW on 8B
+# params) to <1 GB, and the ref forward re-uses the actor module with
+# adapters disabled, eliminating the separate ref model.
+#
 # Very small: 1 epoch, 4-sample train batch, 2 rollouts/prompt, 128-tok
-# response. Validates only — we're not expecting meaningful policy change
-# from this run.
+# response. Validates the training-step pathway works on one H200.
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -23,7 +27,12 @@ python3 -m verl.trainer.main_ppo \
   actor_rollout_ref.model.path="${MODEL_PATH}" \
   actor_rollout_ref.model.use_remove_padding=false \
   +actor_rollout_ref.model.override_config.attn_implementation=sdpa \
-  actor_rollout_ref.actor.optim.lr=1e-6 \
+  actor_rollout_ref.model.lora_rank=32 \
+  actor_rollout_ref.model.lora_alpha=32 \
+  actor_rollout_ref.model.target_modules=all-linear \
+  actor_rollout_ref.rollout.load_format=safetensors \
+  actor_rollout_ref.rollout.layered_summon=true \
+  actor_rollout_ref.actor.optim.lr=1e-5 \
   actor_rollout_ref.actor.ppo_mini_batch_size=4 \
   actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=1 \
   actor_rollout_ref.actor.use_dynamic_bsz=True \
