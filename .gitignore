@@ -1,0 +1,31 @@
+# Run outputs — too large (150+ GB trajectories, scored.jsonl, etc.)
+runs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Logs
+*.log
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Claude Code session state
+.claude/
+
+# Secrets
+.env
+.env.*
+!.env.example
