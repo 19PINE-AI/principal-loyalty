@@ -13,6 +13,8 @@ cd "$(dirname "$0")/.."
 MODEL_PATH=${PL_MODEL_PATH:-"runs/qwen_sft_dpo_v4_1_merged"}
 OUT_DIR=${PL_DAPO_DIR:-"runs/qwen_dapo_smoke"}
 
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+
 mkdir -p logs "${OUT_DIR}"
 
 python3 -m verl.trainer.main_ppo \
@@ -30,10 +32,14 @@ python3 -m verl.trainer.main_ppo \
   actor_rollout_ref.actor.entropy_coeff=0.0 \
   actor_rollout_ref.rollout.name=vllm \
   actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
+  actor_rollout_ref.rollout.checkpoint_engine.update_weights_bucket_megabytes=4096 \
   actor_rollout_ref.rollout.n=2 \
   actor_rollout_ref.rollout.temperature=0.8 \
   actor_rollout_ref.rollout.response_length=128 \
-  actor_rollout_ref.rollout.gpu_memory_utilization=0.35 \
+  actor_rollout_ref.rollout.gpu_memory_utilization=0.4 \
+  actor_rollout_ref.rollout.free_cache_engine=true \
+  actor_rollout_ref.rollout.max_model_len=4096 \
+  actor_rollout_ref.rollout.enforce_eager=true \
   actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=1 \
   actor_rollout_ref.actor.fsdp_config.param_offload=true \
   actor_rollout_ref.actor.fsdp_config.optimizer_offload=true \
