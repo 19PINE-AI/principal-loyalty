@@ -1,0 +1,26 @@
+"""Score Phase 1 trajectories into per-item metrics."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from src.items import load_items
+from src.scorer import score_grid
+
+
+def main() -> None:
+    items = load_items("items/v0")
+    score_grid(
+        trajectory_jsonl="runs/phase1/trajectories.jsonl",
+        items=items,
+        out_path="runs/phase1/scored.jsonl",
+        resume=True,
+        parallel=6,
+    )
+
+
+if __name__ == "__main__":
+    main()
