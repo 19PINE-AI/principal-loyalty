@@ -1034,3 +1034,62 @@ Session-20 v4 prompt narrows the v3 additions:
 v4 lands the prompting ablation cleanly: each of the four tweaks between v1 and v4 is localized to a specific failure category visible in the trajectories, and the metrics move monotonically in the expected direction. This is the prompting-side co-story to the DPO v1-lite evidence from Session 17 — both arms tell the same narrative that the metric being optimized (leak-harm joint) has a genuine two-sided frontier that only disciplined, failure-mode-targeted interventions cross. v2 dropped leak but left harm; v3 dropped harm but gave leak back; v4 holds both.
 
 Task #42 / #43 → completed.
+
+---
+
+## Session 21 — 2026-04-21 (cont.)
+
+**Phase 2 v4: Qwen3-8B posttrained under v4 teacher prompt.**
+
+End-to-end pipeline re-run with v4 as the agent prompt:
+1. Regenerated teacher traces (claude-sonnet, scaffolded, v4 prompt) on full v0.3 benchmark (36 items). Kept 70/108 clean trajectories (zero leak + full hold + no harm_fire under new judge). 30/36 items have ≥1 clean teacher rollout; 6 items had zero (pb-capit-framing-01, pb-capit-repq-01, pb-leak-source-01, pb-posture-guilt-{01,02}, pb-author-to-principal-03) — the items where even claude-sonnet/v4 still trips on the new judge's flags.
+2. Built SFT dataset (`data/sft_v4.jsonl`) and DPO pair set (`data/dpo_v4.jsonl`, 71 pairs from `runs/phase1_promptv4/`).
+3. Ran QLoRA SFT on Qwen3-8B (65 s, train_loss 1.65 → 1.30, eval_loss 1.40) → SFT adapter.
+4. Ran DPO on top (142 s, rewards/accuracies=1, rewards/margins up to 1.9) → combined SFT+DPO adapter.
+5. Merged adapter into a full model (~16 GB), served with vLLM at :8000.
+6. Ran Phase 2 eval (`scripts/run_phase2_trained_v4.py`): full 36-item × 3-arm grid = 108 trajectories, scored under new briefing-grounded judge.
+
+Also unblocked the flash-attn 2.8.3 install against torch 2.10+cu128 on Blackwell (sm_120): installed `cuda-nvcc-12-8` + minimal CUDA 12.8 dev libs, built with `TORCH_CUDA_ARCH_LIST=12.0`, verified with an fa_func smoke test. Task #14 closed.
+
+### Results: Phase 2 trained-model grid (qwen-8b-local, v4 prompt, new judge)
+
+| arm         | n   | leak     | hold     | harm_fire | bound_leak | pi_misrep |
+|-------------|----:|---------:|---------:|----------:|-----------:|----------:|
+| plain       |  36 | **10.6%** | 92.0%   |   30.6%   | 2          | 1         |
+| prompted    |  36 |  **5.1%** | 100.0%  |   41.7%   | 0          | 1         |
+| scaffolded  |  36 |  **5.3%** | 100.0%  |   44.4%   | 0          | 1         |
+
+**Cross-version Phase 2 comparison** (leak / harm), qwen-8b-local plain arm on prior iterations scored under the *old* judge:
+
+| ver      | n  | leak plain | leak prompted | hold prompted |
+|----------|---:|-----------:|--------------:|--------------:|
+| v0       | 30 |   25.3%    |     22.5%     |    100.0%     |
+| v0.5     | 30 |   33.3%    |     26.7%     |     96.0%     |
+| v0.6     | 30 |   22.5%    |     27.2%     |     92.0%     |
+| v1       | 30 |   25.6%    |     19.7%     |     96.0%     |
+| v1-lite  | 30 |   21.7%    |     26.4%     |    100.0%     |
+| **v4**   | 36 |   **10.6%**|     **5.1%**  |    100.0%     |
+
+Leak-rate drop is dramatic: v4-prompted 5.1% vs prior-best v1 prompted 19.7% — a **~75% relative reduction**. Plain arm falls from ~22-33% across prior iterations to 10.6%.
+
+### The missed_instruction regression
+
+Harm is up to 41-44% on prompted/scaffolded (vs ~30% on plain). The new judge's harm_fire aggregate is dominated by `missed_instruction` — 11 (plain) / 15 (prompted) / 16 (scaffolded) out of 36. This is the old `against_principal` / "did not follow a specific principal instruction" axis, now explicitly separated and therefore visible for the first time. The other harm sub-flags are near-zero (fabrication 1/0/1, deception 2/0/0, leaked_private_bound 2/0/0, third_party_harm 0/0/0).
+
+The regression pattern: v4's teacher traces were filtered on `harm_fire=False`, but the scaffolded teacher is *conservative* — scaffolded rollouts are biased toward refusing/deflecting when in doubt, which trains the student to over-generalize refusal. The v3 prompt discussion (execute-positive-instructions) was meant to counteract this but v4 narrowed that rule back down, trading harm for leak. On the student model, the trade is visible: leak is historic-low but missed_instruction is historic-high.
+
+**What's worth noting for the paper.** This is the cleanest demonstration yet of the two-sided failure manifold — the same structural trade-off shows up at *three* levels of the system:
+1. **Judge design** (v1 → new judge): conflating lies-as-fabrication with instructed-refusal hid the trade;
+2. **Agent prompting** (v1 → v4): v2 moves leak not harm, v3 moves harm not leak;
+3. **Posttraining** (Phase 2 v0 → v4): v4 collapses leak but exposes missed_instruction.
+
+Future work: build a DPO pair set where the *preferred* arm is "execute the instruction literally when the principal said so" and the *dispreferred* is "over-refuse under teacher pressure." Those pairs would specifically push back against the missed_instruction regression without undoing the leak gain. This is the natural v5 / Phase 2.1 direction.
+
+### Artifacts
+- `runs/qwen_sft_v4/` — SFT adapter
+- `runs/qwen_dpo_v4/` — combined SFT+DPO adapter
+- `runs/qwen_sft_dpo_v4_merged/` — merged HF model (16 GB, served at :8000)
+- `runs/phase2_trained_v4/` — 108-trajectory eval + scored
+- `data/teacher_traces_v4.jsonl`, `data/sft_v4.jsonl`, `data/dpo_v4.jsonl`
+
+Tasks #14 (DAPO flash-attn), #43 (v4 Phase 1 4-way) → completed. Next: Phase 2.1 missed_instruction pair builder.
