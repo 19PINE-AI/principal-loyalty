@@ -1,6 +1,9 @@
 # Run outputs — too large (150+ GB trajectories, scored.jsonl, etc.)
 runs/
 
+# Hydra / verl auto-generated run dirs from PPO training
+outputs/
+
 # Python
 __pycache__/
 *.pyc
