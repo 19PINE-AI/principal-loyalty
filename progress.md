@@ -1239,3 +1239,65 @@ Neither regression touches leak. The frontier has been pushed, but the prompted 
 - `scripts/run_phase3_dapo_v1_step{30,35}.py`, `scripts/compare_phase3_dapo.py`
 
 Tasks #50-53 → completed. Paper §4.4 rewritten with Phase 3 numbers. #54 (writeup) → this entry.
+
+---
+
+## Session 24 — 2026-04-22 (counterparty robustness: three-vendor frontier verification)
+
+Goal: the §6 biggest unaddressed limitation has been "single counterparty (claude-sonnet)". With a strong DAPO endpoint (step_35, 25/108 harm) in hand, re-run the full Phase 3 grid with two other vendors as the other party and see whether the leak/MI frontier is a Claude-specific dialogue artifact or a structural property of the policy × item space.
+
+We also planned DAPO-v2 (tuned MI-aware reward + sanity oversampling) and a leak-only reward ablation, but the GPU was blocked by another project's processes at 49 GB steady-state for the full session. Prep is done (reward variants, oversampled parquet, run scripts) but training is deferred.
+
+### Counterparty swap protocol
+
+- Subject model: `runs/qwen_dapo_v1_step35_merged` (same checkpoint as §4.4 headline).
+- Arms: plain / prompted / scaffolded (same as §4.4).
+- Items: same 36-item v0.3 grid.
+- Counterparties: `claude-sonnet` (baseline, already reported §4.4) + `gpt-5` + `gemini-3-flash`.
+- Scoring: same gpt-5-mini judge, same rubric.
+- `scripts/run_phase3_step35_gpt5cp.py` / `_gemcp.py` + `scripts/compare_counterparty.py`.
+
+### Results — 3-counterparty headline
+
+| metric (108 rollouts) | cp=claude-sonnet | cp=gpt-5 | cp=gemini-3-flash |
+|---|---:|---:|---:|
+| leak plain | 11.1% | 15.3% | 13.7% |
+| leak prompted | 6.0% | 3.7% | 8.1% |
+| leak scaffolded | 3.9% | 8.8% | 4.2% |
+| harm_fire total | **25/108** | **34/108** | **38/108** |
+| missed_instruction total | 24 | 34 | 38 |
+| leaked_private_bound total | 4 | **0** | 3 |
+| authoring cell harm | 1/15 | 7/15 | 4/15 |
+| capitulation cell harm | 7/18 | 6/18 | 7/18 |
+| leakage cell harm | 2/15 | 4/15 | 5/15 |
+| moderation cell harm | 1/15 | 1/15 | 3/15 |
+| posture cell harm | 1/15 | 3/15 | 3/15 |
+| sanity cell harm | 13/30 | 13/30 | 16/30 |
+
+### Four findings
+
+**1. The leak/MI frontier is vendor-invariant across three independent counterparty vendors.** Leak rates sit in a 3.7–15.3% band across every arm × vendor combination and never dominate harm. Harm is dominated by missed_instruction under every vendor. The "single-counterparty artifact" reading of §4.4 is ruled out with positive evidence.
+
+**2. Mass migrates *within* the manifold under counterparty swap, not across it.** Non-Claude counterparties produce **more MI** (+42% under GPT-5, +58% under Gemini) and **less bound-leak** (4 → 0 → 3). This is the signature the manifold framing predicts: pressure on one dimension shifts mass to the other. If the frontier were a judge/training artifact, we'd expect either (a) harm to collapse under a weaker counterparty or (b) both dimensions to move together. Neither happens — the policy chooses a point that slides along the manifold as dialogue pressure changes.
+
+**3. Per-cell counterparty sensitivity is highly uneven.** Capitulation is nearly counterparty-invariant (7/6/7) — the model's anchor-resistance behavior is model-internal, not elicited by counterparty style. Authoring is counterparty-sensitive (1/7/4) — consistent with §4.6's thesis that reader-identity disambiguation is fragile at the surface level, since different vendors exercise different probe patterns. Sanity is mostly invariant between claude/gpt-5 (13/13) but slightly worse under gemini (16) — the DAPO-v1 sanity regression is therefore not a claude-induced artifact.
+
+**4. Step_30 was not a different frontier point.** Step_30 vs v4.1 had 12 improvements / 12 regressions (net zero, total harm 31/108 = v4.1's 31/108 exactly), while step_35 had 15/9 (25/108). Val-reward oscillation at train time did not correspond to different benchmark frontier positions — the policy was simply still converging. Implication: don't report multi-checkpoint frontier walks from val reward alone; val reward is loosely coupled to benchmark frontier position.
+
+### GPU contention deferred DAPO-v2 and leak-only ablation
+
+The other tenant's training process held ~49 GB for the full session; my DAPO training peaks at 64 GB, which didn't fit. Prep work is committed so both runs can fire the moment the GPU frees:
+- `src/reward.py`: added `compute_score_v2` (coop penalty -0.5 → -1.0, adv refusal bonus +0.5 → +0.3) and `compute_score_leakonly` (leak-only, no coop branch, no bonus). Expanded `REFUSAL_MARKERS` to catch generic "I can't help"-style refusals that the v1 markers missed; existing patterns still match so v1's training signal is strictly a subset of the new coverage.
+- `scripts/build_verl_dataset.py`: `--oversample_sanity` flag. Built `data/verl_train_v2.parquet` at 3× sanity oversample (24/47 = 51% coop).
+- `scripts/run_dapo_v2.sh` + `scripts/run_dapo_leakonly.sh`: LoRA configs matching run_dapo.sh with the v2/leakonly reward functions and appropriate parquets.
+- `scripts/run_phase3_dapo_v2.py` + `_leakonly.py`: PL_STEP-selectable eval harnesses.
+- `scripts/compare_phase3_all.py`: four-way comparison (v4.1 / v1 / v2 / leak-only).
+
+### Artifacts
+- `runs/phase3_dapo_v1_step35_gpt5cp/` (108 trajectories + scored + compare_vs_claude_cp.txt)
+- `runs/phase3_dapo_v1_step35_gemcp/` (108 trajectories + scored + compare_3cp.txt)
+- `scripts/run_phase3_step35_gpt5cp.py`, `scripts/run_phase3_step35_gemcp.py`
+- `scripts/compare_counterparty.py`
+- Prep-only: `src/reward.py` (+ compute_score_v2, + compute_score_leakonly, expanded markers), `data/verl_train_v2.parquet` + `verl_val_v2.parquet`, `scripts/run_dapo_v2.sh` + `run_dapo_leakonly.sh`, `scripts/run_phase3_dapo_v2.py` + `_leakonly.py`, `scripts/compare_phase3_all.py`
+
+Tasks #55, #58 → completed (counterparty evals). #56, #57 deferred pending GPU. Paper §4.4 + §6 updated with counterparty robustness.

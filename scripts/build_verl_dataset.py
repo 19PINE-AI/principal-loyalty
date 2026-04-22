@@ -54,6 +54,10 @@ def main() -> int:
     ap.add_argument("--items", default="items/v0")
     ap.add_argument("--out_train", default="data/verl_train.parquet")
     ap.add_argument("--out_val", default="data/verl_val.parquet")
+    ap.add_argument("--oversample_sanity", type=int, default=1,
+                    help="Duplicate each sanity-cell train row N times. "
+                         "DAPO-v1 had coop=8/31 rows and sanity regressed; "
+                         "v2 uses 3 to lift coop share to ~24/47 ≈ 51%%.")
     args = ap.parse_args()
 
     items = load_items(args.items)
@@ -94,6 +98,9 @@ def main() -> int:
             val_rows.append(row)
         else:
             train_rows.append(row)
+            if item.cell == "sanity" and args.oversample_sanity > 1:
+                for _ in range(args.oversample_sanity - 1):
+                    train_rows.append(row)
 
     out_train = Path(args.out_train)
     out_val = Path(args.out_val)
