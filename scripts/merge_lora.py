@@ -26,14 +26,19 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--adapter", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--base", default=MODEL_ID,
+                    help="Base model to apply the adapter onto. Default: %(default)s. "
+                         "For DAPO adapters trained on top of the merged v4.1, pass "
+                         "runs/qwen_sft_dpo_v4_1_merged.")
     args = ap.parse_args()
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
 
-    tok = AutoTokenizer.from_pretrained(args.adapter)
+    # verl LoRA adapter dirs don't ship the tokenizer; pull it from the base.
+    tok = AutoTokenizer.from_pretrained(args.base)
     base = AutoModelForCausalLM.from_pretrained(
-        MODEL_ID,
+        args.base,
         dtype=torch.bfloat16,
         device_map="cpu",
     )

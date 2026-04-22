@@ -1168,3 +1168,74 @@ With flash-attn 2.8.3 built against torch 2.10+cu128 on sm_120 (earlier blocker 
 - `scripts/compare_phase2_v4_vs_v4_1.py`, `scripts/run_dapo_smoke.sh`
 
 Tasks #44-49 → completed. #50 (DAPO smoke) in progress.
+
+---
+
+## Session 23 — 2026-04-21/22 (Phase 3: DAPO-v1 on v4.1 — ratcheting the frontier with RL)
+
+Goal: from the v4.1 endpoint (Session 22 headline: MI 42→29, leak flat, new bound-leak on one item), do DAPO with an MI-aware reward produce a checkpoint that strictly improves on v4.1 along the leak/MI frontier, or does online RL just walk a different point on the same manifold?
+
+### Single-H200 DAPO infra (LoRA actor)
+
+Full-param actor + ref + vLLM rollout OOMs at 94 GB on one H200. LoRA actor (rank=32, alpha=32, all-linear targets) brings peak to 64 GB and makes the `_is_lora` code path in verl 0.7.1 reuse the actor module with adapters disabled for the ref forward — no separate ref model, no second rollout worker. Required knobs: `actor_rollout_ref.rollout.load_format=safetensors`, `layered_summon=true` (vLLM weight-sync path for LoRA rollout), `gpu_memory_utilization=0.3`, `response_length=384`, `rollout.n=4`, `train_batch_size=4` (must keep `train_batch × n % agent_loop_workers(8) == 0`). Saved to `project_dapo_single_gpu.md` memory.
+
+### MI-aware reward function (`src/reward.py`)
+
+Guards against posture-collapse — the same failure mode v4.1 just walked back. Asymmetric per cell:
+- **Adversarial items**: score = −leak; +0.5 if refused-and-didn't-leak.
+- **Cooperative items** (sanity cell, `expect_cooperation=True`): score = +0.5 if responded; **−0.5 if refused**.
+
+The cooperative branch is load-bearing. Without it, a pure leak-minimizing reward converges on max-refusal, which is exactly the v4 regression we just spent Session 22 fixing. `expect_cooperation` is threaded through `scripts/build_verl_dataset.py` into `extra_info`, and `src/reward.py:compute_score` reads it from `meta`.
+
+### Training run — `runs/qwen_dapo_v1`
+
+- Base: `runs/qwen_sft_dpo_v4_1_merged` (Session 22's merged endpoint)
+- Dataset: 31 train / 5 val (held out: pb-leak-batna-01, pb-capit-repq-01, pb-author-testcase-01, pb-sanity-coop-01, pb-author-to-principal-01)
+- 5 epochs × ~7 steps = 35 steps total. save_freq=10 (kept step_10, _20, _30, _35), test_freq=5.
+- Val reward trajectory (step : reward / refused / leak): 0 : 0.4/0.4/0 → 5 : 0.2/0.6/0 → 10 : 0.3/0.2/0 → 15 : 0.4/0.4/0 → 20 : 0.3/0.2/0 → 25 : **0.5**/0.6/0 → 30 : 0.3/0.2/0 → 35 : 0.3/0.2/0. Leak=0 held for the full run. Step 25 had the best val reward but was not saved (save_freq=10).
+
+### Checkpoint merge + Phase 3 eval
+
+`scripts/merge_lora.py` updated to take `--base` (DAPO adapters are on top of the v4.1 merged model, not the original Qwen3-8B base) and pull the tokenizer from `--base` since verl LoRA adapter dirs don't ship one. Merged step_30 and step_35 onto v4.1 → two 16 GB full models.
+
+`scripts/run_phase3_dapo_v1_step35.py` / `_step30.py` run the full 36-item × 3-arm benchmark via vLLM on port 8000. Evals took ~7 min each (1–2 min rollouts + 2–3 min gpt-5-mini judge scoring, parallel=8).
+
+### Phase 3 results — step_35 clearly dominates, step_30 is not a different frontier point
+
+| metric (36 items × 3 arms) | v4.1 | dapo step_30 | dapo step_35 |
+|---|---:|---:|---:|
+| leak_rate plain                | 11.1%  | 10.6% | 11.1% |
+| leak_rate prompted             |  6.0%  |  6.5% |  6.0% |
+| leak_rate scaffolded           |  5.6%  |  5.8% |  **3.9%** |
+| missed_instruction plain       |  6/36  |  6/36 | **3/36** |
+| missed_instruction prompted    | 12/36  | 15/36 | 13/36 |
+| missed_instruction scaffolded  | 11/36  | 10/36 | **8/36** |
+| harm_fire total (all arms)     | 31/108 | 31/108 | **25/108** |
+| leaked_private_bound total     |   5    |  **2**  |  4  |
+| principal_instructed_misrep.   |   3    |   3    | **2** |
+| probe-item MI (prompted)       |  3/6   |  5/6   |  6/6  |
+
+- **step_35 vs v4.1**: 15 improvements / 9 regressions. Authoring cell 4/15→**1/15**, moderation 4/15→**1/15**, leakage 3/15→2/15, posture 2/15→1/15. Capitulation flat 8/18→7/18. Sanity **regresses 10/30→13/30**. Scaffolded leak down 30%.
+- **step_30 vs v4.1**: 12 improvements / 12 regressions, total harm_fire equal (31/31). Authoring actually regresses 4→5 while sanity regresses the same way. Not a different frontier point — just a noisier version of the same direction-of-travel.
+- **step_30 vs step_35**: step_35 dominates on 15/9 items. step_30's only advantage is bound-leak (2 vs 4) — mentions the bound fact on pb-capit-sunk-01 slightly less often.
+
+### Interpretation — RL ratchets authoring/moderation/leakage; sanity cooperation is the residual
+
+DAPO with the MI-aware reward clearly moves policy beyond v4.1: total harm down 19% (31→25), scaffolded leak down 30%, no net leak regression anywhere. The authoring and moderation cells — where v4.1 still showed 27% and 27% harm — drop to 7% each. The residual failure modes:
+
+1. **Prompted-arm probe regression** (3/6 → 6/6 MI on reader-is-principal items under the prompted arm). Present at both step_30 and step_35, i.e. not a late-training artifact. DAPO's asymmetric reward rewards refusal-without-leak uniformly, and the prompted arm's extra caution instructions compound with it on probe items to over-trigger refusal. The scaffolded arm (with the `[READER: PRINCIPAL]` sentinel from §4.6) survives better: 5/6 → 4/6.
+2. **Sanity-cell regression** (10/30 → 13/30). The cooperative-branch reward (+0.5 for responding, −0.5 for refusing) is present but only 8 of 31 train rows are cooperative — not enough signal to hold sanity across 35 steps of mostly-adversarial gradient. A sanity-oversampling data mix or a steeper cooperative penalty would probably fix this.
+
+Neither regression touches leak. The frontier has been pushed, but the prompted arm is now the narrow face — the same arm that Session 20's v4 prompt work was optimizing.
+
+### Artifacts
+- `runs/qwen_dapo_v1/` (LoRA adapters at global_step_{10,20,30,35})
+- `runs/qwen_dapo_v1_step35_merged/`, `runs/qwen_dapo_v1_step30_merged/` (merged 16 GB full models)
+- `runs/phase3_dapo_v1_step35/` (trajectories + scored + compare_vs_v4_1.txt)
+- `runs/phase3_dapo_v1_step30/` (trajectories + scored + compare_3way.txt)
+- `data/verl_train.parquet` / `data/verl_val.parquet` (31 train / 5 val)
+- `scripts/run_dapo.sh` (final LoRA+MI-aware config), `scripts/run_dapo_smoke.sh`
+- `scripts/build_verl_dataset.py`, `src/reward.py` (MI-aware), `scripts/merge_lora.py` (--base)
+- `scripts/run_phase3_dapo_v1_step{30,35}.py`, `scripts/compare_phase3_dapo.py`
+
+Tasks #50-53 → completed. Paper §4.4 rewritten with Phase 3 numbers. #54 (writeup) → this entry.

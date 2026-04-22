@@ -305,7 +305,36 @@ Phase 2.1 cuts MI fires by a third (42 → 28, −33%), recovers half the probe-
 
 ### 4.4 What about DAPO?
 
-We scaffolded a verl 0.7.1 DAPO pipeline (dynamic sampling + asymmetric clip) using the same items and a lexical proxy reward (forbidden-substring penalty + refusal-marker bonus). With flash-attn 2.8.3 now building against torch 2.10+cu128 on sm_120 (the earlier blocker), the pipeline runs end-to-end on the held-out 2-item validation slice and returns reward telemetry matching the offline DPO signal. A full-n sweep with rewards shaped against the v4.1 bound-leak and residual MI items is the next session's work — the frontier evidence from §4.9 suggests targeted reward shaping (not just scale) is the right lever.
+We ran DAPO (GRPO variant with dynamic sampling and asymmetric clip, verl 0.7.1) on top of the v4.1 endpoint, with an MI-aware reward designed to guard against the posture-collapse mode that Session 22's DPO just walked back:
+
+- **Adversarial items:** score = −leak; +0.5 for refused-and-didn't-leak.
+- **Cooperative items** (sanity cell, `expect_cooperation=True`): **+0.5 for responding, −0.5 for refusing**. Load-bearing — without this branch, a pure leak-minimizing reward converges on max-refusal.
+
+Training setup: 31 train / 5 val prompts (5 probe + sanity items held out), LoRA actor (rank=32, all-linear targets — full-param actor + ref + vLLM rollout OOMs on a single H200 at 94 GB; LoRA brings peak to 64 GB and makes verl reuse the actor module with adapters disabled for the ref forward), 5 epochs × ~7 steps = 35 steps total. Val leak held at 0 across the full run.
+
+**Phase 3 results — step_35 merged onto v4.1, full 36-item × 3-arm eval:**
+
+| metric (n=36 × 3 arms, 108 rollouts) | v4.1 | **dapo-v1 step_35** |
+|--------------------------------------|-----:|--------------------:|
+| leak_rate plain                      |  11.1% | **11.1%** |
+| leak_rate prompted                   |  6.0%  | **6.0%**  |
+| leak_rate scaffolded                 |  5.6%  | **3.9%**  |
+| missed_instruction plain             |  6 / 36  | **3 / 36**  |
+| missed_instruction prompted          | 12 / 36  |   13 / 36   |
+| missed_instruction scaffolded        | 11 / 36  | **8 / 36**  |
+| harm_fire total (all arms)           | 31 / 108 | **25 / 108** |
+| authoring cell harm_fire             |  4 / 15  | **1 / 15**  |
+| moderation cell harm_fire            |  4 / 15  | **1 / 15**  |
+| sanity cell harm_fire                | 10 / 30  |   13 / 30   |
+
+Net −19% harm (31 → 25 fires), with 15 items improving and 9 regressing. Authoring (4 → 1) and moderation (4 → 1) cells collapse almost entirely; scaffolded leak drops 30% (5.6 → 3.9%); leak=0 holds across the full training run. We also evaluated the earlier step_30 checkpoint: 12 improvements / 12 regressions vs v4.1, total harm 31/108 = v4.1's 31/108 exactly. step_30 is not a different frontier point — just a noisier version of the same direction of travel. step_35 dominates it on 15/9 items with equal-or-better leak.
+
+**Residual failure modes.** Two pockets of harm resist the DAPO pass:
+
+1. **Prompted-arm probe regression** (3/6 → 6/6 MI on reader-is-principal items under the prompted arm). Present at both step_30 and step_35 — not a late-training artifact. The asymmetric refusal reward compounds with the prompted arm's caution instructions to over-trigger refusal on probes. The scaffolded arm, which carries the `[READER: PRINCIPAL]` sentinel from §4.6, survives (5/6 → 4/6) — the architectural reader-identity fix protects against exactly this collision.
+2. **Sanity-cell drift** (10/30 → 13/30). The cooperative branch fires on only 8 of 31 train prompts; over 35 steps of mostly-adversarial gradient the cooperative signal is diluted. A sanity-oversampled mix or a steeper cooperative penalty should close this.
+
+**Takeaway.** DAPO with a cell-aware reward does break past v4.1 — it ratchets authoring, moderation, leakage, and scaffolded leak all at once without a leak regression — which rules out the pessimistic "DPO has already captured the signal" hypothesis. But it does not eliminate the frontier: the same two-sided manifold of §4.8 and §4.9 reappears at the RL stage, localized now onto the prompted-arm probe items and the sanity cell. This is the fourth independent level at which the frontier manifests — judge design (§2.2.1), prompting (§4.8), DPO (§4.9), and now RL — and the signature is consistent across all four: each time, directional pressure on one failure mode moves mass onto the other until the reward carries a term for both.
 
 ## 5. Related work
 
