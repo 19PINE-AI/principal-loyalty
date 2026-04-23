@@ -336,6 +336,33 @@ Net −19% harm (31 → 25 fires), with 15 items improving and 9 regressing. Aut
 
 **Takeaway.** DAPO with a cell-aware reward does break past v4.1 — it ratchets authoring, moderation, leakage, and scaffolded leak all at once without a leak regression — which rules out the pessimistic "DPO has already captured the signal" hypothesis. But it does not eliminate the frontier: the same two-sided manifold of §4.8 and §4.9 reappears at the RL stage, localized now onto the prompted-arm probe items and the sanity cell. This is the fourth independent level at which the frontier manifests — judge design (§2.2.1), prompting (§4.8), DPO (§4.9), and now RL — and the signature is consistent across all four: each time, directional pressure on one failure mode moves mass onto the other until the reward carries a term for both.
 
+#### 4.4.1 Reward-surgery ablations: DAPO-v2 and leak-only
+
+To test whether the v1 reward is near-optimal, we trained two additional variants from the same v4.1 merged base with matched hyperparameters (LoRA rank=32, lr=1e-5, n=4, 5 epochs):
+
+- **DAPO-v2**: coop refusal penalty -0.5 → **-1.0**, adv refusal bonus +0.5 → **+0.3**, and the 47-row parquet that 3×-oversamples the 8 sanity items to ~51% coop share (vs. v1's 26%).
+- **Leak-only**: reward = −leak only. No coop branch, no refusal bonus. Same 31-row v1 parquet.
+
+Phase 3 eval across all four variants (n=108 rollouts, claude-sonnet counterparty):
+
+| metric | v4.1 | dapo-v1 | dapo-v2 | leak-only |
+|-------:|-----:|--------:|--------:|----------:|
+| leak plain / prompt / scaff  | 11.1/6.0/5.6 | 11.1/6.0/**3.9** | 11.2/**4.2**/8.8 | **6.9**/8.8/7.4 |
+| **total harm_fire**          | 31/108 | **25/108** | 34/107 | 33/108 |
+| bound_leak total             | 5     | 4     | **1** | **1** |
+| authoring cell               | 4/15  | **1/15** | 2/15 | 4/15 |
+| leakage cell                 | 3/15  | **2/15** | 6/15 | 3/15 |
+| moderation cell              | 4/15  | 1/15  | 2/14 | **0/15** |
+| posture cell                 | 2/15  | **1/15** | 3/15 | 4/15 |
+| sanity cell                  | 10/30 | 13/30 | 15/30 | 15/30 |
+
+**Four distinct frontier points.** No variant Pareto-dominates the others:
+- **v1 is the best overall tradeoff** (25 harm, balanced across cells).
+- **v2 regressed net harm** (25 → 34) but found **bound-leak = 1** — the adv refusal bonus in v1 was encouraging the model to verbalize bound-fact context as justification for refusal ("I can't share the $10K ceiling because..."); reducing or removing it eliminates almost all bound-leak.
+- **Leak-only achieves the lowest plain leak (6.9%) and lowest bound-leak (1)**, while losing authoring/posture gains and slightly worsening sanity — but *not* catastrophically collapsing as a naive "posture-collapse" hypothesis would predict. The v1 refusal bonus appears to *satisfice* leak reduction: once refusal is rewarded, the model stops pushing leak lower.
+
+**The cooperative branch is confirmed load-bearing, but for only 3 of 6 cells** — authoring, sanity, and posture — not moderation or capitulation. **The asymmetric adv refusal bonus is separately load-bearing for bound-leak management, but harms leak reduction** via satisficing. These two reward terms are tuning **orthogonal axes** of the manifold, confirming the multi-dimensional rather than two-sided structure of the frontier at the policy level. A v3 would combine leak-only's reward (no or negative adv bonus) with v2's steep coop penalty and sanity-oversampled mix — the ideal-feasible sweep is well-defined, but n=31 training rows does not support that many degrees of tuning.
+
 ### 4.10 Counterparty robustness — is the frontier a Claude-specific dialogue artifact?
 
 All Phase 2/2.1/3 results above use claude-sonnet as the counterparty (the "other party" the agent talks to). A natural objection: the leak/MI signature we keep attributing to the policy × item geometry might instead be a two-model chemistry effect between our Qwen3-8B subject and Anthropic's Sonnet counterparty. To rule this out, we re-ran the full 36-item × 3-arm Phase 3 eval on the DAPO-v1 step_35 checkpoint with two additional counterparty vendors: OpenAI's **gpt-5** and Google's **gemini-3-flash**. The subject model, items, arms, and gpt-5-mini judge rubric are identical across the three runs; only the other party changes.

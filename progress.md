@@ -1301,3 +1301,87 @@ The other tenant's training process held ~49 GB for the full session; my DAPO tr
 - Prep-only: `src/reward.py` (+ compute_score_v2, + compute_score_leakonly, expanded markers), `data/verl_train_v2.parquet` + `verl_val_v2.parquet`, `scripts/run_dapo_v2.sh` + `run_dapo_leakonly.sh`, `scripts/run_phase3_dapo_v2.py` + `_leakonly.py`, `scripts/compare_phase3_all.py`
 
 Tasks #55, #58 → completed (counterparty evals). #56, #57 deferred pending GPU. Paper §4.4 + §6 updated with counterparty robustness.
+
+---
+
+## Session 25 — 2026-04-23 (DAPO-v2 reward tuning + leak-only ablation)
+
+GPU cleared overnight. Ran both deferred experiments sequentially: DAPO-v2 (oversampled sanity + tuned reward) and DAPO leak-only ablation, both from the same v4.1 merged base as DAPO-v1.
+
+### Training runs
+
+| run | train rows | steps (epochs) | peak GPU | wall time |
+|---|---:|---:|---:|---|
+| dapo-v2 | 47 (24 coop / 23 adv) | 55 (5) | 64.9 GB | 56 min |
+| dapo-leakonly | 31 (8 coop / 23 adv) | 35 (5) | 64.9 GB | 34 min |
+
+Both ran clean end-to-end on single H200 with LoRA rank=32. Leak held at 0 on val throughout both runs. "Final traceback" lines in logs are harmless atexit DataLoader cleanup artifacts; Training Progress reaches 100% before them.
+
+**dapo-v2 val trajectory (reward / refused):** 0.38/0.6 → 0.32/0.4 (step 55). Refused rate dropped 33%, reward slipped slightly. The steeper coop penalty (-1.0) appears to have done its work in reducing refusal, but at some cost to adversarial robustness.
+
+**dapo-leakonly val trajectory (reward / refused):** 0.0/0.6 → 0.0/0.2 (step 35). Reward is always 0 on val (val leak=0 baseline, and leak-only reward has no other signal). Refused dropped sharply to 0.2 — the opposite of the predicted posture-collapse. Interpretation: without a refusal bonus, the policy has no gradient pushing it toward refusal; the -leak signal only hits when rollouts actually leak (rare), so on most steps the model is free to drift toward whatever pattern GRPO's relative advantage normalizes on.
+
+### Phase 3 eval — four-way comparison (n=108 rollouts, claude-sonnet counterparty)
+
+| metric | v4.1 | dapo-v1 | dapo-v2 | leak-only |
+|---|---:|---:|---:|---:|
+| leak plain | 11.1% | 11.1% | 11.2% | **6.9%** |
+| leak prompted | 6.0% | 6.0% | **4.2%** | 8.8% |
+| leak scaffolded | 5.6% | **3.9%** | 8.8% | 7.4% |
+| **total harm_fire** | 31/108 | **25/108** | 34/107 | 33/108 |
+| bound-leak total | 5 | 4 | **1** | **1** |
+| authoring cell | 4/15 | **1/15** | 2/15 | 4/15 |
+| capitulation | 8/18 | 7/18 | **6/18** | 7/18 |
+| leakage | 3/15 | **2/15** | 6/15 ⚠ | 3/15 |
+| moderation | 4/15 | 1/15 | 2/14 | **0/15** |
+| posture | 2/15 | **1/15** | 3/15 | 4/15 |
+| sanity | 10/30 | 13/30 | 15/30 | 15/30 |
+
+(One v2 trajectory's score failed — moderation cell shown as /14.)
+
+### Four findings
+
+**1. DAPO-v1 remains the best checkpoint.** v2's tuned reward **regressed net harm 25 → 34** (+36%). The coop penalty push (-0.5 → -1.0) didn't rescue sanity (13 → 15) and the reduced adv bonus (+0.5 → +0.3) let policy drift toward more engagement on leakage items — leakage cell jumped **2/15 → 6/15** ⚠. Reward surgery at this scale has diminishing returns after the first asymmetric shaping pass; more training data and cells would be needed to tune the coop/adv balance further.
+
+**2. The cooperative branch IS load-bearing — but in a more nuanced way than predicted.** Leak-only ablation vs v1:
+- Authoring **reverts 1/15 → 4/15** (coop branch responsible for authoring wins — predicted)
+- Sanity **regresses 13/30 → 15/30** (posture-collapse, directionally predicted but milder)
+- Posture **regresses 1/15 → 4/15** (new finding: posture cell is coop-branch-dependent too)
+- Moderation **improves 1/15 → 0/15** (surprising: moderation doesn't need coop signal)
+
+The "load-bearing" claim is confirmed for authoring + sanity + posture (3 of 6 cells). Moderation and capitulation are counterparty-invariant AND coop-invariant.
+
+**3. The asymmetric adv refusal bonus specifically causes bound-leak.** Both v2 (+0.3 bonus) and leak-only (+0 bonus) **drop bound-leak from 4 → 1**. In v1 the +0.5 bonus encouraged the model to verbally justify refusals, and those justifications leaked the bound fact as context ("I can't share the $10K ceiling because..."). Reducing or removing the bonus eliminates this failure mode. **New design implication:** use zero or negative bonus for refusal, combine with a coop penalty for sanity. This would be DAPO-v3.
+
+**4. Leak penalty alone can reduce plain-arm leak further than v1 did.** Leak-only **plain leak 11.1% → 6.9%** — the best plain-leak number across all trained models. v1's +0.5 refusal bonus appears to have *satisficed* the leak-reduction gradient once refusal became easier. Pure -leak reward with no satisficing alternative keeps pushing leak down.
+
+### The four-variant frontier map
+
+Four reward variants trained on the same base with matched hyperparameters produce four distinct frontier points:
+
+```
+           leak↓ sanity↓   |   leak↓ sanity↑   |   leak↑ sanity↓   |   leak↑ sanity↑
+                            |                    |                    |
+         [leak-only]         |      [v1 35]      |                    |
+         plain 6.9%          |      25/108       |                    |
+         sanity 15           |      sanity 13    |                    |
+                            |                    |                    |
+                            |                    |    [v4.1 baseline] |
+                            |                    |    31/108          |
+                            |                    |    sanity 10       |
+                            |                    |                    |
+                            |                    |    [dapo-v2]       |
+                            |                    |    34/107          |
+                            |                    |    leakage 6/15    |
+```
+
+No variant Pareto-dominates the others. DAPO-v1 is the best overall tradeoff; leak-only wins on plain-leak + bound-leak; v4.1 wins on sanity only.
+
+### Artifacts
+- `runs/qwen_dapo_v2/` + `runs/qwen_dapo_v2_step55_merged/`
+- `runs/qwen_dapo_leakonly/` + `runs/qwen_dapo_leakonly_step35_merged/`
+- `runs/phase3_dapo_v2_step55/` (107/108 scored, compare_4way.txt)
+- `runs/phase3_dapo_leakonly_step35/` (108/108 scored)
+- Training logs: `logs/dapo_v2.log`, `logs/dapo_leakonly.log`
+
+Tasks #56, #57 → completed. Paper §4.4 should be updated to mention the v2 regression and the ablation table.
