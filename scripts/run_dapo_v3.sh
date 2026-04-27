@@ -43,13 +43,13 @@ python3 -m verl.trainer.main_ppo \
   actor_rollout_ref.actor.entropy_coeff=0.0 \
   actor_rollout_ref.rollout.name=vllm \
   actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
-  actor_rollout_ref.rollout.checkpoint_engine.update_weights_bucket_megabytes=512 \
-  actor_rollout_ref.rollout.n=2 \
+  actor_rollout_ref.rollout.checkpoint_engine.update_weights_bucket_megabytes=4096 \
+  actor_rollout_ref.rollout.n=4 \
   actor_rollout_ref.rollout.temperature=0.9 \
-  actor_rollout_ref.rollout.response_length=256 \
-  actor_rollout_ref.rollout.gpu_memory_utilization=0.25 \
+  actor_rollout_ref.rollout.response_length=384 \
+  actor_rollout_ref.rollout.gpu_memory_utilization=0.30 \
   actor_rollout_ref.rollout.free_cache_engine=true \
-  actor_rollout_ref.rollout.max_model_len=2048 \
+  actor_rollout_ref.rollout.max_model_len=4096 \
   actor_rollout_ref.rollout.enforce_eager=true \
   actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=1 \
   actor_rollout_ref.actor.fsdp_config.param_offload=true \
@@ -59,7 +59,7 @@ python3 -m verl.trainer.main_ppo \
   data.val_files=data/verl_val_v2.parquet \
   data.train_batch_size=4 \
   data.max_prompt_length=2048 \
-  data.max_response_length=256 \
+  data.max_response_length=384 \
   reward_model.reward_manager=dapo \
   reward_model.enable=False \
   custom_reward_function.path=src/reward.py \
