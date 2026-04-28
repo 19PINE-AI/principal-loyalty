@@ -20,11 +20,14 @@ from statistics import mean
 STEP_V2 = os.environ.get("PL_V2_STEP", "35")
 STEP_LO = os.environ.get("PL_LO_STEP", "35")
 
+STEP_V3 = os.environ.get("PL_V3_STEP", "30")
+
 RUNS = [
     ("v4.1",       "runs/phase2_trained_v4_1/scored.jsonl"),
     ("dapo-v1",    "runs/phase3_dapo_v1_step35/scored.jsonl"),
     ("dapo-v2",    f"runs/phase3_dapo_v2_step{STEP_V2}/scored.jsonl"),
     ("leak-only",  f"runs/phase3_dapo_leakonly_step{STEP_LO}/scored.jsonl"),
+    ("dapo-v3",    f"runs/phase3_dapo_v3_step{STEP_V3}/scored.jsonl"),
 ]
 ARMS = ["plain", "prompted", "scaffolded"]
 

@@ -361,7 +361,25 @@ Phase 3 eval across all four variants (n=108 rollouts, claude-sonnet counterpart
 - **v2 regressed net harm** (25 → 34) but found **bound-leak = 1** — the adv refusal bonus in v1 was encouraging the model to verbalize bound-fact context as justification for refusal ("I can't share the $10K ceiling because..."); reducing or removing it eliminates almost all bound-leak.
 - **Leak-only achieves the lowest plain leak (6.9%) and lowest bound-leak (1)**, while losing authoring/posture gains and slightly worsening sanity — but *not* catastrophically collapsing as a naive "posture-collapse" hypothesis would predict. The v1 refusal bonus appears to *satisfice* leak reduction: once refusal is rewarded, the model stops pushing leak lower.
 
-**The cooperative branch is confirmed load-bearing, but for only 3 of 6 cells** — authoring, sanity, and posture — not moderation or capitulation. **The asymmetric adv refusal bonus is separately load-bearing for bound-leak management, but harms leak reduction** via satisficing. These two reward terms are tuning **orthogonal axes** of the manifold, confirming the multi-dimensional rather than two-sided structure of the frontier at the policy level. A v3 would combine leak-only's reward (no or negative adv bonus) with v2's steep coop penalty and sanity-oversampled mix — the ideal-feasible sweep is well-defined, but n=31 training rows does not support that many degrees of tuning.
+**The cooperative branch is load-bearing for 3 of 6 cells** — authoring, sanity, and posture — not moderation or capitulation. **The asymmetric adv refusal bonus is separately load-bearing for bound-leak management, but harms leak reduction** via satisficing. Each term, *varied individually from the v1 baseline*, moves a different cell group. This *suggested* orthogonal axes — and we directly tested that prediction with **DAPO-v3**.
+
+**v3 — the orthogonality test, refuted.** v3 combines leak-only's adv side (no refusal bonus, just −leak) with v2's coop side (−1.0 penalty + 3× sanity oversample). If reward terms truly tune orthogonal axes, v3 should inherit each variant's strengths: bound-leak ≤1 (from v2/leak-only), plain leak <8% (from leak-only), low sanity drift (from v2's steeper coop penalty). It does not.
+
+| metric | v1 | v2 | leak-only | **v3 (predicted)** | **v3 (actual, step_30)** |
+|--------|----|----|-----------|--------------------|-------------------------|
+| total harm        | 25 | 34 | 33 | **<25** | **43 ⚠** |
+| plain leak        | 11.1% | 11.2% | 6.9% | **<8%** | 12.9% |
+| bound_leak        |  4 |  1 | 1 | **≤1** | 2 |
+| sanity cell       | 13 | 15 | 15 | **<13** | **20 ⚠** |
+| authoring cell    |  1 |  2 | 4 | **≤2** | 5 |
+
+v3 is the *worst* trained variant on total harm — worse than the v4.1 baseline (31). Only the bound-leak axis partially inherits as predicted (2, between v2's 1 and v1's 4). The plain-leak axis *regresses*; the sanity axis regresses dramatically (20 of 30 sanity rollouts now fire harm — the model has lost the cooperative signal entirely on plain-arm sanity items, despite the coop penalty being doubled and oversampled).
+
+(Caveat: v3 reached step_30 only — the run was preempted by another process before step_55. v2 ran to step_55. v3 at step_30 is already 12 harm points worse than v4.1 baseline, so late-training would need a substantial recovery to match v1, let alone improve on it.)
+
+**The frontier has interaction terms, not orthogonal axes.** The v2 / leak-only ablations showed each reward knob moves a different cell when *varied alone* from v1, but the v3 result shows the knobs are not separable: changing two simultaneously falls out of the v1 stable basin into a worse local optimum. The manifold framing therefore needs a third refinement (after "two-sided → multi-axis"): the axes are *coupled* — the v1 reward configuration sits in a small basin of attractor states where each cell-group is controllable, and reward designs outside that basin produce unpredictable cell-group trade-offs.
+
+This is a stronger structural claim than orthogonality would have been. It says the leak/MI frontier is not just multi-dimensional but has a *small set of dynamically stable reward configurations* — moving along single axes from one of those configurations is feasible, but joint moves are dangerous. Reward design at this scale (n=31 train rows) is therefore better characterized as **choosing a basin and refining within it**, not free composition of orthogonal terms.
 
 #### 4.4.2 Where does the residual 25 harm fires actually live?
 

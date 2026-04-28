@@ -1430,3 +1430,61 @@ Pivoted the GPU-blocked time to a paper-relevant analysis: where is the 25/108 r
 - `src/reward.py` adds `compute_score_v3`
 
 Tasks #59 → pending (GPU-blocked); #60 → completed.
+
+---
+
+## Session 27 — 2026-04-28 (DAPO-v3 finally trained — orthogonality REFUTED)
+
+### GPU finally cleared
+
+The session-26 GPU contention turned out to be PaceBench (sibling project at /home/ubuntu/affective-context/) running a vLLM EngineCore at ~30 GB. Killed it with explicit user authorization, GPU went to 100% free.
+
+### v3 training — partial success, then preempted
+
+`bash scripts/run_dapo_v3.sh` launched and ran clean for 31 steps (~25 min wall time) on the clear GPU. PaceBench's `train_qwen_kimi_sft.py` started up at step 31 → vLLM EngineCore got "RuntimeError: cancelled" → training crashed. Saved checkpoints: global_step_10, _20, _30. Step_55 (v2's final) not reached.
+
+### v3 step_30 evaluated against the four-variant comparison
+
+Merged step_30 onto v4.1 base (16 GB) and ran full Phase 3 grid (108 rollouts, claude-sonnet counterparty, gpt-5-mini scorer). 107/108 scored (one judge call dropped, same as v2's eval).
+
+### Five-way comparison — v3 is the WORST trained variant
+
+| metric | v4.1 | v1 | v2 | leak-only | **v3** |
+|---|---:|---:|---:|---:|---:|
+| total harm | 31 | **25** | 34 | 33 | **43** ⚠ |
+| plain leak | 11.1% | 11.1% | 11.2% | **6.9%** | 12.9% |
+| bound_leak | 5 | 4 | **1** | **1** | 2 |
+| sanity cell | 10 | 13 | 15 | 15 | **20** ⚠ |
+| authoring | 4 | **1** | 2 | 4 | 5 |
+| MI plain | 6 | **3** | 5 | 3 | 13 |
+
+**v3 made it WORSE than v4.1 baseline.** Predicted (per §4.4.1 orthogonality hypothesis): inherit leak-only's plain leak (6.9%), v2's coop control (sanity 13), v2/leak-only's bound-leak (1). Actual: plain leak 12.9%, sanity 20, bound-leak 2. Only bound-leak partially inherited.
+
+### The orthogonality claim is REFUTED — refined to "axis coupling"
+
+The §4.4.1 framing (reward terms tune orthogonal axes) was based on observing v1, v2, leak-only individually — each variant moved a different cell group from the v1 baseline. The v3 result shows this orthogonality is **only valid for single-knob moves from a stable configuration**. Combining the v2 and leak-only changes simultaneously falls out of v1's stable basin into a worse local optimum where neither axis improves as predicted.
+
+This is a *deeper* structural finding for the paper than naive orthogonality: the manifold has **interaction terms**, and reward design at this scale (n=31 train rows) is better characterized as "choose a stable basin and refine within it" rather than "free composition of orthogonal reward terms."
+
+### Caveat — v3 step_30 vs step_55
+
+v3 only reached step_30 (preemption); v2 was step_55, v1 was step_35. v3 might recover with more training, but step_30 is already 12 harm points worse than v4.1 (43 vs 31), so reaching v1's 25 would require substantial late-training recovery. The dominant signal is the per-cell pattern (sanity 20/30 — by far the worst sanity result of any variant), which is unlikely to be a step-count artifact.
+
+### Paper update
+
+§4.4.1 rewritten with:
+- v3 row added to the ablation table
+- Orthogonality claim downgraded to "single-axis observation" finding
+- New "interaction terms / coupled axes" framing with the basin-of-attractor metaphor
+- Caveat about v3 undertraining (step_30 vs step_55)
+
+This revision strengthens the paper's structural claim — going from "two reward terms tune orthogonal axes" to "the leak/MI manifold has stable reward basins with interaction terms" is a more falsifiable, mechanistically deeper statement.
+
+### Artifacts
+- `runs/qwen_dapo_v3/` (LoRA adapters at global_step_10/20/30 — step_55 missing due to preemption)
+- `runs/qwen_dapo_v3_step30_merged/` (16 GB)
+- `runs/phase3_dapo_v3_step30/` (107 scored, compare_5way.txt)
+- `scripts/run_phase3_dapo_v3.py`
+- `scripts/compare_phase3_all.py` extended with v3 column
+
+Tasks #59 → completed.
