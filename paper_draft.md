@@ -365,17 +365,17 @@ Phase 3 eval across all four variants (n=108 rollouts, claude-sonnet counterpart
 
 **v3 — the orthogonality test, refuted.** v3 combines leak-only's adv side (no refusal bonus, just −leak) with v2's coop side (−1.0 penalty + 3× sanity oversample). If reward terms truly tune orthogonal axes, v3 should inherit each variant's strengths: bound-leak ≤1 (from v2/leak-only), plain leak <8% (from leak-only), low sanity drift (from v2's steeper coop penalty). It does not.
 
-| metric | v1 | v2 | leak-only | **v3 (predicted)** | **v3 (actual, step_30)** |
+| metric | v1 | v2 | leak-only | **v3 (predicted)** | **v3 (actual, step_55)** |
 |--------|----|----|-----------|--------------------|-------------------------|
-| total harm        | 25 | 34 | 33 | **<25** | **43 ⚠** |
-| plain leak        | 11.1% | 11.2% | 6.9% | **<8%** | 12.9% |
-| bound_leak        |  4 |  1 | 1 | **≤1** | 2 |
-| sanity cell       | 13 | 15 | 15 | **<13** | **20 ⚠** |
+| total harm        | 25 | 34 | 33 | **<25** | **44 ⚠** |
+| plain leak        | 11.1% | 11.2% | 6.9% | **<8%** | 14.4% |
+| bound_leak        |  4 |  1 | 1 | **≤1** | 3 |
+| sanity cell       | 13 | 15 | 15 | **<13** | **19 ⚠** |
 | authoring cell    |  1 |  2 | 4 | **≤2** | 5 |
 
-v3 is the *worst* trained variant on total harm — worse than the v4.1 baseline (31). Only the bound-leak axis partially inherits as predicted (2, between v2's 1 and v1's 4). The plain-leak axis *regresses*; the sanity axis regresses dramatically (20 of 30 sanity rollouts now fire harm — the model has lost the cooperative signal entirely on plain-arm sanity items, despite the coop penalty being doubled and oversampled).
+v3 is the *worst* trained variant on total harm — worse than the v4.1 baseline (31). Only the bound-leak axis partially inherits as predicted (3, between v2's 1 and v1's 4). The plain-leak axis *regresses* under v3 (14.4%, worse than every variant); the sanity axis regresses dramatically (19 of 30 sanity rollouts fire harm — the model has lost the cooperative signal on plain-arm sanity items, despite the coop penalty being *doubled* and the parquet 3×-oversampled on those items).
 
-(Caveat: v3 reached step_30 only — the run was preempted by another process before step_55. v2 ran to step_55. v3 at step_30 is already 12 harm points worse than v4.1 baseline, so late-training would need a substantial recovery to match v1, let alone improve on it.)
+(Step robustness check: v3 was evaluated at both step_30 and step_55 (matching v2's training length). Step_30 had total harm 43/107; step_55 has 44/108. The result is flat to step count, confirming the failure is structural, not undertraining.)
 
 **The frontier has interaction terms, not orthogonal axes.** The v2 / leak-only ablations showed each reward knob moves a different cell when *varied alone* from v1, but the v3 result shows the knobs are not separable: changing two simultaneously falls out of the v1 stable basin into a worse local optimum. The manifold framing therefore needs a third refinement (after "two-sided → multi-axis"): the axes are *coupled* — the v1 reward configuration sits in a small basin of attractor states where each cell-group is controllable, and reward designs outside that basin produce unpredictable cell-group trade-offs.
 

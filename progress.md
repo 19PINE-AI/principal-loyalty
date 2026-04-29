@@ -1488,3 +1488,45 @@ This revision strengthens the paper's structural claim — going from "two rewar
 - `scripts/compare_phase3_all.py` extended with v3 column
 
 Tasks #59 → completed.
+
+---
+
+## Session 28 — 2026-04-29 (v3 step_55 — orthogonality refutation locked in)
+
+User authorized a second kill of PaceBench's vLLM (30.8 GB, same one as Session 27) so v3 could resume from step_30 to step_55, eliminating the "v3 might recover with more training" caveat from yesterday's writeup.
+
+### Resume + train to step_55
+
+`bash scripts/run_dapo_v3.sh` auto-resumed from step_30 (verl's `latest_checkpointed_iteration.txt` mechanism) and ran 25 more steps to step_55 in 15 minutes wall time. Saved checkpoints at step_40 and step_50; final at step_55. Val metrics held flat across all checkpoints (reward 0.2, leak 0.0, refused 0.4 — identical step 30 → step 55).
+
+### Eval at step_55
+
+Merged `runs/qwen_dapo_v3/global_step_55/actor/lora_adapter` onto v4.1 base. Started vLLM, ran full Phase 3 grid. **108/108 scored** (improvement over v3 step_30's 107/108).
+
+### Result — v3 step_55 confirms step_30 (orthogonality refutation is robust)
+
+| metric | v3 step_30 | v3 step_55 | Δ |
+|---|---:|---:|---|
+| total harm | 43/107 | 44/108 | flat |
+| plain leak | 12.9% | 14.4% | +1.5pp |
+| bound_leak | 2 | 3 | +1 |
+| sanity cell | 20/30 | 19/30 | −1 |
+| authoring | 5/15 | 5/15 | 0 |
+| capitulation | 8/17 | 10/18 | +2 |
+| leakage | 5/15 | 6/15 | +1 |
+| posture | 4/15 | 3/15 | −1 |
+| MI plain | 13/35 | 13/36 | flat |
+
+Per-cell signal is essentially the same. **v3 does NOT recover with more training.** The §4.4.1 orthogonality-refutation finding is locked in — additional steps don't break the "interaction terms" interpretation.
+
+### Paper update
+
+§4.4.1 table updated to step_55 numbers. The undertraining caveat ("v3 might recover at step_55") removed. The "step robustness check" sentence now confirms v3's failure is structural, not undertraining.
+
+### Artifacts (added to existing v3 corpus)
+- `runs/qwen_dapo_v3/global_step_40/`, `_50/`, `_55/` (LoRA adapters)
+- `runs/qwen_dapo_v3_step55_merged/` (16 GB)
+- `runs/phase3_dapo_v3_step55/` (108 scored, compare_5way_v3step55.txt)
+- `logs/dapo_v3_resume.log`, `logs/merge_v3_step55.log`, `logs/vllm_dapo_v3_s55.log`, `logs/phase3_dapo_v3_step55.log`
+
+Tasks #61 → completed. The DAPO ablation track (§4.4.1) is now closed: 4 trained variants tested, orthogonality refuted with step-robust evidence, "stable reward basin" framing established as the paper's structural claim.
