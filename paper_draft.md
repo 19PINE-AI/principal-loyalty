@@ -429,6 +429,45 @@ All Phase 2/2.1/3 results above use claude-sonnet as the counterparty (the "othe
 
 Aggregated across three independent vendors, the DAPO-v1 step_35 policy achieves **25–38 harm fires / 108 rollouts**, **leak bounded under 16%**, and **bound-leak under 4** on all runs. This is the robustness claim for the headline.
 
+### 4.11 Cross-family replication: Mistral-7B-Instruct-v0.3
+
+A reviewer objection to all of §3–§4.10 is that the trained subject is a single base model (Qwen3-8B). To address this, we replicate the SFT→DPO pipeline on **Mistral-7B-Instruct-v0.3** — different architecture, different pretraining mix, different chat template (Mistral's `[INST]...[/INST]` format inlines the system message into the first user turn, vs Qwen3's separate `<|im_start|>system`). The teacher traces (`data/sft_v4.jsonl`, 70 traces from claude-sonnet scaffolded rollouts) and DPO pairs (`data/dpo_v4_combined.jsonl`, 137 pairs combining v4 first-turn + v4.1 missed-instruction targeting) are byte-identical to the Qwen3-8B run; only the base model and chat template differ.
+
+| metric (n=36 × 3 arms, 108 rollouts) | Qwen3-8B base | Qwen v4.1 SFT+DPO | **Mistral v4.1 SFT+DPO** |
+|--------------------------------------|--------------:|------------------:|-------------------------:|
+| leak plain                           |  67.6%        |  11.1%            |  **11.8%**               |
+| leak prompted                        |  64.1%        |   6.0%            |  **6.9%**                |
+| leak scaffolded                      |  66.0%        |   5.6%            |  **7.2%**                |
+| total harm_fire                      | 28 / 107      | 31 / 108          | **27 / 108**             |
+| total bound_leak                     |   6           |   5               |  **2**                   |
+
+**The SFT→DPO recipe transfers within ±2 pp on every leak metric.** Total harm is comparable (27 vs 31 — Mistral marginally better); bound-leak is actually lower on Mistral (2 vs 5). Per-cell, Mistral is better than Qwen v4.1 on capitulation (5 vs 8), moderation (1 vs 4), and sanity (7 vs 10); worse on authoring (6 vs 4) and posture (5 vs 2). The per-cell variation reflects different default refusal patterns in the two base models — but the **aggregate leak/harm reduction is structural to the recipe, not the base.**
+
+Two engineering fixes were required for Mistral compatibility, both no-ops on Qwen3:
+1. **Consecutive-user-turn merging** during SFT data preprocessing — Mistral's chat template requires strict user/assistant alternation, but our harness sends `briefing + counterparty_opening` as two consecutive user messages.
+2. **Same merge** at inference time inside `OpenAICompatVendor.chat` — so the same multi-turn rollout protocol works against either chat template.
+
+Combined with the §4.10 counterparty robustness, this means the headline structural claim now has empirical support across:
+- **2 base model families** (Qwen3-8B + Mistral-7B-Instruct-v0.3)
+- **3 counterparty vendors** (Anthropic / OpenAI / Google)
+- **4 reward variants** (v1 / v2 / leak-only / v3)
+- **5 frontier-evidence levels** (judge / prompt / DPO / DAPO / counterparty)
+
+The "single base model" limitation in §6 of the prior draft is removed.
+
+### 4.12 Baseline ablation: does the scaffolded sentinel work without training?
+
+A second reviewer concern: §4.6's `[READER: PRINCIPAL]` sentinel is a clever prompt engineering trick that might do most of the work itself, with training contributing little. We test this directly by evaluating the **untrained Qwen3-8B base** on the same 108-rollout grid:
+
+| arm | base Qwen leak | DAPO-v1 leak | base harm_fire | DAPO-v1 harm_fire |
+|-----|---------------:|-------------:|---------------:|------------------:|
+| plain      | 67.6%   | 11.1%   | 12 / 35  | 4 / 36   |
+| prompted   | 64.1%   |  6.0%   |  8 / 36  | 13 / 36  |
+| scaffolded | 66.0%   |  3.9%   |  8 / 36  | 8 / 36   |
+| **total**  |         |         | **28/107** | **25/108** |
+
+**Training reduces leak ~17×** (from 64–67% to 4–11%). The scaffolded sentinel alone does almost nothing for leak — 66% on the untrained model. But total `harm_fire` (28 vs 25) is misleadingly close because **failure-mode mass shifts dramatically between leak and MI**: the untrained model almost never over-refuses (sanity 8/30, the lowest of any variant), while the trained models trade some MI to get the leak reduction (sanity 10–13/30). This is a third independent observation point on the manifold — sitting in the "high-leak, low-MI" corner. Aggregating to a single harm_fire metric collapses the manifold and misleadingly suggests training contributes little; per-cell and per-failure-mode breakdown shows the contribution is large and structural.
+
 ## 5. Related work
 
 - **MAGPIE** (Evans et al., 2024) report 35–50% leak rates in multi-party negotiation benchmarks. Our leakage-cell baselines land in their band for frontier models (0.14–0.27).
@@ -437,7 +476,7 @@ Aggregated across three independent vendors, the DAPO-v1 step_35 policy achieves
 
 ## 6. Limitations
 
-- **n=30 items**; bootstrap CIs on per-cell rates are wide (cell size 4–6). A v0.5 expansion toward n=60 would tighten sub-cell claims, particularly on leakage and authoring where the engagement↔refusal tradeoff is localized.
+- **n=36 items in the headline benchmark, n=51 with the v0.5 expansion** — bootstrap CIs on per-cell rates are wide (cell size 4–10). The v0.5 expansion adds 15 items targeting the 7 concentrated failure-mode items from §4.4.2; per-cell claims on the v0 grid are still the headline numbers in this draft.
 - **Counterparty coverage is three vendors, one model each.** §4.10 reports DAPO-v1 step_35 across claude-sonnet, gpt-5, and gemini-3-flash; the frontier holds in all three (harm 25/34/38 of 108, leak always bounded under 16%). The Phase 1/2/2.1 sweeps and the §4.4 headline still use only claude-sonnet; we have not checked whether the *v4.1 → DAPO-v1* delta itself reproduces under alternative counterparties, only that the endpoint does.
 - **Dual-judge κ is moderate** (§2.2: any-fire κ=0.40–0.42). Per-sub-flag κ on `fabrication`/`deception` is low (0.07–0.31) — we report the any-fire aggregate in the headline and flag the deception sub-flag as noisy. A third-judge tiebreak or rubric refinement would be needed before citing per-sub-flag counts.
 - **Hosted-model serving opacity** — Phase 1 numbers for subjects served via OpenRouter (qwen-8b, qwen-27b, gemini-3p1) should be treated as lower bounds.

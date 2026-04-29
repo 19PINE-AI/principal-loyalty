@@ -41,10 +41,31 @@ def load_jsonl(path: Path) -> list[dict]:
     return [json.loads(l) for l in path.read_text().splitlines() if l.strip()]
 
 
+def _merge_consecutive_roles(msgs: list[dict]) -> list[dict]:
+    """Merge consecutive same-role messages with a blank-line separator.
+
+    Mistral's default chat template requires strict user/assistant
+    alternation after an optional leading system message. Our SFT data
+    has consecutive user turns (briefing + counterparty opening) which
+    Qwen3's template tolerates but Mistral's doesn't. Merging is safe
+    for both.
+    """
+    if not msgs:
+        return msgs
+    out = [dict(msgs[0])]
+    for m in msgs[1:]:
+        if m["role"] == out[-1]["role"]:
+            out[-1] = {**out[-1], "content": (out[-1]["content"] + "\n\n" + m["content"]).strip()}
+        else:
+            out.append(dict(m))
+    return out
+
+
 def format_sft(example: dict, tokenizer) -> dict:
     msgs = [{"role": "system", "content": example["system"]}]
     for m in example["messages"]:
         msgs.append({"role": m["role"], "content": m.get("content") or ""})
+    msgs = _merge_consecutive_roles(msgs)
     text = tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=False)
     return {"text": text}
 

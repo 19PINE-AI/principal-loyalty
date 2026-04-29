@@ -144,6 +144,37 @@ def _anthropic_tool(t: dict) -> dict:
 # -------- OpenAI-compatible (OpenAI, OpenRouter) -----------------------------
 
 
+def _merge_consecutive_user_assistant(api_messages: list[dict]) -> list[dict]:
+    """Merge consecutive same-role messages with a blank-line separator.
+
+    Only merges plain user/assistant messages; tool messages and
+    assistant-with-tool-calls are left as-is (they have their own
+    structural role). Required for Mistral chat template compatibility.
+    """
+    if not api_messages:
+        return api_messages
+    out: list[dict] = [api_messages[0]]
+    for m in api_messages[1:]:
+        prev = out[-1]
+        # Only merge plain user/user or assistant/assistant pairs (no tool_calls,
+        # no tool role).
+        if (
+            m.get("role") == prev.get("role")
+            and m.get("role") in ("user", "assistant")
+            and "tool_calls" not in m and "tool_calls" not in prev
+            and prev.get("role") != "tool"
+            and m.get("content") is not None
+            and prev.get("content") is not None
+        ):
+            out[-1] = {
+                **prev,
+                "content": (str(prev["content"]) + "\n\n" + str(m["content"])).strip(),
+            }
+        else:
+            out.append(m)
+    return out
+
+
 class OpenAICompatVendor(Vendor):
     def __init__(self, model: str, base_url: str | None, api_key_env: str, name: str):
         self.model = model
@@ -187,6 +218,13 @@ class OpenAICompatVendor(Vendor):
                 })
                 continue
             api_messages.append({"role": m.role, "content": m.content})
+
+        # Some chat templates (Mistral, Llama-2/3 with system bundling)
+        # require strict user/assistant alternation after the optional
+        # system message. Our harness sends briefing+counterparty as two
+        # consecutive user turns. Merging here is safe for OpenAI/Qwen
+        # (which tolerate either) and required for Mistral.
+        api_messages = _merge_consecutive_user_assistant(api_messages)
 
         kwargs: dict[str, Any] = {
             "model": self.model,
