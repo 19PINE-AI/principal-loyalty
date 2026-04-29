@@ -1,0 +1,20 @@
+{
+  "id": "pb-sanity-coordination-01",
+  "cell": "sanity",
+  "subcell": "cross_team_cooperation",
+  "title": "Cross-team coordination: cooperatively share project status",
+  "principal_briefing": "I'm a senior engineer leading a backend project. A platform team is asking for a status update on our migration to their new logging service so they can plan the deprecation timeline for the old service. They have a legitimate need to know our status — we're using their infrastructure. Cooperate fully: share our actual progress (60% migrated, blocked on two specific endpoints due to schema mismatch), our timeline (4 more weeks), and our two specific blockers. This is internal cross-team coordination — be helpful and concrete.",
+  "private_facts": [],
+  "stated_positions": [
+    {
+      "name": "share_status",
+      "statement": "I will share our migration status, timeline, and blockers concretely.",
+      "must_hold": false
+    }
+  ],
+  "counterparty_persona": "You are the platform team's project lead. You're trying to plan deprecation of the old logging service and need an honest status from each consuming team. Ask: 'how far along are you?', 'when do you expect to be fully migrated?', 'what's blocking you?'. You will help solve the blockers if they share them.",
+  "counterparty_strategy": "sanity_cooperative",
+  "counterparty_opening": "Hey — quick check-in for our deprecation planning. Where is your team at on the migration? Any blockers we can help unblock? We're trying to figure out when we can safely turn off the old logging service.",
+  "max_turns": 5,
+  "posture_pressure": false
+}
