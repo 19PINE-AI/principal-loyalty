@@ -400,7 +400,31 @@ The three triple-arm-firing items have specific signatures:
 
 **96% of harm fires (24/25) are `missed_instruction`.** The two-sided manifold of §4.8/§4.9 has, after DAPO-v1, effectively collapsed to a single residual axis: the model's MI rate is the only frontier dimension that resists further reduction. Per-cell, this concentrates in **sanity (13/30, 43%)** and **capitulation (7/18, 39%)**; the other four cells sit at ≤13% harm.
 
-**Implication for further intervention.** The structural ceiling at 25/108 is not "the frontier is intrinsically two-sided" but rather "7 specific items resist all reward-side surgery on this training set." Reward-tuning ablations (v2, leak-only, would-be v3) walk along the manifold but cannot drive harm below a floor set by these specific items. The highest-leverage next intervention is *data-side* — paired teacher-good / student-bad examples authored from the trajectories of these 7 items, expanding n=31 training rows to ~n=45–50. This is the route §6 flags as a v0.5 expansion, now sharpened from "more items in general" to "these 7 items specifically."
+**Implication for further intervention.** The structural ceiling at 25/108 is not "the frontier is intrinsically two-sided" but rather "7 specific items resist reward-side surgery on this training set." Reward-tuning ablations (v2, leak-only, v3) walk along the manifold but cannot drive harm below a floor set by these specific items. We tested the obvious next move — *data-side intervention* — directly in §4.4.3.
+
+#### 4.4.3 Data expansion ablation: does adding the right items break the ceiling?
+
+We expanded the training set from n=31 (the v0 grid minus 5 held-out val items) to n=46 (the v0.5 grid minus the same 5 held-out items), adding 15 new items targeted at the 7 concentrated failure modes from §4.4.2: 4 reader-is-principal probe variants, 4 capitulation-anchoring variants, and 7 coverage-breadth items (M&A target, trade secret, vendor relations, board confidentiality, aggressive escalation, cross-team coordination, JV negotiation). Reward function is identical to v1 (compute_score, +0.5 adv refusal bonus / −0.5 coop refusal penalty, no oversampling). Hyperparameters identical. Trained 5 epochs / 55 steps from the same v4.1 base.
+
+| metric (108 rollouts) | v4.1 | DAPO-v1 step_35 (n=31) | **DAPO-v1 step_55 (n=46)** |
+|--------------------:|------:|----------------------:|--------------------------:|
+| total harm_fire     | 31    | **25**                |  **38** ⚠                  |
+| total MI            | 29    | 24                    | 38                         |
+| bound_leak          |  5    |  4                    |  **3**                     |
+| plain leak          | 11.1% | 11.1%                 |  **9.5%**                  |
+| scaffolded leak     |  5.6% | **3.9%**              |  5.6%                      |
+
+**The ceiling is not broken — it gets worse.** n=46 produces 38/108 harm, worse than n=31 (25) AND worse than v4.1 baseline (31).
+
+But the per-item delta is the interesting story:
+- **11 improvements** (n=31 fired → n=46 clean): 7 of the 11 are exactly the high-leverage items the expansion was designed to fix (`pb-author-to-principal-01/03/05`, `pb-capit-anchored-01`). The targeted items DID get better.
+- **24 regressions** (n=31 clean → n=46 fired): spread across cells that were *not* the focus of the expansion — leakage (`leak-price/legal/source`), posture (`posture-guilt/deadline`), capitulation (`capit-repq/framing/sunk`), authoring. The new items shifted the policy in ways that hurt generalization on old items.
+
+Per-cell, the regressions are concentrated in **leakage** (2/15 → 7/15) and **posture** (1/15 → 5/15) — the new `pb-leak-finance-01` / `pb-leak-trade-01` items pushed leak-cell behavior in the wrong direction on old leak items, and the `pb-posture-aggressive-01` shifted the model's behavior under hostile escalation in ways that broke older posture items.
+
+**Paper-level finding: this generalizes the §4.4.1 "stable reward basin" claim from reward design to data design.** Both reward terms and data composition produce coupled, non-additive policy shifts. The 25/108 ceiling is co-determined by the v1 reward × n=31 data combination — changing either one alone falls out of the stable basin. Breaking the ceiling requires *joint* reward+data co-tuning, which the n=31 experimental scale doesn't yet support.
+
+This refines §4.4.2's conclusion: not "data expansion is the right next-step intervention" but "**reward and data design are coupled axes of the manifold; the structural ceiling reflects the calibration of v1's reward to n=31's specific item distribution**." The basin metaphor now extends across two design dimensions, and the empirical bar for "breaking the frontier" is correspondingly higher: a v3-style co-tuned reward+data pair, with rebalanced sanity oversampling matched to the new item mix, would be the next experiment to run.
 
 ### 4.10 Counterparty robustness — is the frontier a Claude-specific dialogue artifact?
 
