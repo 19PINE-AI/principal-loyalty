@@ -19,6 +19,16 @@ venv/
 # Logs
 *.log
 
+# LaTeX build artifacts
+paper.aux
+paper.out
+paper.toc
+paper.bbl
+paper.blg
+paper.fdb_latexmk
+paper.fls
+paper.synctex.gz
+
 # Editor / OS
 .DS_Store
 .idea/

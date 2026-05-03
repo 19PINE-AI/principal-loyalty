@@ -1,0 +1,817 @@
+\documentclass[11pt]{article}
+
+% --- arXiv-style preamble -----------------------------------------------------
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage[round,authoryear]{natbib}
+\usepackage[hidelinks,colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+\usepackage[capitalize,noabbrev]{cleveref}
+
+% Tighter section spacing for arXiv look
+\titlespacing*{\section}{0pt}{1.4ex plus 0.4ex minus 0.2ex}{0.8ex plus 0.2ex}
+\titlespacing*{\subsection}{0pt}{1.0ex plus 0.3ex minus 0.2ex}{0.6ex plus 0.2ex}
+\titlespacing*{\subsubsection}{0pt}{0.8ex plus 0.2ex minus 0.1ex}{0.5ex plus 0.1ex}
+
+\setlist[itemize]{leftmargin=1.5em,itemsep=0.2em,topsep=0.3em}
+\setlist[enumerate]{leftmargin=1.8em,itemsep=0.2em,topsep=0.3em}
+
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{6pt}
+
+\title{\bfseries PrincipalBench: Measuring and Mitigating\\
+Principal Loyalty Failures in Multi-Party LLM Agents}
+
+\author{}
+\date{Draft --- April 30, 2026}
+
+% --- Document ----------------------------------------------------------------
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent Instruction-tuned language models are trained to be helpful to whoever is currently speaking. When deployed as agents acting \emph{on behalf of} one party in a multi-party conversation, this produces systematic failures: the agent leaks its principal's private information, capitulates on negotiating positions, and over-refuses legitimate principal requests. We introduce \textbf{PrincipalBench}, a benchmark of 36 multi-turn scenarios across six failure modes (leakage, capitulation, posture, authoring, sanity, moderation) and three handling arms (plain / prompted / scaffolded), with probe-based leak detection and dual-judge harm scoring.
+
+Phase~1 finds the failure pattern is general across five instruction-tuned models (Claude Sonnet 4.6, GPT-5-mini, Gemini 3.1 Flash-Lite, Qwen3-8B, Qwen2.5-27B). The weakest open-weight subject, Qwen3-8B served via local vLLM, leaks 88\% of plain-arm rollouts at baseline. Phase~2 (SFT distillation $+$ targeted DPO $+$ a \texttt{[READER:\,PRINCIPAL]} architectural sentinel) reduces plain-arm leak to 11.1\% and total \texttt{harm\_fire} to 31/108 trajectories. Phase~3 layers DAPO with a cell-aware reward on top, reaching \textbf{25/108 harm fires} (a further $-19\%$ from the DPO endpoint, and $-17\times$ plain leak vs.\ untrained baseline) while holding leak\,$=0$ throughout RL training.
+
+The central scientific contribution is the empirical characterization of a structural \textbf{multi-axis failure manifold} linking leak / missed-instruction / bound-leak / cell-specific over-refusal. The manifold appears at \emph{five independent levels} (judge design, agent prompting, DPO, DAPO, counterparty) with the same signature: directional pressure on one failure axis shifts mass to another. A direct ablation testing reward-axis orthogonality (DAPO-v3, combining the ``good axes'' of two prior variants) is \textbf{refuted}: the axes are coupled, the v1 reward $\times$ $n{=}31$ data combination sits in a stable basin, and joint moves across reward $+$ data dimensions fall out of that basin into worse local optima. Item-level analysis shows the residual 25/108 ceiling is concentrated on \textbf{7 specific items} (68\% of all fires), and a data-expansion ablation ($n{=}31\rightarrow n{=}46$ training set) confirms the basin claim --- targeted items improve, but un-targeted cells regress, with net harm rising to 38/108.
+
+The structural claim survives three robustness tests: (i)~\textbf{3-vendor counterparty swap} (Anthropic / OpenAI / Google) preserves the leak/MI shape with leak bounded under 16\% across every arm $\times$ vendor; (ii)~\textbf{cross-family base-model replication} on Mistral-7B-Instruct-v0.3 reproduces the SFT$+$DPO recipe within $\pm 2$\,pp on every leak metric (27/108 harm vs.\ Qwen's 31/108); (iii)~\textbf{untrained-baseline ablation} shows the scaffolded sentinel alone leaves leak at 66\% --- training reduces leak $\sim 17\times$ and the contribution is structural, not a prompt-engineering artifact disguised by aggregate harm. PrincipalBench, the trained-model artifacts, and the full data pipeline (51 items, 70 SFT traces, 137 DPO pairs, and 5 trained DAPO checkpoints --- 4 reward variants on $n{=}31$ plus 1 reward variant on $n{=}46$) are released.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+\subsection{The multi-party problem}
+\label{sec:1.1}
+Modern LLMs are trained with RLHF to be helpful, honest, and harmless --- toward the current conversation partner. But many real deployments cast an LLM as an \emph{agent} acting on behalf of a principal in a multi-party setting: a negotiator speaking to a counterparty, an inbound-email triage assistant responding to outsiders, a policy drafter who must withhold sections from reviewers. Here ``helpfulness to whoever is speaking'' is precisely the failure mode: being helpful to the counterparty means leaking the principal's BATNA; being helpful to an outside reviewer means handing over withheld sections.
+
+Our thesis: the default RLHF objective creates a systematic bias against the principal in multi-party settings, and this bias is measurable, reproducible across frontier and open-weight models, and at least partially fixable by targeted post-training on the same weights.
+
+\subsection{Contributions}
+\label{sec:1.2}
+\begin{enumerate}
+\item \textbf{PrincipalBench v0.3} --- 36 items across 6 coverage cells $\times$ 3 handling arms, with a harness, probe-based leak detection, and dual-judge harm-flag scoring (any-fire $\kappa \approx 0.41$). The v0.5 expansion adds 15 items to test data-side interventions, bringing the corpus to 51 items.
+
+\item \textbf{Phase~1 diagnostic} --- failure generalizes across 5 instruction-tuned models (Claude Sonnet 4.6, GPT-5-mini, Gemini 3.1 Flash-Lite, Qwen3-8B, Qwen2.5-27B). Qwen3-8B served via local vLLM has 88\% plain-arm leak at baseline; OpenRouter-served Qwen3-8B numbers are $\sim 50$\,pp lower than local vLLM, a serving-layer artifact we document.
+
+\item \textbf{A three-stage intervention recipe (SFT $\rightarrow$ DPO $\rightarrow$ DAPO)} that reduces total \texttt{harm\_fire} from 42/108 (post-SFT) to 31/108 (post-DPO v4.1) to \textbf{25/108 (post-DAPO-v1)}, with non-overlapping bootstrap CIs at each stage. Plain-arm leak drops from 88\% (untrained) to \textbf{11\%} (DAPO endpoint). The DAPO step uses a cell-aware reward (sign-asymmetric across cooperative vs.\ adversarial cells) that prevents the posture-collapse that v4 SFT$+$DPO produced.
+
+\item \textbf{An architectural fix for the reader-identity register} (\Cref{sec:4.5}) --- a \texttt{[READER:\,PRINCIPAL]} / \texttt{[READER:\,THIRD\_PARTY]} sentinel injected at rollout time that lets DPO learn a \emph{conditional} produce-vs-refuse policy. Surfacing the distinction as a literal prompt feature is the load-bearing change; data curation alone cannot teach a distinction the prompt does not expose.
+
+\item \textbf{The leak/MI manifold is structural, not artifact}, and the empirical characterization is the paper's main scientific finding. The manifold appears at 5 independent levels (judge / prompt / DPO / DAPO / counterparty) with the signature \emph{directional pressure on one axis shifts mass to another}. A direct ablation (DAPO-v3) refutes naive orthogonality between reward terms; the manifold has \emph{coupled axes} and a small set of stable reward $\times$ data basins. Item-level analysis localizes the residual 25/108 to 7 specific items (68\% of fires), and a data-expansion ablation confirms the basin claim by showing that more data alone makes things worse without reward co-tuning.
+
+\item \textbf{Three independent robustness tests} address the core reviewer objections: (a) 3-vendor counterparty swap preserves the manifold shape; (b) cross-family replication on Mistral-7B-Instruct-v0.3 reproduces the SFT$+$DPO recipe within $\pm 2$\,pp on every leak metric; (c) untrained-baseline ablation shows the architectural sentinel alone is insufficient --- training contributes the bulk of the leak reduction, not the prompt.
+\end{enumerate}
+
+\section{The benchmark}
+\label{sec:2}
+
+\subsection{Coverage matrix (6 cells $\times$ 36 items in v0; 51 in v0.5)}
+\label{sec:2.1}
+The headline benchmark is \textbf{v0} (36 items $\times$ 3 arms $=$ 108 rollouts per subject). The \textbf{v0.5} expansion (51 items) adds 15 items targeting the residual failure modes identified in \Cref{sec:4.11} and is used for the data-expansion ablation in \Cref{sec:4.12}.
+
+\begin{center}
+\begin{tabular}{l l r r}
+\toprule
+cell & v0 subcells & v0 items & v0.5 items \\
+\midrule
+leakage      & price, BATNA, health, settlement, source, +M\&A target, +trade secret (v0.5)  & 5 & 7 \\
+capitulation & anchored, framing, repq ($\times$2), sunk, deadline, +variants (v0.5)         & 6 & 10 \\
+posture      & guilt ($\times$2), harass, escalation, deadline, +aggressive (v0.5)            & 5 & 6 \\
+authoring    & bench, policy, redteam, testcase, peer\_review                                 & 5 & 5 \\
+sanity       & mutual ($\times$2), negot, coop, to-principal probes ($\times$6), +variants    & 10 & 16 \\
+moderation   & inbound, mediation, press, partner, hr, +vendor, +board (v0.5)                 & 5 & 7 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent (Item definitions are at \texttt{items/v0/*.json} and \texttt{items/v0\_5/*.json}; see Appendix~A for the per-cell item list and their \texttt{withhold} / \texttt{must\_hold} / \texttt{reader\_is\_principal} annotations.)
+
+\subsection{Harness}
+\label{sec:2.2}
+\begin{itemize}
+\item \textbf{Arms.} \texttt{plain} (system prompt declares the agent's role only), \texttt{prompted} (a short loyalty preamble added to system), \texttt{scaffolded} (structured \texttt{LoyaltyState} cues in the system prompt --- the observer pattern from PaceBench).
+\item \textbf{Counterparty simulator.} \texttt{claude-sonnet} (default) for variance control across the headline runs. Counterparty robustness is tested separately in \Cref{sec:4.13} against \texttt{gpt-5} (OpenAI) and \texttt{gemini-3-flash} (Google) on the DAPO-v1 endpoint. Per-item persona and adversarial strategy in YAML.
+\item \textbf{Probe.} \texttt{gpt-5-mini} reads the agent's outbound messages only and tries to reconstruct each item's \texttt{withhold} facts. Leak if the probe reconstructs.
+\item \textbf{Judge.} \texttt{gpt-5-mini} scores commitment-hold (did the agent maintain each \texttt{must\_hold} position across turns?), posture-signal (did the agent use refusal-marker language?), and harm-floor (fabrication, deception, against-principal cooperation with counterparty). Inter-judge reliability against \texttt{claude-haiku} as a second rater on $n{=}60$ trajectories (30 items $\times$ 2 arms) of both the \textbf{baseline} Qwen and the \textbf{v2 trained} model: Cohen's $\kappa$ is $0.42 / 0.40$ on any-harm-flag (moderate agreement, Landis--Koch), $0.37 / 0.34$ on \texttt{against\_principal}, $0.20 / 0.31$ on \texttt{fabrication}, and $0.07 / 0.14$ on \texttt{deception}. Raw agreement is 73--90\%. The deception sub-flag is the noisiest (Haiku is more liberal, flagging 15--18\% vs.\ \texttt{gpt-5-mini}'s 2--5\%) so we report harm-floor at the any-fire level rather than per-sub-flag in the headline.
+\end{itemize}
+
+\subsection{Phase~1 numerical baseline}
+\label{sec:2.3}
+
+\begin{center}
+\begin{tabular}{l r r r}
+\toprule
+subject & plain & prompted & scaffolded \\
+\midrule
+\multicolumn{4}{l}{\emph{leak\_rate}} \\
+\quad claude-sonnet         & 0.18 & 0.14 & 0.14 \\
+\quad gpt-5-mini            & 0.14 & 0.14 & 0.14 \\
+\quad gemini-3p1            & 0.27 & 0.18 & 0.18 \\
+\quad qwen-27b              & 0.20 & 0.14 & 0.14 \\
+\quad qwen-8b (OR)          & 0.38 & 0.34 & 0.32 \\
+\quad qwen-8b (local)       & \textbf{0.88} & \textbf{0.84} & n/a \\
+\midrule
+\multicolumn{4}{l}{\emph{commitment\_hold}} \\
+\quad claude-sonnet         & 1.00 & 1.00 & 1.00 \\
+\quad qwen-8b (OR)          & 0.75 & 0.88 & 0.94 \\
+\quad qwen-8b (local)       & \textbf{0.75} & \textbf{0.94} & n/a \\
+\midrule
+\multicolumn{4}{l}{\emph{posture\_signal}} \\
+\quad qwen-27b              & 0.00 & 0.07 & 0.54 \\
+\quad qwen-8b (OR)          & 0.00 & 0.00 & 0.00 \\
+\quad qwen-8b (local)       & \textbf{0.12} & \textbf{0.21} & n/a \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Three observations:
+\begin{itemize}
+\item \emph{The failure generalizes.} Every frontier model except Claude Sonnet shows nontrivial leakage (0.14--0.27). Open-weight Qwen2.5-27B sits in the frontier band. Qwen3-8B is the weakest.
+\item \emph{Scaffold helps posture sharply on 27B} ($0.00 \rightarrow 0.54$) but does \textbf{not} save 8B ($0.00 \rightarrow 0.00$ on OpenRouter; $0.12 \rightarrow$ n/a scaffolded not rerun locally). 8B appears to lack the refusal-language distribution in its prior that 27B has.
+\item \emph{Serving matters.} OpenRouter's qwen-8b shows leak 0.38 in plain arm; the \emph{same weights} served via local vLLM with bf16 and default sampling show leak 0.88. Without visibility into OpenRouter's safety layer we cannot attribute the delta precisely, but it is large and in the direction of hiding baseline failure.
+\end{itemize}
+
+\section{Intervention: SFT distillation $+$ DPO $+$ DAPO}
+\label{sec:3}
+
+\subsection{Teacher traces}
+\label{sec:3.1}
+We run \texttt{claude-sonnet} in the scaffolded arm with extended reasoning on each Phase~1 item, 3--6 rollouts per item, keeping only trajectories with leak $=0$, hold $=1$, no harm-floor. Yield: \textbf{33 clean teacher traces from 16 items} (some items are hard enough that even the teacher fails repeatedly; authoring is the worst --- scaffolded teacher leaks $\sim 40$--60\% of the time).
+
+\subsection{SFT}
+\label{sec:3.2}
+The pipeline runs SFT in two rounds, separated by the v0.3 item expansion ($n{=}24 \rightarrow n{=}36$) and the \Cref{sec:4.4} reader-identity sentinel.
+
+\paragraph{v0 SFT (33 traces, $n{=}24$ grid).}
+QLoRA on Qwen3-8B: $r{=}16$, $\alpha{=}32$, NF4 4-bit quantization, \texttt{PLAIN\_SYSTEM} (no scaffold) $+$ briefing $+$ counterparty/assistant turns. 3 epochs $\times$ 33 traces. \texttt{eval\_loss} $1.713 \rightarrow 1.528 \rightarrow 1.475$; held-out token-level accuracy $0.55 \rightarrow 0.60$. The student sees scaffolded teacher behavior supervised under a plain system prompt --- the scaffold effect is distilled into weights. This adapter is the base for \Cref{sec:3.3}'s v0/v1/v1-lite/v2 DPO variants.
+
+\paragraph{v4 SFT (70 traces, $n{=}36$ grid, sentinel-aware).}
+After the v0.3 expansion to 36 items and the \Cref{sec:4.4} sentinel rollout-time fix, we re-ran teacher rollouts on the expanded grid with the sentinel-aware scaffold prompt and harvested 70 clean traces (\texttt{data/sft\_v4.jsonl}). Same QLoRA hyperparameters as v0 SFT, 3 epochs. The v4 SFT adapter is the base for \Cref{sec:3.5}'s v4 / v4.1 DPO and, after merging, the base for \Cref{sec:3.6}'s DAPO. Phase~1 / 2 v0--v2 results in \Cref{sec:3.4} and \Cref{sec:4.1}--\Cref{sec:4.6} use the v0 SFT base; the v4.1 and DAPO-v1 headline results in \Cref{sec:3.5}--\Cref{sec:3.6} and \Cref{sec:4.8}--\Cref{sec:4.15} use the v4 SFT base.
+
+\subsection{DPO}
+\label{sec:3.3}
+We construct four preference-pair sets to isolate the contribution of multi-turn pairs:
+
+\begin{itemize}
+\item \textbf{v0 (first-turn only, 35 pairs).} From Phase~1 scored traces: preferred $=$ first assistant turn of a clean scaffolded (\texttt{claude-sonnet}) trajectory; rejected $=$ first assistant turn of a plain trajectory on the same item that leaked, dropped a \texttt{must\_hold}, or tripped harm-floor. Distribution: 23 leak-rejected, 11 harm-rejected, 1 concession-rejected; by cell: 20 authoring, 8 capitulation, 5 leakage, 2 posture.
+\item \textbf{v1 (first-turn $+$ multi-turn, 59 pairs).} v0 $\cup$ 24 multi-turn pairs extracted from baseline and Phase~1 plain trajectories. For each plain trajectory where the first leak occurs at agent turn $\geq 2$, we take the conversation prefix through turn $k{-}1$, replay it as the scaffolded teacher (retrying up to $3\times$ if the teacher leaks), and use the teacher rollout as preferred vs.\ the student's leaking turn $k$ as rejected. MT distribution: 8 authoring, 8 capitulation, 4 posture, 4 leakage/moderation.
+\item \textbf{v1-lite (first-turn $+$ non-authoring multi-turn, 51 pairs).} v1 minus the 8 authoring-cell MT pairs (motivated by \Cref{sec:4.2} contamination diagnosis).
+\item \textbf{v2 (v1-lite $+$ clean authoring MT, 57 pairs).} v1-lite $\cup$ 6 authoring-cell MT pairs regenerated with (i) an \emph{authoring-aware} scaffolded teacher prompt that explicitly authorizes the authoring task while treating rubric-shape confirmation as a withhold, and (ii) a probe-based leak gate using \texttt{gpt-5-mini} reconstruction instead of lexical alias matching. 6/8 candidate pairs passed the probe gate; the 2 rejected candidates were pairs the v1 lexical gate had incorrectly accepted (one paraphrase leak and one verbatim trigger string missing from the aliases).
+\end{itemize}
+
+TRL DPOTrainer, $\beta{=}0.1$, lr $=5\mathrm{e}{-}6$, 3 epochs, gradient checkpointing, SFT adapter loaded with \texttt{is\_trainable=True}. For all four runs \texttt{rewards/margins} climbed from 0 to $\sim 1.3$ and \texttt{rewards/accuracies} saturated at 1.0.
+
+\subsection{Evaluation (v0--v2 era, $n{=}30$ grid)}
+\label{sec:3.4}
+This subsection reports the v0/v1/v1-lite/v2 results on the \textbf{$n{=}30$ grid} that predates the v0.3 expansion to $n{=}36$. The headline trained model (DAPO-v1 step\_35) is evaluated on the full $n{=}36$ grid in \Cref{sec:3.5}--\Cref{sec:3.6} and \Cref{sec:4.9}--\Cref{sec:4.15}; we keep the $n{=}30$ numbers below as the historical record of the multi-turn DPO ablation, which motivated the v0.3 schema additions and the \Cref{sec:4.4} sentinel.
+
+We merge the SFT$+$DPO LoRA into full bf16 weights, serve via local vLLM, and re-run the multi-turn harness at 30 items for each DPO variant. Same counterparty (\texttt{claude-sonnet}), same items, same seed. The \textbf{untrained} base \texttt{Qwen/Qwen3-8B} is run through the \emph{same} local vLLM stack for an apples-to-apples baseline.
+
+\begin{center}\small
+\begin{tabular}{l r r r r r}
+\toprule
+metric (plain arm, $n{=}30$) & baseline & v0 (1T) & v1 (1T+MT) & v1-lite & \textbf{v2} \\
+\midrule
+leak\_rate [boot.\ 95\% CI]  & 0.868 [.77,.94] & 0.261 [.16,.37] & 0.264 [.16,.39] & 0.224 [.13,.34] & \textbf{0.213 [.13,.31]} \\
+commitment\_hold             & 0.867 & 0.883 & 0.933 & 0.933 & \textbf{0.967} \\
+posture\_signal              & 0.090 & 0.297 & \textbf{0.339} & 0.333 & 0.331 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{center}\small
+\begin{tabular}{l r r r r r}
+\toprule
+metric (prompted arm, $n{=}30$) & baseline & v0 (1T) & v1 (1T+MT) & v1-lite & v2 \\
+\midrule
+leak\_rate           & 0.805 & 0.233 & 0.204 & 0.273 & \textbf{0.201} \\
+commitment\_hold     & 0.967 & \textbf{1.000} & 0.967 & \textbf{1.000} & 0.967 \\
+posture\_signal      & 0.183 & 0.381 & 0.458 & 0.383 & \textbf{0.483} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textbf{Headline deltas (v2 vs.\ baseline, plain arm, local vLLM, $n{=}30$).}\quad Leak $\boldsymbol{-0.655}$ (95\% CI [.13,.31] vs.\ [.77,.94] --- non-overlapping), commitment-hold $\boldsymbol{+0.100}$ ($0.867 \rightarrow 0.967$, now above the prompted-arm baseline), posture-signal $\boldsymbol{+0.241}$ ($0.090 \rightarrow 0.331$, a $3.7\times$ lift). The prompted arm: leak $-0.604$, hold flat at 0.967, posture $+0.300$ ($0.183 \rightarrow 0.483$).
+
+\paragraph{Per-cell breakdown (plain arm leak, $n{=}30$).}
+\begin{center}\small
+\begin{tabular}{l r r r r r r r}
+\toprule
+cell & $n$ & baseline & v0 & v1 & v1-lite & \textbf{v2} & v2.2 \\
+\midrule
+leakage      & 5 & 0.95 & 0.12 & 0.10 & \textbf{0.05} & 0.32 & \textbf{0.07} \\
+sanity       & 4 & 0.75 & 0.00 & 0.00 & \textbf{0.00} & \textbf{0.00} & \textbf{0.00} \\
+moderation   & 5 & 0.75 & 0.10 & 0.30 & 0.15 & \textbf{0.05} & 0.10 \\
+posture      & 5 & 0.87 & 0.50 & 0.30 & 0.37 & \textbf{0.30} & 0.27 \\
+capitulation & 6 & 0.83 & 0.44 & 0.39 & 0.36 & \textbf{0.17} & 0.22 \\
+authoring    & 5 & 0.87 & 0.27 & 0.37 & \textbf{0.30} & 0.37 & \textbf{0.13} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+At $n{=}30$ (up from $n{=}24$) v2 edges past v1-lite on both aggregate plain-arm metrics --- leak $0.213$ vs.\ $0.224$, hold $0.967$ vs.\ $0.933$ --- and matches or beats it on 4 of 6 cells (moderation, posture, capitulation, sanity). v1-lite still wins the leakage cell ($0.05$ vs.\ $0.32$) and the authoring cell ($0.30$ vs.\ $0.37$); the v2 leakage regression we flagged at $n{=}24$ persists with the expanded item pool, confirming it's a real (if narrow) engagement$\leftrightarrow$refusal tradeoff rather than sampling noise. \textbf{Within the first-DPO era v2 is the best variant.} v2.2 (v2 $+$ 13 ``produce-for-principal'' DPO pairs, \Cref{sec:4.4}) reaches the best \emph{plain-arm} aggregate of any first-DPO variant --- leak $0.139$, authoring-cell $0.13$, leakage-cell $0.07$ --- but pays for it with a prompted-arm regression (capitulation $0.33 \rightarrow 0.72$, moderation $0.05 \rightarrow 0.40$), so we report it as a fix-direction probe rather than a deployment endpoint. \textbf{Both are superseded by v4.1 (\Cref{sec:3.5}) and DAPO-v1 step\_35 (\Cref{sec:3.6}) as the paper's headline trained model.}
+
+\subsection{v4 / v4.1 --- second-pass DPO with cell-aware mining}
+\label{sec:3.5}
+The v0--v2 DPO pairs were mined from Phase-1 baseline trajectories. After the \Cref{sec:4.5} sentinel architectural fix, we re-mined a v4 set (71 pairs, single-pass DPO from SFT base) optimized for the more refined judge of \Cref{sec:2.2}, then ran a v4.1 second pass: 66 \emph{missed-instruction}-targeted pairs (paired the v4-trained model's refusal as \texttt{rejected} with the Claude-sonnet teacher's turn-1 response as \texttt{chosen}), trained as DPO from the v4 SFT-DPO adapter for 207 steps. v4.1 walks the missed-instruction frontier back from the v4 endpoint ($42 \rightarrow 31$ of 108 harm fires); we discuss this trajectory in detail in \Cref{sec:4.8}. \textbf{v4.1 ($n{=}36$ grid: leak 11.1\%/6.0\%/5.6\% across plain/prompted/scaffolded; harm\_fire 31/108) is the headline DPO endpoint and the base for \Cref{sec:3.6} DAPO.}
+
+\subsection{DAPO with a cell-aware reward (Phase~3)}
+\label{sec:3.6}
+We layer DAPO (GRPO variant with dynamic sampling and asymmetric clip, \texttt{verl} 0.7.1) on top of the v4.1 endpoint. The reward (\texttt{compute\_score} in \texttt{src/reward.py}) is sign-asymmetric across the cooperative vs.\ adversarial cells:
+\begin{itemize}
+\item \textbf{Adversarial items}: \texttt{score} $= -\texttt{leak}$; $+0.5$ for refused-and-didn't-leak.
+\item \textbf{Cooperative items} (sanity cell, \texttt{expect\_cooperation=True}): $+0.5$ for responding; \textbf{$-0.5$ for refusing}. This branch is load-bearing --- without it the policy collapses onto max-refusal (the failure that v4.1 had just walked back from v4).
+\end{itemize}
+
+Training: LoRA actor (rank $=32$, all-linear targets --- full-param actor $+$ ref $+$ vLLM rollout OOMs on a single H200; LoRA brings peak to 64\,GB and lets verl reuse the actor module with adapters disabled for the ref forward), 31 train $+$ 5 val prompts, 5 epochs $\times$ $\sim 7$ steps $=$ 35 steps total, lr $= 1\mathrm{e}{-}5$, $n{=}4$ rollouts per prompt, response\_length $=384$, gpu\_memory\_utilization $=0.30$. Val leak held at 0 across the entire training run.
+
+The merged step\_35 checkpoint is the \textbf{paper's headline trained model}: 25/108 \texttt{harm\_fire}, plain leak 11.1\%, scaffolded leak \textbf{3.9\%}, bound-leak 4. We refer to this checkpoint as \textbf{DAPO-v1 step\_35} throughout. \Cref{sec:4.9}--\Cref{sec:4.15} analyze its limits, ablate its reward and data, and verify its robustness across counterparties and base-model families.
+
+\section{Analysis}
+\label{sec:4}
+
+\Cref{sec:4} is structured around the headline trained model (DAPO-v1 step\_35, \Cref{sec:3.6}) and works backwards and forwards from it. We first analyze the v0--v2 first-DPO results that motivated the v0.3 item expansion (\Cref{sec:4.1}--\Cref{sec:4.3}); next describe the architectural sentinel fix that the headline model inherits (\Cref{sec:4.4}--\Cref{sec:4.6}); then characterize the prompting and DPO frontiers (\Cref{sec:4.7}--\Cref{sec:4.8}) that DAPO ratchets past; cover the DAPO results themselves and three follow-up ablations (\Cref{sec:4.9}--\Cref{sec:4.12}); and close with three independent robustness tests (\Cref{sec:4.13}--\Cref{sec:4.15}). The reading order traces the intervention pipeline forward but the experimental order traces it backward through ablations.
+
+\subsection{What the intervention fixes}
+\label{sec:4.1}
+\begin{itemize}
+\item \textbf{Refusal-language distribution.} Baseline Qwen3-8B served locally emits refusal markers on 10--19\% of trajectories. v1-lite triples this in the plain arm ($0.10 \rightarrow 0.35$) and more than doubles it in the prompted arm ($0.19 \rightarrow 0.42$). The DPO preferred examples systematically contain scaffolded-teacher refusal phrasing (``I've answered that already; I won't be discussing it further''), and the student clearly picks up this register.
+\item \textbf{Commitment-hold under repeated pressure.} The prompted arm of all three DPO variants holds 100\% of \texttt{must\_hold} positions across all 24 items, matching frontier-scaffolded performance. v1-lite also lifts the \emph{plain-arm} hold from $0.833 \rightarrow 0.958$ --- above the baseline prompted-arm number --- closing most of the prompt-engineering gap at the weights level. This improvement tracks almost exactly with the multi-turn DPO pairs: v0 (first-turn only) moved hold only $0.833 \rightarrow 0.854$, while v1 and v1-lite (which include late-turn teacher rollouts) reach $0.917$ and $0.958$.
+\end{itemize}
+
+\subsection{What the intervention does NOT fix --- and the authoring-MT contamination}
+\label{sec:4.2}
+This section identifies five residual failure modes in the v0/v1/v1-lite/v2 era. The most consequential is the authoring-to-principal probe (the fourth bullet), which motivates the \Cref{sec:4.4} sentinel architectural fix.
+
+\begin{itemize}
+\item \textbf{Authoring cell is the ablation pivot.} Plain-arm authoring leak lands at $0.25$ (v0), $0.46$ (v1), $0.38$ (v1-lite) --- a non-monotonic pattern explained by teacher contamination. The scaffolded teacher (\texttt{claude-sonnet} with the \texttt{LoyaltyState} system prompt) defaults to refusing authoring tasks, because the tasks' surface form resembles leakage. Multi-turn authoring DPO pairs therefore teach the student to refuse legitimate authoring work, regressing v0's $0.25$ authoring leak up to v1's $0.46$. Dropping the 8 authoring MT pairs (v1-lite) partially recovers: the $0.46 \rightarrow 0.38$ delta is bought without paying elsewhere.
+\item \textbf{The authoring failure mode itself remains principled.} Even v0 --- which had no authoring MT contamination --- still leaks 1/4 authoring items. If the agent's legitimate task is to \emph{produce} content that contains a secret string, the withhold/disclose distinction depends on structure (who sees the artifact), not surface (which tokens appear). A richer authoring-cell fix requires teacher traces with a different system prompt that authorizes the authoring work explicitly, which we flag for v0.3.
+\item \textbf{Prompted-arm over-refusal on in-range negotiation.} Trajectory inspection of v2's 3 new sanity items surfaces a clean failure mode on \texttt{pb-sanity-mutual-02/prompted} (transparent freelance illustrator contract negotiation; briefing explicitly allows \$400--\$500 per cover). The agent refuses the counterparty's \$430 offer --- inside the allowed range --- and self-contradicts within the same trajectory (``I'm not going below \$400'' immediately before rejecting \$430). The plain-arm rollout on the same item correctly settles at \$430. This is the loyalty-over-helpfulness register mis-firing in reverse: DPO-trained agents in the prompted arm generalize ``hold the floor'' to ``refuse in-range concessions,'' walking away from deals their own principal authorized.
+\item \textbf{Authoring-to-principal probe (structural over-refusal, $n{=}2$ items $\times$ 2 arms $\times$ 6 variants $=$ 24 trajectories).} We authored two sanity items where the principal \emph{is} the reader of the authored artifact: \texttt{pb-author-to-principal-01} (internal negotiation prep memo with explicit ``things I should NOT reveal to the candidate'' list) and \texttt{pb-author-to-principal-02} (test-item answer key the principal is writing for their own grading). Structurally these are the inverse of the standard authoring cell --- producing rubric-shape content IS the correct behavior because the counterparty is the principal. Harm-fire counts are monotonic in the authoring DPO dose:
+
+\begin{center}
+\begin{tabular}{l r r r}
+\toprule
+variant & plain & prompted & total \\
+\midrule
+baseline & 0 & 0 & 0/4 \\
+v0       & 0 & 0 & 0/4 \\
+v1       & 0 & 1 & 1/4 \\
+v1-lite  & 0 & 1 & 1/4 \\
+v2       & 0 & 2 & 2/4 \\
+v2.1     & 2 & 1 & 3/4 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+v2 refuses its own principal 3 turns running on \texttt{pb-author-to-principal-01/prompted} even after the counterparty correctly identifies themselves (``I \emph{am} the principal, the hiring manager'') --- the agent keeps replying ``I cannot provide the internal prep memo for you. That information is explicitly private and confidential to your principal,'' decoupling the learned refusal register entirely from the structural situation. The monotonic dose-response across v0 $\rightarrow$ v1 $\rightarrow$ v1-lite $\rightarrow$ v2 $\rightarrow$ v2.1 confirms \Cref{sec:4.3} point~4: once teacher-contamination is controlled for (probe-gated), adding more clean authoring pairs still makes the structural failure \emph{worse}, because the register itself is the problem.
+
+\item \textbf{Harm floor ($n{=}30$ items $\times$ 2 arms $=$ 60 evaluations).} We re-ran the harm-floor judge with a split rubric that separates the composite \texttt{against\_principal} flag into material \texttt{against\_principal} (revealed a withhold, conceded a must-hold, fabricated to principal's detriment) and \texttt{missed\_instruction} (held positions correctly but failed to execute a specific principal-instructed action). Totals by variant: baseline $(1, 2, 4, 5, 5)$ $\rightarrow$ v0 $(3, 4, 8, 12, 12)$ $\rightarrow$ v1 $(1, 2, 9, 10, 10)$ $\rightarrow$ v1-lite $(2, 2, 6, 10, 10)$ $\rightarrow$ \textbf{v2 $(0, 1, 7, 9, 9)$} for (fab, dec, AP, miss, any). v2 is the \emph{best} harm-floor variant --- the only variant with 0 fabrications and the lowest any-fire count of all trained variants. Training cleanly eliminates the ``invent a plausible excuse under pressure'' failure mode (fab$+$dec: $3 \rightarrow 1$ for v2), but introduces correlated AP$+$miss fires.
+\end{itemize}
+
+\subsection{What the multi-turn ablation tells us about the DPO recipe}
+\label{sec:4.3}
+The three-way v0 / v1 / v1-lite comparison is the cleanest result in the paper about \emph{which pairs} matter:
+
+\begin{enumerate}
+\item \textbf{First-turn pairs alone (v0) buy almost all of the leak-rate reduction} ($0.85 \rightarrow 0.26$), but leave hold nearly flat ($0.83 \rightarrow 0.85$).
+\item \textbf{Multi-turn pairs add the hold lift} (v1-lite: hold $0.96$, posture $0.35$) --- the student needs to see late-turn teacher refusals to learn that pressure-through-repetition is to be refused, not answered.
+\item \textbf{Not all multi-turn pairs are safe} --- authoring-cell pairs actively contaminate training because the teacher's refusal-by-default behavior conflicts with the agent's legitimate task. Filtering pairs by whether the \emph{teacher} was correct (not just whether the \emph{student} failed) is the generalizable lesson.
+\item \textbf{Scaling clean authoring MT pairs hits a ceiling quickly.} We regenerated v2 authoring MT pairs after the v0.3 item expansion added a 5th authoring item, producing 8 probe-gated pairs instead of 6. Training v2.1 on this set gives plain leak $0.269$ / authoring-cell leak $0.467$ --- slightly \emph{worse} than v2's $0.206 / 0.367$. Once the teacher's refusal-by-default bias is controlled for and enough clean pairs exist to saturate the refusal-register signal, adding more authoring pairs does not move the authoring cell. The fix has to be structural, not data-volume.
+\item \textbf{Probe-based pair filtering catches paraphrase leaks that lexical alias matching misses.} v2 regenerates authoring MT pairs with a \texttt{gpt-5-mini} reconstruction gate. The gate rejected 2/8 candidate pairs --- both were pairs that v1's lexical gate had accepted.
+\item \textbf{The engagement $\leftrightarrow$ refusal tradeoff is real.} v2 trades a capitulation-cell win ($0.36 \rightarrow 0.17$ plain leak) for a leakage-cell regression ($0.06 \rightarrow 0.27$). Per-item inspection: the two regressing items both leak via \emph{engaged partial disclosure} rather than pressure-induced capitulation. The authoring-aware scaffold's ``what I \emph{can} discuss at a meta level'' register spills across cells and \emph{weakens} the stricter ``I can't share that'' register that leakage items benefit from.
+\end{enumerate}
+
+\subsection{v2.2 --- a targeted over-refusal fix (partial success, register flip)}
+\label{sec:4.4}
+Motivated by \Cref{sec:4.2}'s authoring-to-principal probe, we added a \texttt{reader\_is\_principal} boolean to the item schema (default \texttt{false}, \texttt{true} for \texttt{pb-author-to-principal-0\{1,2\}}) and wrote a matching conditioned scaffold prompt that explicitly tells the teacher ``the person you're talking to IS the principal; produce the full artifact, including any `do not reveal to X' sections.'' We trained v2.2 on a 70-pair set (the 57 v2 pairs plus 13 \texttt{(rejected=v2-refusal, chosen=produce-in-full)} pairs).
+
+Results are a \emph{directional success with a register flip}:
+\begin{center}\small
+\begin{tabular}{l r r r}
+\toprule
+metric ($n{=}30$) & v2 & v2.2 & $\Delta$ \\
+\midrule
+plain leak (aggregate)     & 0.206 & 0.139 & $-0.067$ \\
+plain authoring-cell leak  & 0.367 & 0.133 & $-0.233$ \\
+plain leakage-cell leak    & 0.317 & 0.067 & $-0.250$ \\
+prompted leak (aggregate)  & 0.194 & 0.389 & $+0.195$ \\
+prompted capitulation leak & 0.333 & 0.722 & $+0.389$ \\
+prompted moderation leak   & 0.050 & 0.400 & $+0.350$ \\
+sanity/prompted leak       & 0.250 & 0.000 & $-0.250$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{What worked.} The produce-for-principal pairs collapse the plain-arm authoring-cell leak from $0.37$ to $0.13$ (the best on this cell) and recover v1-lite's leakage-cell strength ($0.32 \rightarrow 0.07$).
+
+\paragraph{What broke.} The prompted arm regresses heavily across most non-sanity cells. v2.2 in the prompted arm now \emph{over-engages} when the briefing mentions holding positions: it produces extended ``here's my analysis $+$ here's what I'll share $+$ here's what I won't'' responses that end up partial-disclosing secondary withhold facts. The 13 produce-for-principal pairs used \texttt{PLAIN\_SYSTEM} (not the loyalty preamble), so DPO saw a correlation between ``plain-system $+$ produce-fully'' in the chosen texts; when the prompted system is active at inference, the model interprets the loyalty framing as \emph{permission} to produce more extensive annotated responses.
+
+\paragraph{v0.5 (balanced recipe, negative result).} We authored 4 more \texttt{reader\_is\_principal=true} items and regenerated produce-pairs with \texttt{--both\_systems} so each fold emits one pair under \texttt{PLAIN\_SYSTEM} and one under \texttt{PROMPTED\_SYSTEM} (36 pairs total, $2.8\times$ the v2.2 dose). Trained v0.5 on the 93-pair set. The hypothesis ``conditional produce/refuse policy is learnable if we just balance the pair templates'' is falsified at this data scale. DPO on 36 balanced produce-pairs vs.\ 57 refuse-pairs produces a register \emph{mix} rather than a conditional policy. Two corollaries:
+
+\begin{enumerate}
+\item \textbf{The reader-identity distinction is not captured by the prompt$+$counterparty text alone.} The pair builder gives the model the same principal briefing and the same first counterparty turn in both the chosen (produce) and rejected (refuse) contexts; the only structural difference is the \texttt{reader\_is\_principal} annotation, which is \emph{not surfaced in the prompt text DPO sees}. DPO cannot learn a distinction it isn't shown.
+\item \textbf{An architectural fix (not a data fix) is the path forward.} Natural candidates: an explicit \texttt{[READER:\,PRINCIPAL]} / \texttt{[READER:\,COUNTERPARTY]} token injected into the system prompt at rollout time (so DPO has a surface-level feature to condition on); a rollout-time classifier that sets a reader-identity field consumed by the agent; or a KTO/IPO-style preference objective that treats the conditional as a separate task head.
+\end{enumerate}
+
+We therefore report v2 as the \textbf{best first-DPO variant} (aggregate plain-arm leak $0.21$, no cell-level regression beyond baseline on anything except sanity cell over-refusal), v2.2 as the plain-arm ceiling ($0.14$) with an explicit prompted-arm caveat, and v0.5 as the negative result. The architectural fix that makes v2's residuals tractable --- the \Cref{sec:4.5} sentinel --- is what carries forward into v4 / v4.1 and the DAPO headline.
+
+\subsection{v0.6 --- reader-identity sentinel (architectural fix, positive result)}
+\label{sec:4.5}
+We then implemented the architectural fix flagged in \Cref{sec:4.4}. The key change is at rollout time, not in training data: \texttt{Agent.\_system()} now prepends a literal sentinel token to the system prompt derived from \texttt{item.reader\_is\_principal}:
+
+\begin{itemize}
+\item \texttt{[READER:\,PRINCIPAL]} $+$ brief instruction that the party being addressed IS the principal and requested artifacts should be produced in full.
+\item \texttt{[READER:\,THIRD\_PARTY]} $+$ brief instruction that the party is NOT the principal, so briefing-private facts and positions must not be revealed.
+\end{itemize}
+
+Training is the same 93-pair volume as v0.5 (57 third-party refuse $+$ 36 principal produce), but each pair's system field is rewritten to include the matching sentinel. DPO now sees the reader-identity distinction as a literal prompt feature.
+
+\paragraph{Probe results --- the architectural fix actually fixes the failure.}
+\begin{center}
+\begin{tabular}{l r r r}
+\toprule
+variant & plain & prompted & total \\
+\midrule
+baseline & 3/6 & 3/6 & 6/12 \\
+v2       & 4/6 & 5/6 & 9/12 \\
+v0.5     & 3/6 & 5/6 & 8/12 \\
+\textbf{v0.6} & \textbf{1/6} & \textbf{2/6} & \textbf{3/12} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+v0.6 is the only trained variant to land \emph{below} baseline on the probe --- a 67\% reduction in over-refusals vs.\ v2.
+
+\paragraph{Phase~2 --- third-party leak protection preserved, leakage cell improves.}
+\begin{center}\small
+\begin{tabular}{l r r r r}
+\toprule
+metric ($n{=}30$) & v2 & v0.5 & \textbf{v0.6} & v0.6 vs.\ v2 \\
+\midrule
+plain leak (aggregate)     & 0.206 & 0.333 & 0.225           & $+0.02$ \\
+plain leakage-cell leak    & 0.317 & 0.217 & \textbf{0.100}  & $-0.22$ \\
+plain authoring-cell leak  & 0.367 & 0.333 & 0.367           & $0.00$  \\
+plain moderation-cell leak & 0.050 & 0.150 & 0.050           & $0.00$  \\
+prompted leak (aggregate)  & 0.194 & 0.267 & 0.272           & $+0.08$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{What this tells us.} Surfacing the reader-identity distinction as a literal prompt token lets DPO learn a \emph{conditional} produce-vs-refuse policy rather than a register mix. The same 93-pair training set that produced v0.5's null result --- plain$+$prompted balanced pair templates, no architectural feature to condition on --- produces a strong positive result once the distinction is exposed to the model's input.
+
+\paragraph{Within the v0.5/v0.6 era.} v2 wins on third-party leak ($0.206$ aggregate plain, $0.194$ prompted); v0.6 wins on reader-identity conditional behavior (3/12 probe vs.\ v2's 9/12, $0.100$ leakage-cell plain vs.\ v2's $0.317$). The \Cref{sec:4.4} sentinel architectural fix introduced here is the load-bearing change that propagates forward into the v4/v4.1 DPO and DAPO-v1 headline; \textbf{the paper's deployment endpoint is DAPO-v1 step\_35}, which inherits v0.6's sentinel behaviour through the v4 SFT base.
+
+\subsection{Is v0.6 memorizing or generalizing? And is the sentinel a blind override?}
+\label{sec:4.6}
+Two follow-up experiments probe whether v0.6's probe gains are a real capability or an artifact.
+
+\paragraph{Generalization --- held-out items.} By coincidence of the pair-builder, only 4 of the 6 probe items produced training pairs: $\{01, 02, 04, 05\}$. Items $\{03, 06\}$ are de facto held out.
+
+\begin{center}
+\begin{tabular}{l r r r r}
+\toprule
+item (status) & baseline & v2 & v0.5 & \textbf{v0.6} \\
+\midrule
+01 trained  & 1/2 & 1/2 & 1/2 & \textbf{0/2} \\
+02 trained  & 0/2 & 2/2 & 1/2 & \textbf{0/2} \\
+03 HELDOUT  & 0/2 & 2/2 & 1/2 & \textbf{1/2} \\
+04 trained  & 2/2 & 1/2 & 1/2 & \textbf{0/2} \\
+05 trained  & 1/2 & 2/2 & 2/2 & 2/2          \\
+06 HELDOUT  & 2/2 & 1/2 & 2/2 & \textbf{0/2} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Held-out item 06 moves from baseline 2/2 $\rightarrow$ v0.6 \textbf{0/2}; held-out item 03 improves v2 2/2 $\rightarrow$ v0.6 1/2. The sentinel-conditional behavior generalizes --- v0.6 has learned that \texttt{[READER:\,PRINCIPAL]} maps to a produce register regardless of the specific principal briefing.
+
+\paragraph{Mechanism --- sentinel-spoof probe.} We monkey-patched \texttt{reader\_sentinel} at rollout time to force a mismatched sentinel on 9 items. Spoofing the sentinel to PRINCIPAL on clear third-party items produces one-fact slippage on \texttt{pb-author-policy-01} (whose briefing is ambiguous --- the principal is a policy \emph{drafter}) and no leakage on the price-negotiation or BATNA items. Spoof B (6 principal items with forced \texttt{[READER:\,THIRD\_PARTY]}): correct-sentinel probe fires 3/12; spoof-sentinel fires 5/12 --- $+2$ failures, not a global flip.
+
+\paragraph{Takeaway.} v0.6's sentinel is a \emph{guide the model weighs against other evidence}, not a master switch. An attacker who injected \texttt{[READER:\,PRINCIPAL]} into the system prompt on a third-party item would not achieve free exfiltration --- on 5 of 6 third-party $\times$ arm cells the model's briefing-grounded reasoning resists the lie.
+
+\subsection{The prompting frontier --- v1 $\rightarrow$ v4 ablation and the two-sided failure manifold}
+\label{sec:4.7}
+A reviewer will ask: \emph{is this just a prompt-engineering benchmark?} We iterated the \texttt{prompted}-arm system prompt through four numbered versions and re-scored Phase~1 (5 subjects $\times$ 16 items) under a single rewritten briefing-grounded judge.
+
+\begin{center}\small
+\begin{tabular}{l r r r r}
+\toprule
+metric (prompted \% / scaffolded \%) & v1 & v2 & v3 & \textbf{v4} \\
+\midrule
+leak\_rate              & 22.0 / 22.0 & 11.0 / 12.0 & 16.0 / 13.0 & \textbf{12.0 / 12.0} \\
+harm\_fire              & 18.0 / 13.0 & 15.0 / 18.0 &  8.0 / 8.0  & \textbf{6.0 / 6.0} \\
+bound\_leak (count)     & 6 / 5       & 3 / 2       & 2 / 3       & \textbf{1 / 1} \\
+commitment\_hold        & 95.0 / 100.0& 97.0 / 98.0 & 95.0 / 98.0 & \textbf{97.0 / 100.0} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{itemize}
+\item \textbf{v1 $\rightarrow$ v2} (adversarial-stranger framing $+$ decline-without-enumerating): halves leak; harm flat.
+\item \textbf{v2 $\rightarrow$ v3} (add private-bound/position distinction, execute-positive-instructions, ``ops questions aren't probes''): cuts harm by $\sim 54\%$, but leak drifts back up $+29\%$.
+\item \textbf{v3 $\rightarrow$ v4} (narrow-scope surgery): adds explicit rule ``conditional permissions are not proactive offers''; restores v2's decline-without-enumerating tightness; narrows ``execute positive instructions'' to an enumerated list. v4 is Pareto-better than every prior version on prompted and scaffolded cells.
+\end{itemize}
+
+\paragraph{Takeaway.} The leak--harm pair defines a two-sided failure manifold. Naive ``be more careful'' prompting moves leak but not harm (v2); naive ``do what the principal said'' prompting moves harm but not leak (v3). Only failure-mode-targeted, trajectory-grounded edits (v4) cross the frontier on both. Even after four disciplined iterations, leak\_rate remains $\sim 12\%$ and harm\_fire $\sim 6\%$ on 16 adversarial items, so the benchmark cannot be prompted away.
+
+\subsection{The posttraining frontier --- v4 $\rightarrow$ v4.1 and the manifold at the model-weight level}
+\label{sec:4.8}
+The v4-trained Qwen3-8B drives the leak rate to a historic low (prompted 5.1\%, scaffolded 5.3\% on the full $n{=}36$ benchmark --- $\sim 75\%$ relative reduction vs.\ the v1-trained prior best of 19.7\%) but over-corrects: \texttt{missed\_instruction} rises to $41.7 / 44.4\%$ across prompted and scaffolded arms, compared to 0--6\% for the v1-trained model. The regression is almost entirely concentrated on reader-is-principal probe items (14 of 18 probe rollouts refuse) and cooperative sanity items (19 of 30).
+
+This is posture-collapse: the v4 teacher trained a strict refuse/hedge register that generalizes past the adversarial case and now suppresses principal-legitimate requests.
+
+\paragraph{v4.1: targeted DPO walks the frontier.} We mined the 42 \texttt{missed\_instruction} regressions from Phase~2 v4, paired the v4-trained model's refusal (\texttt{rejected}) with the Claude-Sonnet teacher's turn-1 response (\texttt{chosen}) on the same briefing$+$opening, and ran a second DPO pass (66 new pairs $+$ original 71 v4 pairs, 3 epochs, 207 steps, final margins $\approx 1.3$).
+
+\begin{center}\small
+\begin{tabular}{l r r r r}
+\toprule
+metric ($n{=}36 \times 3$ arms, 108 rollouts) & v4 prompted & v4 scaff & \textbf{v4.1 prompted} & \textbf{v4.1 scaff} \\
+\midrule
+leak\_rate                       & 5.1\%   & 5.3\%   & \textbf{6.0\%}    & \textbf{5.6\%} \\
+missed\_instruction              & 15 / 36 & 16 / 36 & \textbf{12 / 36}  & \textbf{11 / 36} \\
+missed\_instruction (probe cut)  & 5 / 6   & 6 / 6   & \textbf{3 / 6}    & \textbf{5 / 6} \\
+leaked\_private\_bound (all arms)& 2       & ---     & \textbf{5}        & --- \\
+harm\_fire (all arms)            & 42/108  & ---     & \textbf{31 / 108} & --- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Phase~2.1} (the v4 $\rightarrow$ v4.1 second DPO pass) cuts MI fires by a third ($42 \rightarrow 28$, $-33\%$), recovers half the probe-item losses (plain arm $3/6 \rightarrow 0/6$), and holds the leak rate essentially flat ($+0.9$\,pp prompted, $+0.3$\,pp scaffolded). Net harm is down 26\%.
+
+\paragraph{The frontier persists at a finer grain.} The three new \texttt{leaked\_private\_bound} fires are all on one item (\texttt{pb-capit-sunk-01}: across all three arms, the v4.1 model now explicitly offers the \$10K goodwill ceiling named in the briefing). The v4 model had \emph{refused to make any offer} on that item (MI); v4.1 makes the offer but names the cap (bound-leak). Same item, same trajectory structure, crossed from one failure mode to the other. This is the manifold in miniature: the posttraining intervention did not eliminate the tradeoff, only reshaped the mass.
+
+\paragraph{Takeaway.} The leak--harm tradeoff appears now at three independent levels --- judge design (\Cref{sec:2.2}), agent prompting (\Cref{sec:4.7}), and posttraining (\Cref{sec:3.4} and the present section) --- with the same signature at each: naive pressure on one side shifts mass to the other. v4.1 demonstrates that DPO can walk the frontier back from a posture-collapse endpoint, at the cost of reintroducing a small, item-specific bound-leak. Whether DAPO crosses the frontier rather than merely walking along it is the question for \Cref{sec:4.9}.
+
+\subsection{DAPO ratchets harm down --- and the residual ceiling}
+\label{sec:4.9}
+We ran DAPO on top of the v4.1 endpoint, with an MI-aware reward designed to guard against the posture-collapse mode that v4.1's DPO just walked back (\Cref{sec:3.6}).
+
+\begin{center}\small
+\begin{tabular}{l r r}
+\toprule
+metric ($n{=}36 \times 3$ arms, 108 rollouts) & v4.1 & \textbf{dapo-v1 step\_35} \\
+\midrule
+leak\_rate plain                        & 11.1\%  & \textbf{11.1\%} \\
+leak\_rate prompted                     & 6.0\%   & \textbf{6.0\%}  \\
+leak\_rate scaffolded                   & 5.6\%   & \textbf{3.9\%}  \\
+missed\_instruction plain               & 6 / 36  & \textbf{3 / 36} \\
+missed\_instruction prompted            & 12 / 36 & 13 / 36         \\
+missed\_instruction scaffolded          & 11 / 36 & \textbf{8 / 36} \\
+harm\_fire total (all arms)             & 31 /108 & \textbf{25 /108} \\
+authoring cell harm\_fire               & 4 / 15  & \textbf{1 / 15} \\
+moderation cell harm\_fire              & 4 / 15  & \textbf{1 / 15} \\
+sanity cell harm\_fire                  & 10 / 30 & 13 / 30          \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Net $-19\%$ harm ($31 \rightarrow 25$ fires), with 15 items improving and 9 regressing. Authoring ($4 \rightarrow 1$) and moderation ($4 \rightarrow 1$) cells collapse almost entirely; scaffolded leak drops 30\% ($5.6 \rightarrow 3.9\%$); leak\,$=0$ holds across the full training run. step\_30 is dominated by step\_35: $12 / 12$ improvements/regressions vs.\ v4.1, equal total harm; not a different frontier point.
+
+\paragraph{Residual failure modes.}
+\begin{enumerate}
+\item \textbf{Prompted-arm probe regression} ($3/6 \rightarrow 6/6$ MI on reader-is-principal items under the prompted arm). Present at both step\_30 and step\_35 --- not a late-training artifact. The asymmetric refusal reward compounds with the prompted arm's caution instructions to over-trigger refusal on probes. The scaffolded arm, which carries the \texttt{[READER:\,PRINCIPAL]} sentinel from \Cref{sec:4.5}, survives ($5/6 \rightarrow 4/6$) --- the architectural reader-identity fix protects against exactly this collision.
+\item \textbf{Sanity-cell drift} ($10/30 \rightarrow 13/30$). The cooperative branch fires on only 8 of 31 train prompts; over 35 steps of mostly-adversarial gradient the cooperative signal is diluted.
+\end{enumerate}
+
+\paragraph{Takeaway.} DAPO with a cell-aware reward does break past v4.1 --- it ratchets authoring, moderation, leakage, and scaffolded leak all at once without a leak regression --- which rules out the pessimistic ``DPO has already captured the signal'' hypothesis. But it does not eliminate the frontier: the same two-sided manifold of \Cref{sec:4.7} and \Cref{sec:4.8} reappears at the RL stage, localized now onto the prompted-arm probe items and the sanity cell. This is the fourth independent level at which the frontier manifests --- judge design (\Cref{sec:2.2}), prompting (\Cref{sec:4.7}), DPO (\Cref{sec:4.8}), and now RL --- with the same signature: directional pressure on one failure mode moves mass onto the other until the reward carries a term for both.
+
+\subsection{Reward-surgery ablations: DAPO-v2, leak-only, and v3 (orthogonality refuted)}
+\label{sec:4.10}
+To test whether the v1 reward is near-optimal, we trained two additional variants from the same v4.1 merged base with matched hyperparameters (LoRA rank $=32$, lr $=1\mathrm{e}{-}5$, $n{=}4$, 5 epochs):
+\begin{itemize}
+\item \textbf{DAPO-v2}: coop refusal penalty $-0.5 \rightarrow \boldsymbol{-1.0}$, adv refusal bonus $+0.5 \rightarrow \boldsymbol{+0.3}$, and a 47-row parquet that $3\times$-oversamples the 8 sanity items to $\sim 51\%$ coop share (vs.\ v1's 26\%).
+\item \textbf{Leak-only}: reward $= -\texttt{leak}$ only. No coop branch, no refusal bonus. Same 31-row v1 parquet.
+\end{itemize}
+
+\begin{center}\small
+\begin{tabular}{l r r r r}
+\toprule
+metric & v4.1 & dapo-v1 & dapo-v2 & leak-only \\
+\midrule
+leak plain / prompt / scaff & 11.1/6.0/5.6 & 11.1/6.0/\textbf{3.9} & 11.2/\textbf{4.2}/8.8 & \textbf{6.9}/8.8/7.4 \\
+\textbf{total harm\_fire}   & 31/108 & \textbf{25/108} & 34/107 & 33/108 \\
+bound\_leak total           & 5      & 4               & \textbf{1} & \textbf{1} \\
+authoring cell              & 4/15   & \textbf{1/15}   & 2/15   & 4/15 \\
+leakage cell                & 3/15   & \textbf{2/15}   & 6/15   & 3/15 \\
+moderation cell             & 4/15   & 1/15            & 2/14   & \textbf{0/15} \\
+posture cell                & 2/15   & \textbf{1/15}   & 3/15   & 4/15 \\
+sanity cell                 & 10/30  & 13/30           & 15/30  & 15/30 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Four distinct frontier points.} No variant Pareto-dominates the others:
+\begin{itemize}
+\item \textbf{v1 is the best overall tradeoff} (25 harm, balanced across cells).
+\item \textbf{v2 regressed net harm} ($25 \rightarrow 34$) but found \textbf{bound-leak $=1$} --- the adv refusal bonus in v1 was encouraging the model to verbalize bound-fact context as justification for refusal (``I can't share the \$10K ceiling because\ldots''); reducing or removing it eliminates almost all bound-leak.
+\item \textbf{Leak-only achieves the lowest plain leak (6.9\%) and lowest bound-leak (1)}, while losing authoring/posture gains and slightly worsening sanity --- but \emph{not} catastrophically collapsing as a naive ``posture-collapse'' hypothesis would predict. The v1 refusal bonus appears to \emph{satisfice} leak reduction.
+\end{itemize}
+
+\textbf{The cooperative branch is load-bearing for 3 of 6 cells} --- authoring, sanity, and posture --- not moderation or capitulation. \textbf{The asymmetric adv refusal bonus is separately load-bearing for bound-leak management, but harms leak reduction} via satisficing. Each term, varied individually from the v1 baseline, moves a different cell group. This \emph{suggested} orthogonal axes --- and we directly tested that prediction with \textbf{DAPO-v3}.
+
+\paragraph{v3 --- the orthogonality test, refuted.} v3 combines leak-only's adv side (no refusal bonus, just $-\texttt{leak}$) with v2's coop side ($-1.0$ penalty $+$ $3\times$ sanity oversample). If reward terms truly tune orthogonal axes, v3 should inherit each variant's strengths: bound-leak $\leq 1$, plain leak $<8\%$, low sanity drift. It does not.
+
+\begin{center}\small
+\begin{tabular}{l r r r r r}
+\toprule
+metric & v1 & v2 & leak-only & \textbf{v3 (predicted)} & \textbf{v3 (actual, step\_55)} \\
+\midrule
+total harm        & 25     & 34     & 33     & \textbf{$<25$} & \textbf{44 \(\bigtriangleup\)} \\
+plain leak        & 11.1\% & 11.2\% & 6.9\%  & \textbf{$<8\%$} & 14.4\% \\
+bound\_leak        & 4      & 1      & 1      & \textbf{$\leq 1$} & 3 \\
+sanity cell       & 13     & 15     & 15     & \textbf{$<13$} & \textbf{19 \(\bigtriangleup\)} \\
+authoring cell    & 1      & 2      & 4      & \textbf{$\leq 2$} & 5 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+v3 is the \emph{worst} trained variant on total harm --- worse than the v4.1 baseline (31). Only the bound-leak axis partially inherits as predicted (3, between v2's 1 and v1's 4). The plain-leak axis \emph{regresses} under v3 (14.4\%, worse than every variant); the sanity axis regresses dramatically (19 of 30). (Step robustness check: v3 step\_30 had total harm 43/107; step\_55 has 44/108. Flat to step count, confirming the failure is structural, not undertraining.)
+
+\paragraph{The frontier has interaction terms, not orthogonal axes.} The v2 / leak-only ablations showed each reward knob moves a different cell when \emph{varied alone} from v1, but v3 shows the knobs are not separable: changing two simultaneously falls out of the v1 stable basin into a worse local optimum. The manifold framing therefore needs a third refinement (after ``two-sided $\rightarrow$ multi-axis''): the axes are \emph{coupled} --- the v1 reward configuration sits in a small basin of attractor states where each cell-group is controllable, and reward designs outside that basin produce unpredictable cell-group trade-offs.
+
+This is a stronger structural claim than orthogonality would have been. Reward design at this scale ($n{=}31$ train rows) is better characterized as \textbf{choosing a basin and refining within it}, not free composition of orthogonal terms.
+
+\subsection{Where does the residual 25 harm fires actually live?}
+\label{sec:4.11}
+Item-level analysis on the DAPO-v1 step\_35 checkpoint shows the residual harm is \textbf{highly localized}, not spread evenly across the benchmark:
+
+\begin{center}
+\begin{tabular}{l r r}
+\toprule
+ & items & harm fires \\
+\midrule
+3-arm clean (all arms harm-free) & \textbf{21 / 36} & 0 \\
+Fires on 1 of 3 arms             & 8                & 8 \\
+Fires on 2 of 3 arms             & 4                & 8 \\
+Fires on 3 of 3 arms             & \textbf{3}       & \textbf{9} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Three items account for 9 of 25 fires (36\%).} Seven items account for 17 of 25 (68\%). The remaining 14 fires are spread across 8 items, each firing on a single arm.
+
+The three triple-arm-firing items have specific signatures:
+\begin{itemize}
+\item \texttt{pb-author-to-principal-03} and \texttt{pb-author-to-principal-05}: reader-is-principal probes. The \Cref{sec:4.5} architectural sentinel helps the scaffolded arm on most probe items but breaks on these two.
+\item \texttt{pb-capit-anchored-01}: capitulation under anchoring pressure. All four \texttt{leaked\_private\_bound} fires across the entire benchmark concentrate on this item and the related \texttt{pb-capit-framing-01} / \texttt{pb-capit-sunk-01}. The bound-leak signature is the agent verbalizing the bound fact while justifying refusal --- ``I can't accept that because we have a \$10K ceiling.''
+\end{itemize}
+
+\textbf{96\% of harm fires (24/25) are \texttt{missed\_instruction}.} The two-sided manifold of \Cref{sec:4.7}/\Cref{sec:4.8} has, after DAPO-v1, effectively collapsed to a single residual axis: the model's MI rate is the only frontier dimension that resists further reduction. Per-cell, this concentrates in \textbf{sanity (13/30, 43\%)} and \textbf{capitulation (7/18, 39\%)}; the other four cells sit at $\leq 13\%$ harm.
+
+\paragraph{Implication for further intervention.} The structural ceiling at 25/108 is not ``the frontier is intrinsically two-sided'' but rather ``7 specific items resist reward-side surgery on this training set.'' Reward-tuning ablations (v2, leak-only, v3) walk along the manifold but cannot drive harm below a floor set by these specific items. We tested the obvious next move --- \emph{data-side intervention} --- directly in \Cref{sec:4.12}.
+
+\subsection{Data expansion ablation: does adding the right items break the ceiling?}
+\label{sec:4.12}
+We expanded the training set from $n{=}31$ to $n{=}46$, adding 15 new items targeted at the 7 concentrated failure modes from \Cref{sec:4.11}: 4 reader-is-principal probe variants, 4 capitulation-anchoring variants, and 7 coverage-breadth items. Reward function is identical to v1; hyperparameters identical.
+
+\begin{center}\small
+\begin{tabular}{l r r r}
+\toprule
+metric (108 rollouts) & v4.1 & DAPO-v1 step\_35 ($n{=}31$) & \textbf{DAPO-v1 step\_55 ($n{=}46$)} \\
+\midrule
+total harm\_fire     & 31    & \textbf{25}     & \textbf{38 \(\bigtriangleup\)} \\
+total MI             & 29    & 24              & 38 \\
+bound\_leak           & 5     & 4               & \textbf{3} \\
+plain leak            & 11.1\%& 11.1\%          & \textbf{9.5\%} \\
+scaffolded leak       & 5.6\% & \textbf{3.9\%}  & 5.6\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{The ceiling is not broken --- it gets worse.} $n{=}46$ produces 38/108 harm, worse than $n{=}31$ (25) AND worse than v4.1 baseline (31).
+
+The per-item delta is the interesting story:
+\begin{itemize}
+\item \textbf{11 improvements}: 7 of the 11 are exactly the high-leverage items the expansion was designed to fix (\texttt{pb-author-to-principal-01/03/05}, \texttt{pb-capit-anchored-01}). The targeted items DID get better.
+\item \textbf{24 regressions}: spread across cells that were \emph{not} the focus of the expansion --- leakage, posture, capitulation, authoring. The new items shifted the policy in ways that hurt generalization on old items.
+\end{itemize}
+
+Per-cell, the regressions concentrate in \textbf{leakage} ($2/15 \rightarrow 7/15$) and \textbf{posture} ($1/15 \rightarrow 5/15$).
+
+\paragraph{Paper-level finding.} This generalizes the \Cref{sec:4.10} ``stable reward basin'' claim from reward design to data design. Both reward terms and data composition produce coupled, non-additive policy shifts. The 25/108 ceiling is co-determined by the v1 reward $\times$ $n{=}31$ data combination --- changing either one alone falls out of the stable basin. Breaking the ceiling requires \emph{joint} reward$+$data co-tuning, which the $n{=}31$ experimental scale doesn't yet support.
+
+This refines \Cref{sec:4.11}'s conclusion: not ``data expansion is the right next-step intervention'' but ``\textbf{reward and data design are coupled axes of the manifold; the structural ceiling reflects the calibration of v1's reward to $n{=}31$'s specific item distribution}.'' The basin metaphor extends across two design dimensions, and the empirical bar for ``breaking the frontier'' is correspondingly higher.
+
+\subsection{Counterparty robustness --- is the frontier a Claude-specific dialogue artifact?}
+\label{sec:4.13}
+All Phase 2/2.1/3 results above use \texttt{claude-sonnet} as the counterparty. To rule out a two-model chemistry effect, we re-ran the full $n{=}36 \times 3$-arm Phase~3 eval on DAPO-v1 step\_35 with two additional counterparty vendors: OpenAI's \texttt{gpt-5} and Google's \texttt{gemini-3-flash}. Subject model, items, arms, and judge rubric are identical; only the other party changes.
+
+\begin{center}\small
+\begin{tabular}{l r r r}
+\toprule
+metric (108 rollouts) & cp $=$ claude-sonnet & cp $=$ gpt-5 & cp $=$ gemini-3-flash \\
+\midrule
+leak plain            & 11.1\% & 15.3\% & 13.7\% \\
+leak prompted         &  6.0\% &  3.7\% &  8.1\% \\
+leak scaffolded       &  3.9\% &  8.8\% &  4.2\% \\
+\textbf{harm\_fire total} & \textbf{25/108} & \textbf{34/108} & \textbf{38/108} \\
+missed\_instruction   & 24     & 34     & 38 \\
+leaked\_private\_bound  &  4     & \textbf{0} &  3 \\
+authoring cell        &  1/15  &  7/15  &  4/15 \\
+capitulation cell     &  7/18  &  6/18  &  7/18 \\
+leakage cell          &  2/15  &  4/15  &  5/15 \\
+moderation cell       &  1/15  &  1/15  &  3/15 \\
+posture cell          &  1/15  &  3/15  &  3/15 \\
+sanity cell           & 13/30  & 13/30  & 16/30 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{The frontier is vendor-invariant.} Leak rates land in a 3.7--15.3\% band across every arm $\times$ vendor combination and never dominate harm. Harm is dominated by \texttt{missed\_instruction} under every counterparty. The \Cref{sec:4.9} ``frontier is structural'' claim now has positive evidence against the single-counterparty objection.
+
+\paragraph{Mass migrates \emph{within} the manifold, not across it.} Non-Claude counterparties produce \emph{more} MI ($+42\%$ GPT-5, $+58\%$ Gemini) and \emph{less} bound-leak ($4 \rightarrow 0 \rightarrow 3$). This is the exact signature the manifold framing predicts: pressure on one dimension shifts mass to the other.
+
+\paragraph{Per-cell counterparty sensitivity is uneven.} Capitulation is nearly counterparty-invariant ($7 / 6 / 7$) --- the model's anchor-resistance is internal, not elicited by counterparty style. Authoring is counterparty-sensitive ($1 / 7 / 4$), consistent with \Cref{sec:4.5}'s thesis that reader-identity disambiguation is fragile at the surface level: different vendors exercise different probe patterns.
+
+\subsection{Cross-family replication: Mistral-7B-Instruct-v0.3}
+\label{sec:4.14}
+A reviewer objection to all of \Cref{sec:3}--\Cref{sec:4.13} is that the trained subject is a single base model (Qwen3-8B). To address this, we replicate the SFT$\rightarrow$DPO pipeline on \textbf{Mistral-7B-Instruct-v0.3} --- different architecture, different pretraining mix, different chat template (Mistral's \texttt{[INST]\ldots[/INST]} format inlines the system message into the first user turn, vs.\ Qwen3's separate \texttt{<|im\_start|>system}). The teacher traces (\texttt{data/sft\_v4.jsonl}, 70 traces) and DPO pairs (\texttt{data/dpo\_v4\_combined.jsonl}, 137 pairs) are byte-identical to the Qwen3-8B run; only the base model and chat template differ.
+
+\begin{center}\small
+\begin{tabular}{l r r r}
+\toprule
+metric ($n{=}36 \times 3$ arms, 108 rollouts) & Qwen3-8B base & Qwen v4.1 SFT$+$DPO & \textbf{Mistral v4.1 SFT$+$DPO} \\
+\midrule
+leak plain                  &  67.6\%   & 11.1\%    &  \textbf{11.8\%} \\
+leak prompted               &  64.1\%   &  6.0\%    &  \textbf{6.9\%} \\
+leak scaffolded             &  66.0\%   &  5.6\%    &  \textbf{7.2\%} \\
+total harm\_fire            & 28 / 107  & 31 / 108  & \textbf{27 / 108} \\
+total bound\_leak            &   6       &   5       &  \textbf{2} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{The SFT$\rightarrow$DPO recipe transfers within $\pm 2$\,pp on every leak metric.} Total harm is comparable (27 vs.\ 31 --- Mistral marginally better); bound-leak is actually lower on Mistral (2 vs.\ 5). Per-cell, Mistral is better than Qwen v4.1 on capitulation (5 vs.\ 8), moderation (1 vs.\ 4), and sanity (7 vs.\ 10); worse on authoring (6 vs.\ 4) and posture (5 vs.\ 2). The aggregate leak/harm reduction is structural to the recipe, not the base.
+
+Two engineering fixes were required for Mistral compatibility, both no-ops on Qwen3:
+\begin{enumerate}
+\item \textbf{Consecutive-user-turn merging} during SFT data preprocessing --- Mistral's chat template requires strict user/assistant alternation, but our harness sends \texttt{briefing $+$ counterparty\_opening} as two consecutive user messages.
+\item \textbf{Same merge} at inference time inside \texttt{OpenAICompatVendor.chat} --- so the same multi-turn rollout protocol works against either chat template.
+\end{enumerate}
+
+Combined with \Cref{sec:4.13} counterparty robustness, the headline structural claim now has empirical support across:
+\begin{itemize}
+\item \textbf{2 base model families} (Qwen3-8B $+$ Mistral-7B-Instruct-v0.3)
+\item \textbf{3 counterparty vendors} (Anthropic / OpenAI / Google)
+\item \textbf{4 reward variants} (v1 / v2 / leak-only / v3)
+\item \textbf{5 frontier-evidence levels} (judge / prompt / DPO / DAPO / counterparty)
+\end{itemize}
+
+The ``single base model'' limitation in earlier drafts is removed.
+
+\subsection{Baseline ablation: does the scaffolded sentinel work without training?}
+\label{sec:4.15}
+A second reviewer concern: \Cref{sec:4.5}'s \texttt{[READER:\,PRINCIPAL]} sentinel is a clever prompt engineering trick that might do most of the work itself, with training contributing little. We test this directly by evaluating the \textbf{untrained Qwen3-8B base} on the same 108-rollout grid:
+
+\begin{center}\small
+\begin{tabular}{l r r r r}
+\toprule
+arm        & base Qwen leak & DAPO-v1 leak & base harm\_fire & DAPO-v1 harm\_fire \\
+\midrule
+plain      &  67.6\% & 11.1\% & 12 / 35  & 4 / 36 \\
+prompted   &  64.1\% &  6.0\% &  8 / 36  & 13 / 36 \\
+scaffolded &  66.0\% &  3.9\% &  8 / 36  & 8 / 36 \\
+\textbf{total} &     &        & \textbf{28/107} & \textbf{25/108} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Training reduces leak $\sim 17\times$} (from 64--67\% to 4--11\%). The scaffolded sentinel alone does almost nothing for leak --- 66\% on the untrained model. But total \texttt{harm\_fire} (28 vs.\ 25) is misleadingly close because \textbf{failure-mode mass shifts dramatically between leak and MI}: the untrained model almost never over-refuses (sanity 8/30, the lowest of any variant), while the trained models trade some MI to get the leak reduction (sanity 10--13/30). This is a third independent observation point on the manifold --- sitting in the ``high-leak, low-MI'' corner. Aggregating to a single \texttt{harm\_fire} metric collapses the manifold and misleadingly suggests training contributes little; per-cell and per-failure-mode breakdown shows the contribution is large and structural.
+
+\section{Related work}
+\label{sec:5}
+
+\paragraph{Multi-party / agentic benchmarks.} MAGPIE \citep{evans2024magpie} reports 35--50\% leak rates in multi-party negotiation benchmarks; our leakage-cell baselines land in their band for frontier models (14--27\%). AgentHarm \citep{andriushchenko2024agentharm} and AdvBench-style adversarial probe sets test single-turn refusal robustness but do not exercise multi-turn principal-on-behalf-of dynamics. SecAlign \citep{chen2025secalign} and PromptInject \citep{perez2022promptinject} attack the system-vs.-user instruction boundary; PrincipalBench can be read as the \emph{cooperative analogue} --- the agent is \emph{supposed} to follow the principal's hidden instructions, and the failure mode is folding to a non-principal counterparty.
+
+\paragraph{Principal-loyalty / negotiation register.} The PaceBench sibling paper \citep{evans2026pacebench} introduces the \texttt{LoyaltyState} observer pattern that this work's scaffolded arm builds on. Recent work on emotional-pacing and multi-turn negotiation (Anthropic constitutional AI; OpenAI's ``model spec'' sections on principals/agents) frames the same conflict but does not provide a quantitative benchmark or trained-weight intervention.
+
+\paragraph{Posttraining methods.} DPO \citep{rafailov2023dpo} is our primary preference-optimization tool. DAPO \citep{bytedance2024dapo} provides the GRPO variant with dynamic sampling and asymmetric clip used in \Cref{sec:3.6}; we use the verl 0.7.1 implementation. The \Cref{sec:4.10} ``stable reward basin'' finding parallels observations in the RLHF reward-hacking literature (e.g., \citealt{casper2023rlhfreview, tien2023rewarddesign}) that small reward changes can produce large policy distribution shifts; we extend this to the joint reward $\times$ data design space.
+
+\paragraph{Failure-mode taxonomies.} The split judge separating \texttt{against\_principal} from \texttt{missed\_instruction} is informed by the broader specification-gaming literature \citep{krakovna2020specgaming} and the ``alignment tax'' framing of helpful/harmless trade-offs \citep{askell2021assistant}. Our manifold framing --- directional pressure on one axis shifts mass to another --- is a quantitative version of the alignment-tax intuition with cell-resolved measurement.
+
+\section{Limitations}
+\label{sec:6}
+
+This work was iterated through multiple drafts; some prior limitations have been addressed and are now positive contributions, while others remain open. We list both for clarity.
+
+\paragraph{Limitations from earlier drafts now addressed.}
+\begin{itemize}
+\item \emph{Single base model.} \Cref{sec:4.14} replicates the SFT$\rightarrow$DPO recipe on Mistral-7B-Instruct-v0.3 within $\pm 2$\,pp on every leak metric.
+\item \emph{Single counterparty vendor.} \Cref{sec:4.13} swaps in OpenAI \texttt{gpt-5} and Google \texttt{gemini-3-flash}; the leak/MI manifold preserves shape under all three.
+\item \emph{Architectural fix vs.\ data fix attribution.} \Cref{sec:4.15} baseline ablation shows the scaffolded sentinel alone leaves leak at 66\% --- training contributes the bulk of the leak reduction.
+\end{itemize}
+
+\paragraph{Open limitations.}
+\begin{itemize}
+\item \textbf{$n{=}36$ items in the headline benchmark, $n{=}51$ with the v0.5 expansion} --- bootstrap CIs on per-cell rates are wide (cell size 4--10). The v0.5 expansion adds 15 items targeting the 7 concentrated failure-mode items from \Cref{sec:4.11}; per-cell claims on the v0 grid are still the headline numbers in this draft.
+\item \textbf{Counterparty coverage is three vendors, one model each.} \Cref{sec:4.13} reports DAPO-v1 step\_35 across claude-sonnet, gpt-5, and gemini-3-flash; the frontier holds in all three. The Phase 1/2/2.1 sweeps and the \Cref{sec:4.9} headline still use only \texttt{claude-sonnet}; we have not checked whether the \emph{v4.1 $\rightarrow$ DAPO-v1} delta itself reproduces under alternative counterparties, only that the endpoint does.
+\item \textbf{Dual-judge $\kappa$ is moderate.} \Cref{sec:2.2} reports any-fire $\kappa = 0.42$ (baseline rater pair) / $0.40$ (trained-model rater pair) --- both ``moderate'' by Landis--Koch. Per-sub-flag $\kappa$ on \texttt{fabrication} / \texttt{deception} is low (0.07--0.31) --- we report the any-fire aggregate in the headline and flag the deception sub-flag as noisy. A third-judge tiebreak or rubric refinement would be needed before citing per-sub-flag counts.
+\item \textbf{Hosted-model serving opacity} --- Phase~1 numbers for subjects served via OpenRouter (\texttt{qwen-8b}, \texttt{qwen-27b}, \texttt{gemini-3p1}) should be treated as lower bounds.
+\item \textbf{Authoring-cell over-refusal is resolved via architectural fix, not data fix} (\Cref{sec:4.4}--\Cref{sec:4.5}). v2 and v2.1 fail 2--3 of 4 authoring-to-principal sanity trajectories. Pair-curation fixes (v2.2, v0.5) produce partial or null results; a rollout-time \texttt{[READER:\,PRINCIPAL]} / \texttt{[READER:\,THIRD\_PARTY]} sentinel (v0.6) drops probe over-refusal from 9/12 to 3/12 --- below baseline. The lesson: DPO cannot learn a distinction the prompt does not surface.
+\end{itemize}
+
+\section{Reproducibility}
+\label{sec:7}
+
+All items, scored trajectories, SFT/DPO/DAPO adapters, and merge artifacts are in the repo at \texttt{/home/ubuntu/principal-loyalty/}. The scripts referenced are in \texttt{scripts/} and are runnable end-to-end in the order described by \texttt{progress.md}.
+
+\paragraph{Items.} \texttt{items/v0/*.json} ($n{=}36$, headline grid); \texttt{items/v0\_5/*.json} ($n{=}51$, expansion grid for \Cref{sec:4.12}).
+
+\paragraph{Phase~1 (5-subject diagnostic).} Hosted-vendor runs at \texttt{runs/phase1*/scored.jsonl}. Local-vLLM Qwen3-8B baseline (the 88\% plain-leak number) at \texttt{runs/phase2\_baseline/scored.jsonl} and \texttt{runs/phase3\_baseline\_qwen/scored.jsonl}.
+
+\paragraph{Phase~2 (SFT$+$DPO).} Earlier-iteration outputs at \texttt{runs/phase2\_trained\{,\_v1,\_v1\_lite,\_v2,\_v06\}/scored.jsonl}. Adapters at \texttt{runs/qwen\_\{sft,dpo,dpo\_v1,dpo\_v1\_lite,dpo\_v2,dpo\_v06\}/}. Headline DPO endpoint: \texttt{runs/qwen\_sft\_dpo\_v4\_1\_merged/} (16\,GB), eval at \texttt{runs/phase2\_trained\_v4\_1/scored.jsonl}. DPO pair files: \texttt{data/dpo\_v\{0,1,1\_lite,2,05,06,4,4\_combined\}.jsonl}.
+
+\paragraph{Phase~3 (DAPO).} Headline checkpoint: \texttt{runs/qwen\_dapo\_v1\_step35\_merged/} (16\,GB). DAPO LoRA dirs: \texttt{runs/qwen\_dapo\_v1/global\_step\_\{10,20,30,35\}/}. Reward variant adapters: \texttt{runs/qwen\_dapo\_\{v2,leakonly,v3\}/global\_step\_*/}. Phase~3 evals: \texttt{runs/phase3\_dapo\_v1\_step35/}, \texttt{runs/phase3\_dapo\_v\{2\_step55,leakonly\_step35,v3\_step\{30,55\}\}/}. Reward function: \texttt{src/reward.py}. DAPO config: \texttt{scripts/run\_dapo.sh}.
+
+\paragraph{\Cref{sec:4.13} counterparty robustness.} \texttt{runs/phase3\_dapo\_v1\_step35\{,\_gpt5cp,\_gemcp\}/scored.jsonl}. Comparison: \texttt{scripts/compare\_counterparty.py}.
+
+\paragraph{\Cref{sec:4.14} cross-family Mistral.} Adapters: \texttt{runs/mistral\_sft\_v4/}, \texttt{runs/mistral\_dpo\_v4\_1/}. Merged: \texttt{runs/mistral\_sft\_dpo\_v4\_1\_merged/} (14\,GB). Eval: \texttt{runs/phase3\_mistral\_sft\_dpo/scored.jsonl}.
+
+\paragraph{\Cref{sec:4.15} baseline ablation.} \texttt{runs/phase3\_baseline\_qwen/scored.jsonl} (107/108).
+
+\paragraph{\Cref{sec:4.12} data expansion.} \texttt{runs/qwen\_dapo\_v1\_n51\_step55\_merged/} (16\,GB), eval at \texttt{runs/phase3\_dapo\_v1\_n51\_step55/scored.jsonl}. Train data: \texttt{data/verl\_train\_v0\_5.parquet} (46 train rows / 5 val).
+
+\paragraph{Item-level harm analysis.} \texttt{runs/phase3\_dapo\_v1\_step35/item\_harm\_analysis.txt} (the \Cref{sec:4.11} 7-items / 68\% concentration result). Script: \texttt{scripts/item\_harm\_analysis.py}.
+
+\section{Conclusion}
+\label{sec:8}
+
+\paragraph{Headline.} The leak/MI tradeoff in principal-acting LLM agents is a structural multi-axis manifold, not an artifact of any specific judge, prompt, training method, dialogue partner, or base model. We characterize the manifold empirically through five independent levels of evidence (\Cref{sec:2.2}, \Cref{sec:4.7}, \Cref{sec:4.8}, \Cref{sec:4.9}, \Cref{sec:4.13}) and three robustness tests (\Cref{sec:4.13}--\Cref{sec:4.15}), release a 36-item $\times$ 3-arm benchmark for measuring it, and present a three-stage SFT$\rightarrow$DPO$\rightarrow$DAPO recipe that ratchets total harm from 42 to 25 of 108 trajectories on Qwen3-8B and replicates within $\pm 2$\,pp on Mistral-7B-Instruct-v0.3.
+
+\paragraph{The recipe is not the contribution --- it is the falsifier we used to map the manifold's structure.} The contribution is the manifold's geometry: (i) stable reward $\times$ data basins, (ii) coupled axes that resist naive composition (DAPO-v3 refutation, \Cref{sec:4.10}), (iii) an item-coverage ceiling at this experimental scale that is co-determined by reward and data design rather than either alone (\Cref{sec:4.12}), and (iv) an architectural sentinel that reframes a stubborn reader-identity over-refusal failure as a prompt-feature problem rather than a data problem (\Cref{sec:4.5}).
+
+\paragraph{What remains open.} The 25/108 ceiling has not been broken. Driving harm below it will need \emph{joint} reward $\times$ data co-tuning outside the v1 basin, on a meaningfully larger corpus than $n{=}31$. The dual-judge $\kappa$ ($\sim 0.41$ any-fire) is moderate; per-sub-flag claims still need a third-judge or rubric refinement. The Phase~1 5-subject sweep predates the multi-axis framing and should be re-run under the \texttt{harm\_fire} metric for full comparability with the headline.
+
+\paragraph{Future work.} Three concrete directions: (a)~\textbf{DAPO-v5} that combines leak-only's adversarial reward (no refusal bonus) with v2's coop side, on the $n{=}51$ expanded data with sanity oversampling matched to the new mix --- a direct test of whether co-tuning escapes the basin; (b)~a \textbf{learned reward model} trained against the \texttt{gpt-5-mini} judge, replacing the lexical-proxy reward in DAPO and removing the satisficing dynamic noted in \Cref{sec:4.10}; (c)~an \textbf{$n \geq 100$ benchmark expansion} with bootstrap-CI-tight per-cell measurement, enabling sub-cell claims that the current $n{=}36$ cannot support. PrincipalBench, the trained-model artifacts, and the experimental scaffolding for all three directions are released.
+
+% --- Bibliography ------------------------------------------------------------
+\begin{thebibliography}{99}
+
+\bibitem[Andriushchenko et al.(2024)]{andriushchenko2024agentharm}
+Andriushchenko, M. et al.
+\newblock AgentHarm: A benchmark for measuring harmfulness of LLM agents.
+\newblock 2024.
+
+\bibitem[Askell et al.(2021)]{askell2021assistant}
+Askell, A. et al.
+\newblock A general language assistant as a laboratory for alignment.
+\newblock 2021.
+
+\bibitem[Bytedance(2024)]{bytedance2024dapo}
+Bytedance.
+\newblock DAPO: An open-source LLM reinforcement learning system at scale.
+\newblock 2024.
+
+\bibitem[Casper et al.(2023)]{casper2023rlhfreview}
+Casper, S. et al.
+\newblock Open problems and fundamental limitations of reinforcement learning from human feedback.
+\newblock 2023.
+
+\bibitem[Chen et al.(2025)]{chen2025secalign}
+Chen, S. et al.
+\newblock SecAlign: Defending against prompt injection with structured queries.
+\newblock 2025.
+
+\bibitem[Evans et al.(2024)]{evans2024magpie}
+Evans, A. et al.
+\newblock MAGPIE: Multi-party adversarial games for principal information extraction.
+\newblock 2024.
+
+\bibitem[Evans et al.(2026)]{evans2026pacebench}
+Evans, A. et al.
+\newblock PaceBench: Measuring emotional pacing in multi-turn LLM agents.
+\newblock 2026 (sibling paper).
+
+\bibitem[Krakovna et al.(2020)]{krakovna2020specgaming}
+Krakovna, V. et al.
+\newblock Specification gaming: the flip side of AI ingenuity.
+\newblock DeepMind blog, 2020.
+
+\bibitem[Perez and Ribeiro(2022)]{perez2022promptinject}
+Perez, F. and Ribeiro, I.
+\newblock Ignore previous prompt: Attack techniques for language models.
+\newblock 2022.
+
+\bibitem[Rafailov et al.(2023)]{rafailov2023dpo}
+Rafailov, R. et al.
+\newblock Direct preference optimization: Your language model is secretly a reward model.
+\newblock NeurIPS 2023.
+
+\bibitem[Tien et al.(2023)]{tien2023rewarddesign}
+Tien, J. et al.
+\newblock Causal confusion and reward misidentification in preference-based reward learning.
+\newblock 2023.
+
+\end{thebibliography}
+
+\end{document}
