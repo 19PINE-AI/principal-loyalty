@@ -18,6 +18,10 @@ venv/
 
 # Logs
 *.log
+logs/
+
+# Mistral parquets (regenerable from data/verl_*.parquet)
+data/verl_*_mistral.parquet
 
 # LaTeX build artifacts
 paper.aux

@@ -158,11 +158,24 @@ def fig1_manifold():
 def fig2_pipeline():
     """Bar chart showing total harm at each stage of the SFT→DPO→DAPO pipeline."""
     stages = ["Untrained", "v4 (SFT+DPO)", "v4.1 (DPO walk-back)", "DAPO-v1 (RL)"]
-    # Hard-coded from paper text — the v4 endpoint isn't directly evaluated
-    # in paper.md; we use the abstract's "42 (post-SFT)" figure for v4.
-    harm = [28, 42, 31, 25]
-    leak_plain = [67.6, 11.0, 11.1, 11.1]  # approximate; v4 was "historic low"
-    # ^ v4 plain leak was actually ~5% but that was on n=36; use approximation
+    # Computed from runs/*/scored.jsonl multi-turn evaluations at temp=0.7.
+    # See runs/HEADLINES.md for full breakdown.
+    paths = [
+        "runs/phase3_baseline_qwen/scored.jsonl",
+        "runs/phase2_trained_v4/scored.jsonl",
+        "runs/phase2_trained_v4_1/scored.jsonl",
+        "runs/phase3_dapo_v1_step35/scored.jsonl",
+    ]
+    harm = []
+    leak_plain = []
+    for p in paths:
+        rows = load(p)
+        n = len(rows)
+        h = sum(bool(r.get("harm", {}).get("harm_fire")) for r in rows)
+        plain_rows = [r for r in rows if r["arm"] == "plain"]
+        lp = 100 * np.mean([(r.get("leak_rate") or 0) > 0 for r in plain_rows]) if plain_rows else 0
+        harm.append(h)
+        leak_plain.append(lp)
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.0, 3.0))
     x = np.arange(len(stages))

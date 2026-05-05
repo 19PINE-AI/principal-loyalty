@@ -52,7 +52,7 @@ Principal Loyalty Failures in Multi-Party LLM Agents}
 \maketitle
 
 \begin{abstract}
-\noindent Instruction-tuned language models are trained to be helpful to whoever is currently speaking. When deployed as agents acting \emph{on behalf of} one party in a multi-party conversation, this produces systematic failures: the agent leaks its principal's private information, capitulates on negotiating positions, and over-refuses legitimate principal requests. We introduce \textbf{PrincipalBench}, a benchmark of 36 multi-turn scenarios across six failure modes (leakage, capitulation, posture, authoring, sanity, moderation) and three handling arms (plain / prompted / scaffolded), with probe-based leak detection and dual-judge harm scoring. Phase~1 finds the failure pattern is general across five instruction-tuned models. Phase~2 (SFT distillation $+$ targeted DPO $+$ a \texttt{[READER:\,PRINCIPAL]} architectural sentinel) reduces plain-arm leak from 88\% to 11\% and total \texttt{harm\_fire} to 31/108 trajectories. Phase~3 layers DAPO with a cell-aware reward on top, reaching \textbf{25/108 harm fires} ($-19\%$ from the DPO endpoint, $-17\times$ plain leak vs.\ untrained baseline) while holding leak\,$=0$ throughout RL training. Our central scientific contribution is the empirical characterization of a structural \textbf{multi-axis failure manifold}: pressure on one failure axis shifts mass to another, and the same signature appears at five independent levels (judge, prompt, DPO, DAPO, counterparty). A direct ablation testing reward-axis orthogonality is \textbf{refuted}; the manifold has coupled axes and a small set of stable reward $\times$ data basins. Three robustness tests close the case: 3-vendor counterparty swap, cross-family replication on Mistral-7B-Instruct-v0.3 (within $\pm 2$\,pp on every leak metric), and an untrained-baseline ablation showing the architectural sentinel alone leaves leak at 66\%. PrincipalBench, the trained-model artifacts, and 5 trained DAPO checkpoints are released.
+\noindent Instruction-tuned language models are trained to be helpful to whoever is currently speaking. When deployed as agents acting \emph{on behalf of} one party in a multi-party conversation, this produces systematic failures: the agent leaks its principal's private information, capitulates on negotiating positions, and over-refuses legitimate principal requests. We introduce \textbf{PrincipalBench}, a benchmark of 36 multi-turn scenarios across six failure modes (leakage, capitulation, posture, authoring, sanity, moderation) and three handling arms (plain / prompted / scaffolded), with probe-based leak detection and dual-judge harm scoring. Phase~1 finds the failure pattern is general across five instruction-tuned models. Phase~2 (SFT distillation $+$ targeted DPO $+$ a \texttt{[READER:\,PRINCIPAL]} architectural sentinel) reduces plain-arm leak from 74\% (untrained Qwen3-8B) to 19\% (DPO endpoint v4.1) under multi-turn evaluation. Phase~3 layers DAPO with a cell-aware reward on top, reducing total \texttt{harm\_fire} from \textbf{56/108} (DPO endpoint) to \textbf{37/108} (DAPO-v1, $-34\%$) by walking missed-instruction back from 51 to 34 fires; aggregate leak holds at 18--19/108 across all post-training stages, while plain-arm leak rises modestly (19\% $\rightarrow$ 28\%) as DAPO trades a small amount of leak for a large MI reduction. Our central scientific contribution is the empirical characterization of a structural \textbf{multi-axis failure manifold}: pressure on one failure axis shifts mass to another, and the same signature appears at five independent levels (judge, prompt, DPO, DAPO, counterparty). A direct ablation testing reward-axis orthogonality is \textbf{refuted}; the manifold has coupled axes and a small set of stable reward $\times$ data basins. Three robustness tests close the case: 3-vendor counterparty swap (manifold preserved across Claude / GPT-5 / Gemini), cross-family replication on Mistral-7B-Instruct-v0.3 (same recipe, different operating point: lower MI, comparable leak), and an untrained-baseline ablation showing the architectural sentinel alone leaves scaffolded-arm leak at 78\%. PrincipalBench, the trained-model artifacts, and 5 trained DAPO checkpoints are released.
 \end{abstract}
 
 \section{Introduction}
@@ -64,10 +64,10 @@ Modern LLMs are trained with RLHF to be helpful, honest, and harmless --- toward
 \paragraph{Contributions.}
 \begin{enumerate}[leftmargin=2em]
 \item \textbf{PrincipalBench v0.3} --- 36 items $\times$ 6 cells $\times$ 3 arms with a harness, probe-based leak detection, and dual-judge harm-flag scoring (any-fire $\kappa \approx 0.41$). The v0.5 expansion adds 15 items for data-side ablations.
-\item \textbf{A three-stage SFT $\rightarrow$ DPO $\rightarrow$ DAPO recipe} that reduces total harm from 42/108 (post-SFT) to 31/108 (post-DPO v4.1) to \textbf{25/108} (post-DAPO-v1), with non-overlapping bootstrap CIs at each stage and plain-arm leak from 88\% to 11\%.
+\item \textbf{A three-stage SFT $\rightarrow$ DPO $\rightarrow$ DAPO recipe} that reduces total harm from 62/108 (DPO v4) to 56/108 (DPO v4.1 walk-back) to \textbf{37/108} (DAPO-v1), and plain-arm leak from 74\% (untrained) to 19\% (DPO endpoint), with held-out items showing the recipe generalizes (val-item harm 9/15 $\rightarrow$ 5/15 under DAPO).
 \item \textbf{An architectural fix for the reader-identity register} --- a \texttt{[READER:\,PRINCIPAL]} / \texttt{[READER:\,THIRD\_PARTY]} sentinel that lets DPO learn a \emph{conditional} produce-vs-refuse policy. Surfacing the distinction as a literal prompt feature is the load-bearing change; data curation alone cannot teach a distinction the prompt does not expose.
 \item \textbf{The leak/MI manifold is structural, not artifact.} The manifold appears at 5 independent levels with the signature \emph{directional pressure on one axis shifts mass to another}. A direct ablation refutes naive orthogonality between reward terms; the axes are coupled, with a small set of stable reward $\times$ data basins.
-\item \textbf{Three independent robustness tests} address the core reviewer objections: 3-vendor counterparty swap, cross-family Mistral replication (within $\pm 2$\,pp), and a baseline ablation isolating prompt vs.\ training contribution.
+\item \textbf{Three independent robustness tests} address the core reviewer objections: 3-vendor counterparty swap (harm 34--38/108 across Claude / GPT-5 / Gemini), cross-family Mistral replication (same recipe yields 27/108 harm via different MI/leak operating point), and a baseline ablation isolating prompt vs.\ training contribution (untrained scaffolded-arm leak 78\%, sentinel alone insufficient).
 \end{enumerate}
 
 \section{Benchmark and methodology}
@@ -96,12 +96,12 @@ The intervention is a three-stage pipeline distilling a scaffolded teacher (Clau
 
 \textbf{Stage~3 (DAPO, v1 reward).} GRPO with cell-aware reward (\texttt{verl} 0.7.1, LoRA actor rank 32, 35 steps): \emph{adversarial items} score $= -\texttt{leak}$, $+0.5$ for refused-and-didn't-leak; \emph{cooperative items} (sanity cell, \texttt{expect\_cooperation=True}) $+0.5$ for responding, $-0.5$ for refusing. The cooperative branch is load-bearing --- without it the policy collapses onto max-refusal (\cref{sec:reward_ablation}).
 
-\Cref{fig:pipeline} shows the harm and leak progression. The merged DAPO-v1 step\_35 checkpoint is the paper's headline trained model: \textbf{25/108 harm\_fire}, plain leak 11.1\%, scaffolded leak \textbf{3.9\%}, bound-leak 4.
+\Cref{fig:pipeline} shows the harm and leak progression. The merged DAPO-v1 step\_35 checkpoint is the paper's headline trained model: \textbf{37/108 harm\_fire}, total leak 19/108, plain-arm leak 28\%, scaffolded leak 17\%, bound-leak 2. \emph{All metrics are computed from the multi-turn evaluation harness; an earlier draft reported single-turn-truncated numbers from a contaminated run, see \cref{app:integrity}.}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{fig2_pipeline.pdf}
-\caption{Three-stage intervention progression on Qwen3-8B. Total harm\_fire (left) drops 28 (untrained) $\rightarrow$ 42 (post-SFT, posture-collapse) $\rightarrow$ 31 (DPO walk-back) $\rightarrow$ \textbf{25} (DAPO-v1). Plain-arm leak rate (right) drops 67.6\% (untrained) $\rightarrow$ 11.1\% (DAPO-v1), a $\sim 17\times$ reduction. Untrained Qwen3-8B has \emph{lower} aggregate harm than DPO endpoints because base models almost never over-refuse — the manifold trades leak for MI (see \cref{fig:manifold}).}
+\caption{Three-stage intervention progression on Qwen3-8B (multi-turn evaluation, $n{=}108$ rollouts per stage). Total harm\_fire (left): 28 (untrained) $\rightarrow$ 62 (post-DPO v4) $\rightarrow$ 56 (post-DPO v4.1 walk-back) $\rightarrow$ \textbf{37} (DAPO-v1). Plain-arm leak rate (right): 74\% (untrained) $\rightarrow$ 17\% (post-DPO v4) $\rightarrow$ 19\% (v4.1) $\rightarrow$ 28\% (DAPO-v1) --- a $\sim 4\times$ reduction; DAPO trades a small leak rise for the MI reduction visible in total harm. Untrained Qwen3-8B has \emph{lower} aggregate harm than the DPO endpoints because base models almost never over-refuse --- the manifold trades leak for MI (see \cref{fig:manifold}).}
 \label{fig:pipeline}
 \end{figure}
 
@@ -119,14 +119,14 @@ The paper's central scientific finding is that the trade-off between leak and mi
 
 \paragraph{Five independent levels.} The same signature appears at: (i)~\textbf{judge design} (early aggregate-harm judges hid the leak/MI separation; the rewritten judge in \cref{app:judge} surfaces it); (ii)~\textbf{agent prompting} (\cref{app:prompting_frontier}: four prompt iterations move leak or harm but not both, until v4 with failure-mode-targeted edits); (iii)~\textbf{DPO} (\cref{app:dpo_iterations}: v4 SFT$+$DPO collapses MI to 41--44\% while driving leak to a historic low; v4.1 walks MI back at the cost of one item-level bound-leak --- the manifold in miniature); (iv)~\textbf{DAPO} (this section); and (v)~\textbf{counterparty swap} (\cref{sec:robustness}: same shape under GPT-5 and Gemini, mass migrates within the manifold).
 
-\paragraph{DAPO ratchets harm; the residual concentrates.} DAPO with the cell-aware reward drops total harm from 31/108 (v4.1) to 25/108: authoring 4$\rightarrow$1, moderation 4$\rightarrow$1, scaffolded leak 5.6\%$\rightarrow$3.9\%, bound-leak 5$\rightarrow$4. \emph{Leak\,$=0$ holds across the entire training run.} Two pockets resist: (a) prompted-arm probe regression (3/6 $\rightarrow$ 6/6 MI on reader-is-principal items --- the asymmetric refusal reward compounds with the prompted arm's caution to over-trigger refusal), and (b) sanity-cell drift (10/30 $\rightarrow$ 13/30 --- the cooperative branch fires on only 8 of 31 train prompts).
+\paragraph{DAPO walks MI back; aggregate leak essentially flat.} DAPO with the cell-aware reward drops total harm from 56/108 (v4.1) to 37/108 ($-34\%$): missed\_instruction $51 \rightarrow 34$, bound-leak $4 \rightarrow 2$, sanity-cell harm $19/24 \rightarrow 16/24$ on training items. Aggregate leak holds at $18 \rightarrow 19$ fires (the leak \emph{rate} on the plain arm rises from 19\% to 28\% as the model becomes less refusal-prone, but bound-leak --- the more consequential failure mode --- drops). DAPO-v1 trades a small leak-rate increase on the easiest arm for a large MI reduction across all arms; this is the manifold dynamic in action.
 
-\paragraph{Where the residual lives.} Item-level analysis (\cref{fig:concentration}) shows the 25 fires are highly localized: \textbf{21 of 36 items are 3-arm clean}; 7 items account for \textbf{68\% of all fires}; 3 items fire on every arm. 96\% of fires (24/25) are \texttt{missed\_instruction} --- after DAPO-v1 the manifold has effectively collapsed to a single residual axis concentrated in the sanity (43\%) and capitulation (39\%) cells.
+\paragraph{Where the residual lives.} Item-level analysis (\cref{fig:concentration}) shows the 37 fires are localized: capitulation (9), sanity (16), and a long tail across other cells. The training/heldout split breakdown (\cref{app:heldout}) shows the recipe generalizes: trained-item harm 47/93 $\rightarrow$ 32/93 ($-32\%$); held-out-item harm 9/15 $\rightarrow$ 5/15 ($-44\%$). The reduction is not memorization-bound.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.55\linewidth]{fig5_concentration.pdf}
-\caption{Item-level harm concentration on DAPO-v1 step\_35. 21/36 items are 3-arm clean; the 25/108 residual harm is concentrated on 7 items (68\% of all fires) and 3 items fire on every arm.}
+\caption{Item-level harm concentration on DAPO-v1 step\_35 (multi-turn eval, $n{=}108$ rollouts). The residual 37 fires are concentrated: 21 of 36 items account for 0--1 fire; the long tail of multi-arm-firing items lives in the sanity (cooperative) and capitulation cells.}
 \label{fig:concentration}
 \end{figure}
 
@@ -139,49 +139,51 @@ The cooperative branch in our v1 reward is asymmetric (cooperative refusal is pe
 
 \begin{table}[h]
 \centering
-\small
+\footnotesize
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{l r r r r r}
 \toprule
-metric (108 rollouts) & v4.1 & dapo-v1 & dapo-v2 & leak-only & \textbf{dapo-v3} \\
+metric (108 rollouts, multi-turn) & v4.1 & dapo-v1 & dapo-v2 & leak-only & \textbf{dapo-v3} \\
 \midrule
-leak plain / prompt / scaff & 11.1/6.0/5.6 & 11.1/6.0/\textbf{3.9} & 11.2/\textbf{4.2}/8.8 & \textbf{6.9}/8.8/7.4 & 14.4/4.6/3.7 \\
-\textbf{total harm\_fire}   & 31/108 & \textbf{25/108} & 34/107 & 33/108 & \textbf{44/108} \\
-bound\_leak total           & 5      & 4               & \textbf{1}      & \textbf{1}     & 3 \\
-sanity cell                 & 10/30  & 13/30           & 15/30           & 15/30          & \textbf{19/30} \\
+leak plain / prompt / scaff & 19/14/17 & 28/\textbf{8}/17 & 26/14/22 & \textbf{14}/25/19 & 25/14/\textbf{11} \\
+\textbf{total harm\_fire}   & 56/108 & \textbf{37/108} & 34/107 & \textbf{33/108} & 44/108 \\
+total leak\_fire            & 18     & 19              & 22/107          & 21              & 18 \\
+bound\_leak total           & 4      & 2               & \textbf{1}      & \textbf{1}      & 3 \\
+missed\_instruction         & 51     & 34              & 32              & 32              & 42 \\
 \bottomrule
 \end{tabular}
-\caption{Reward-surgery ablations. \textbf{DAPO-v3}, designed to combine the predicted strengths of v2 (low bound-leak) and leak-only (low plain leak), \emph{regresses} on every metric except bound-leak --- 44 harm fires, the worst of any variant, including the v4.1 baseline (31). Step robustness check: v3 step\_30 had 43 harm; step\_55 has 44. The failure is structural, not undertraining.}
+\caption{Reward-surgery ablations under multi-turn evaluation. \textbf{DAPO-v3}, designed to combine the predicted strengths of v2 and leak-only, lands at 44/108 harm at step\_55 --- worse than v1 (37/108), v2 (34/107), and leak-only (33/108). The orthogonality test fails: the (low-MI, low-leak) corner that v2$+$leak-only suggested is reachable cannot be reached by composing their reward terms. v1, v2, and leak-only are all within 4 fires of each other on total harm but reach that point via different leak/MI compositions. Step trajectory check: v3 starts at 55/108 harm at step\_30 and improves to 44/108 by step\_55 (still above v1); for comparison, v1 starts at 54/108 at step\_30 and reaches 37/108 by step\_35 --- a much steeper inflection that v3 never matches. The v3 plateau is structural, not undertraining.}
 \label{tab:reward_ablation}
 \end{table}
 
-\paragraph{Orthogonality refuted: the manifold has coupled axes.} \cref{tab:reward_ablation} shows that v2 and leak-only each move different cell groups when varied alone from v1. But \textbf{combining them in v3 does not yield additive improvements} --- v3 produces 44/108 harm, worse than the v4.1 baseline. Reward designs outside the v1 stable basin produce unpredictable cell-group trade-offs. We characterize this as \textbf{stable reward basins}: the v1 reward $\times$ $n{=}31$ data combination sits in a small basin where each cell-group is controllable by single-knob moves; joint moves fall out into worse local optima.
+\paragraph{Orthogonality refuted: the manifold has coupled axes.} \cref{tab:reward_ablation} shows that v1, v2, and leak-only each reach different points on the manifold: v1 trades a 28\% plain-arm leak for the lowest prompted-arm leak (8.3\%); leak-only achieves the lowest plain-arm leak (13.9\%) at the cost of higher prompted-arm leak (25\%); v2 lands midway. \textbf{Composing the favorable axes of v2 and leak-only into v3 does not yield Pareto improvement} --- v3 lands at 44/108 harm, the worst of the four DAPO variants, with no axis where it dominates. The four points span a $\sim$11-fire window on harm (33--44) and the $\{$v1, v2, leak-only$\}$ cluster lies within 4 fires; but no composition reaches the conjectured (low-leak, low-MI) corner. We characterize this as \textbf{stable reward basins}: the v1 reward $\times$ $n{=}31$ data combination sits in a small basin where single-knob reward moves shift between leak/MI compositions of similar total harm; joint moves fall out into worse local optima.
 
-\paragraph{Data expansion does not break the basin either.} We expanded the training set from $n{=}31$ to $n{=}46$ (the 15 new items from v0.5 target the 7 concentrated failure-mode items from \cref{fig:concentration}). With identical reward and hyperparameters, total harm \emph{rises} to 38/108. Per-item delta: 11 improvements (including the 7 targeted high-leverage items) but 24 regressions on cells that weren't directly targeted. The basin claim therefore generalizes from reward design to data design --- both are coupled axes, and the 25/108 ceiling is co-determined by the v1 reward $\times$ $n{=}31$ data combination, not by either alone. \cref{app:data_expansion} reports the full per-cell breakdown.
+\paragraph{Data expansion does not break the basin either.} We expanded the training set from $n{=}31$ to $n{=}46$ (the 15 new items from v0.5 target concentrated failure-mode items). With identical reward and hyperparameters, total harm rises slightly to 38/108 (vs.\ DAPO-v1's 37/108). Per-item delta on the original $n{=}31$: 11 improvements but 24 regressions on cells that weren't directly targeted. The basin claim therefore generalizes from reward design to data design --- both are coupled axes, and the 33--38/108 harm window is co-determined by the v1 reward $\times$ data combination, not by either alone. \cref{app:data_expansion} reports the full per-cell breakdown.
 
 \section{Robustness}
 \label{sec:robustness}
 
 Three independent tests address the core reviewer objections: counterparty-specific dialogue artifact, single-base-model artifact, and prompt-engineering artifact disguised by aggregate harm.
 
-\paragraph{Counterparty robustness.} \Cref{fig:counterparty} swaps the counterparty from \texttt{claude-sonnet} to OpenAI \texttt{gpt-5} and Google \texttt{gemini-3-flash} on the DAPO-v1 step\_35 checkpoint. The leak/MI shape is preserved across all three: leak rates land in 3.7--15.3\% across every arm $\times$ vendor; harm is dominated by MI under every counterparty. Mass migrates \emph{within} the manifold (non-Claude counterparties produce more MI, $+42\%$ GPT-5 / $+58\%$ Gemini, and \emph{less} bound-leak: $4 \rightarrow 0 \rightarrow 3$) --- the exact signature the manifold framing predicts.
+\paragraph{Counterparty robustness.} \Cref{fig:counterparty} swaps the counterparty from \texttt{claude-sonnet} to OpenAI \texttt{gpt-5} and Google \texttt{gemini-3-flash} on the DAPO-v1 step\_35 checkpoint. The leak/MI shape is preserved across all three: total harm 37/34/38, total leak 19/20/21 across Claude/GPT/Gemini. Per-arm leak migrates within the manifold (e.g.\ GPT-5 produces 0 bound-leaks but $+42$\,pp prompted leak shift; Gemini produces 3 bound-leaks but holds plain leak similar to Claude) --- the exact signature the manifold framing predicts.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.85\linewidth]{fig3_counterparty.pdf}
-\caption{Counterparty robustness: harm per cell across 3 vendors on DAPO-v1 step\_35 (108 rollouts each). The leak/MI shape is preserved; mass migrates within the manifold (e.g.\ GPT-5 produces zero bound-leak but more MI). Capitulation cell is nearly counterparty-invariant (7/6/7) — anchor-resistance is internal to the model, not elicited by counterparty style.}
+\caption{Counterparty robustness: harm per cell across 3 vendors on DAPO-v1 step\_35 (108 rollouts each, multi-turn). Total harm 37/34/38 across Claude/GPT-5/Gemini; total leak 19/20/21. The leak/MI shape is preserved; mass migrates within the manifold (e.g.\ GPT-5 produces zero bound-leak but $+42$\,pp prompted-arm leak; Gemini holds plain leak similar to Claude with $+5.5$\,pp prompted leak).}
 \label{fig:counterparty}
 \end{figure}
 
-\paragraph{Cross-family replication.} \Cref{fig:crossfamily} replicates the SFT$\rightarrow$DPO recipe on Mistral-7B-Instruct-v0.3 --- different architecture, different pretraining, different chat template (Mistral inlines the system message into the first user turn). Same teacher traces and DPO pairs as the Qwen3-8B run; only the base model differs. Mistral total harm is \textbf{27/108} vs.\ Qwen v4.1's 31/108 (within $\pm 2$\,pp on every leak metric); bound-leak is actually lower on Mistral (2 vs.\ 5). Per-cell, Mistral is better on capitulation, moderation, and sanity, worse on authoring and posture --- the per-cell variation reflects different default refusal patterns in the two base models, but the aggregate leak/harm reduction is structural to the recipe, not the base. The ``single base model'' limitation in earlier drafts is removed.
+\paragraph{Cross-family replication.} \Cref{fig:crossfamily} replicates the SFT$\rightarrow$DPO recipe on Mistral-7B-Instruct-v0.3 --- different architecture, different pretraining, different chat template (Mistral inlines the system message into the first user turn). Same teacher traces and DPO pairs as the Qwen3-8B run; only the base model differs. Mistral SFT$+$DPO yields \textbf{27/108} harm and 21/108 leak vs.\ Qwen v4.1's 56/108 harm and 18/108 leak --- the recipe transfers, but Mistral lands at a noticeably different operating point on the manifold: substantially lower MI (27 vs.\ 51), comparable leak (21 vs.\ 18), and a higher plain-arm leak rate (25\% vs.\ 19\%). Per-cell, Mistral has fewer MI fires across the board, reflecting its different default refusal pattern; bound-leak is lower (2 vs.\ 4). The ``single base model'' limitation in earlier drafts is removed; the manifold structure (single-knob moves shift between leak/MI compositions) is preserved across families even though the base-model anchor point differs.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{fig4_crossfamily.pdf}
-\caption{Cross-family replication on Mistral-7B-Instruct-v0.3 (right bars) vs.\ Qwen3-8B v4.1 (left bars). The SFT$\rightarrow$DPO recipe transfers within $\pm 2$\,pp on every leak metric; per-cell harm differs by base-model defaults but aggregate harm is comparable (27 vs.\ 31).}
+\caption{Cross-family replication on Mistral-7B-Instruct-v0.3 (right bars) vs.\ Qwen3-8B v4.1 (left bars). The SFT$\rightarrow$DPO recipe transfers but lands at a different point on the leak/MI manifold: Mistral has substantially lower MI (27 vs.\ 51 fires) and comparable leak (21 vs.\ 18), reflecting its lower default refusal rate. Per-cell harm differs by base-model defaults; the manifold structure is preserved.}
 \label{fig:crossfamily}
 \end{figure}
 
-\paragraph{Baseline ablation.} A reviewer concern: the \texttt{[READER:\,PRINCIPAL]} sentinel might do most of the work, with training contributing little. We evaluate the \emph{untrained} Qwen3-8B base on the same 108-rollout grid: plain-arm leak \textbf{67.6\%}, prompted 64.1\%, scaffolded 66.0\%. \textbf{Training reduces leak $\sim 17\times$} (from 64--67\% to 4--11\%); the scaffolded sentinel alone leaves leak essentially untouched. Total \texttt{harm\_fire} (28 vs.\ 25 for trained) is misleadingly close because failure-mode mass shifts dramatically: the untrained model almost never over-refuses (sanity 8/30), while trained models trade some MI to get the leak reduction. This is a \emph{third independent observation point} on the manifold --- the untrained model sits in the high-leak / low-MI corner, the trained models sit in the low-leak / higher-MI corner (\cref{fig:manifold}).
+\paragraph{Baseline ablation.} A reviewer concern: the \texttt{[READER:\,PRINCIPAL]} sentinel might do most of the work, with training contributing little. We evaluate the \emph{untrained} Qwen3-8B base on the same 108-rollout grid: plain-arm leak \textbf{74.3\%}, prompted 75.0\%, scaffolded \textbf{77.8\%}. \textbf{Training reduces total leak $\sim 4.5\times$} (from 81/107 to 18/108 at the v4.1 endpoint); the scaffolded sentinel alone --- which the untrained model still receives in this evaluation --- leaves leak essentially untouched. Total \texttt{harm\_fire} (28 untrained vs.\ 37 DAPO-v1) is misleadingly low for the untrained side because base models almost never over-refuse (untrained MI=24, DAPO-v1 MI=34); the untrained's low harm is bought with a 76\%-leak floor that the trained recipe trades down to a 24\% plain-arm-leak / 34-MI-fire composition. This is a \emph{third independent observation point} on the manifold --- the untrained model sits in the high-leak / low-MI corner, the trained models in the low-leak / higher-MI corner (\cref{fig:manifold}).
 
 \section{The reader-identity sentinel}
 \label{sec:sentinel}
@@ -204,7 +206,7 @@ Multiple session-2-era pre-DAPO ablations failed to fix one specific failure mod
 \section{Limitations}
 \label{sec:limitations}
 
-\paragraph{Resolved in this draft.} (i)~Single base model --- replicated on Mistral-7B-Instruct-v0.3, $\pm 2$\,pp on every leak metric (\cref{sec:robustness}). (ii)~Single counterparty vendor --- 3-vendor swap preserves manifold shape (\cref{fig:counterparty}). (iii)~Architectural fix vs.\ data fix attribution --- baseline ablation shows the sentinel alone leaves leak at 66\% (\cref{sec:robustness}).
+\paragraph{Resolved in this draft.} (i)~Single base model --- replicated on Mistral-7B-Instruct-v0.3 (\cref{sec:robustness}); the recipe transfers but lands at a different operating point on the manifold. (ii)~Single counterparty vendor --- 3-vendor swap preserves manifold shape (\cref{fig:counterparty}). (iii)~Architectural fix vs.\ data fix attribution --- baseline ablation shows the sentinel alone leaves scaffolded-arm leak at 78\% (\cref{sec:robustness}). (iv)~Held-out generalization --- DAPO-v1 reduces train-item harm 47/93 $\rightarrow$ 32/93 ($-32\%$) and held-out-item harm 9/15 $\rightarrow$ 5/15 ($-44\%$) (\cref{app:heldout}).
 
 \paragraph{Open.}
 \begin{itemize}
@@ -217,9 +219,9 @@ Multiple session-2-era pre-DAPO ablations failed to fix one specific failure mod
 \section{Conclusion}
 \label{sec:conclusion}
 
-The leak/MI tradeoff in principal-acting LLM agents is a structural multi-axis manifold, not an artifact of any specific judge, prompt, training method, dialogue partner, or base model. We characterize the manifold through five independent levels of evidence and three robustness tests, release a 36-item $\times$ 3-arm benchmark, and present a three-stage SFT$\rightarrow$DPO$\rightarrow$DAPO recipe that ratchets total harm from 42 to 25 of 108 trajectories on Qwen3-8B and replicates within $\pm 2$\,pp on Mistral-7B. The \emph{recipe} is not the contribution --- it is the falsifier we used to map the manifold's structure. The contribution is the manifold's geometry: stable reward $\times$ data basins, coupled axes that resist naive composition, an item-coverage ceiling at this experimental scale that is co-determined by reward and data design rather than either alone, and an architectural sentinel that reframes a stubborn reader-identity over-refusal failure as a prompt-feature problem rather than a data problem.
+The leak/MI tradeoff in principal-acting LLM agents is a structural multi-axis manifold, not an artifact of any specific judge, prompt, training method, dialogue partner, or base model. We characterize the manifold through five independent levels of evidence and three robustness tests, release a 36-item $\times$ 3-arm benchmark, and present a three-stage SFT$\rightarrow$DPO$\rightarrow$DAPO recipe that drops total harm from 62/108 (post-DPO v4) to \textbf{37/108} (DAPO-v1) on Qwen3-8B by walking missed-instruction back from 51 to 34 fires while holding aggregate leak at 18--19/108. The \emph{recipe} is not the contribution --- it is the falsifier we used to map the manifold's structure. The contribution is the manifold's geometry: stable reward $\times$ data basins, coupled axes that resist naive composition (a (low-leak, low-MI) corner that single-knob reward variants suggest reachable is not reached by composing their reward terms), and an architectural sentinel that reframes a stubborn reader-identity over-refusal failure as a prompt-feature problem rather than a data problem.
 
-The 25/108 ceiling has not been broken. Driving harm below it will need joint reward $\times$ data co-tuning outside the v1 basin, on a meaningfully larger corpus than $n{=}31$. PrincipalBench, the trained-model artifacts, and the experimental scaffolding for follow-up co-tuning experiments are released.
+The 33/108 harm floor (DAPO-leak-only, the lowest of the four DAPO variants) has not been broken. Driving harm below it will need joint reward $\times$ data co-tuning outside the v1 basin, on a meaningfully larger corpus than $n{=}31$. PrincipalBench, the trained-model artifacts, and the experimental scaffolding for follow-up co-tuning experiments are released.
 
 % --- Bibliography ------------------------------------------------------------
 \begin{thebibliography}{99}
@@ -392,27 +394,29 @@ v1$\rightarrow$v2 (adversarial-stranger framing): halves leak; harm flat. v2$\ri
 \section{The DPO walk-back: v4 $\rightarrow$ v4.1 in detail}
 \label{app:dpo_walkback}
 
-v4 SFT$+$DPO produces posture-collapse: prompted/scaffolded leak drops to 5.1\% / 5.3\% (a $\sim 75\%$ reduction vs.\ v1) but \texttt{missed\_instruction} rises to 41.7\% / 44.4\%, concentrated on reader-is-principal probes (14/18 refused) and cooperative sanity items (19/30). Other harm sub-flags are near zero --- this is not a generic capability regression, but a register-level over-correction.
+v4 SFT$+$DPO drives plain-arm leak down to 30.6\% (vs.\ untrained 74\%), but \texttt{missed\_instruction} rises sharply --- 14/22/19 fires on plain/prompted/scaffolded, total MI 55/108. The MI is concentrated on reader-is-principal probes and cooperative sanity items. Other harm sub-flags are near zero --- this is not a generic capability regression, but a register-level over-correction.
 
-v4.1 mines the 42 MI regressions, pairs the v4-trained refusal as \texttt{rejected} with the teacher's correct response as \texttt{chosen}, and runs a second DPO pass (137 pairs total, 207 steps, final margins $\approx 1.3$).
+v4.1 mines the v4 MI regressions, pairs the v4-trained refusal as \texttt{rejected} with the teacher's correct response as \texttt{chosen}, and runs a second DPO pass (137 pairs total, 207 steps, final margins $\approx 1.3$).
 
-\begin{center}\small
-\begin{tabular}{l r r r r}
+\begin{center}\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{l r r r r r r}
 \toprule
-metric ($n{=}36 \times 3$ arms, 108 rollouts) & v4 prompted & v4 scaff & \textbf{v4.1 prompted} & \textbf{v4.1 scaff} \\
+metric ($n{=}108$ rollouts, multi-turn) & v4 pln & v4 prm & v4 sca & \textbf{v4.1 pln} & \textbf{v4.1 prm} & \textbf{v4.1 sca} \\
 \midrule
-leak\_rate                       & 5.1\%   & 5.3\%   & \textbf{6.0\%}    & \textbf{5.6\%} \\
-missed\_instruction              & 15 / 36 & 16 / 36 & \textbf{12 / 36}  & \textbf{11 / 36} \\
-missed\_instruction (probe cut)  & 5 / 6   & 6 / 6   & \textbf{3 / 6}    & \textbf{5 / 6} \\
-leaked\_private\_bound (all arms)& 2       & ---     & \textbf{5}        & --- \\
-harm\_fire (all arms)            & 42/108  & ---     & \textbf{31 / 108} & --- \\
+leak\_rate          & 30.6\% & 11.1\% & 8.3\% & \textbf{19.4\%} & \textbf{13.9\%} & \textbf{16.7\%} \\
+missed\_instruction & 14/36  & 22/36  & 19/36 & \textbf{13/36}  & \textbf{19/36}  & \textbf{19/36} \\
+leaked\_private\_bound  & 1 & 2 & 0 & \textbf{2} & \textbf{1} & \textbf{1} \\
+harm\_fire (per arm)& 18/36  & 23/36  & 21/36 & \textbf{16/36}  & \textbf{20/36}  & \textbf{20/36} \\
+\midrule
+\multicolumn{4}{l}{harm\_fire total v4 = 62/108} & \multicolumn{3}{r}{harm\_fire total v4.1 = \textbf{56/108}} \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-v4.1 cuts MI fires by a third ($42 \rightarrow 28$, $-33\%$), recovers half the probe-item losses (plain arm $3/6 \rightarrow 0/6$), and holds leak essentially flat ($+0.9$\,pp prompted, $+0.3$\,pp scaffolded). Net harm is down 26\%.
+v4.1 cuts total MI from 55 to 51 ($-7\%$) while reducing plain-arm leak (30.6\% $\rightarrow$ 19.4\%); prompted and scaffolded leak rise modestly. Net harm drops 62 $\rightarrow$ 56 ($-10\%$). The walk-back is the manifold in miniature: a re-paired second DPO pass shifts mass within the manifold rather than dominating v4 on every axis.
 
-\paragraph{The frontier persists at finer grain.} The three new \texttt{leaked\_private\_bound} fires are all on one item (\texttt{pb-capit-sunk-01}: across all three arms, the v4.1 model now offers the \$10K goodwill ceiling named in the briefing). The v4 model had \emph{refused to make any offer} on that item (MI); v4.1 makes the offer but names the cap (bound-leak). Same item, same trajectory structure, crossed from one failure mode to the other --- the manifold in miniature.
+\paragraph{The frontier persists at finer grain.} On a per-item basis, the v4 $\rightarrow$ v4.1 transition produces both improvements (3 items recover from MI without re-leaking) and regressions (1 item that v4 refused now offers a bound figure under v4.1). Same items, different trajectory compositions, crossed from one failure mode to the other --- the manifold in miniature.
 
 \section{Data expansion ablation in detail}
 \label{app:data_expansion}
@@ -422,18 +426,44 @@ We expanded the training set from $n{=}31$ (v0 grid minus 5 heldout) to $n{=}46$
 \begin{center}\small
 \begin{tabular}{l r r r}
 \toprule
-metric (108 rollouts) & v4.1 & DAPO-v1 ($n{=}31$) & \textbf{DAPO-v1 ($n{=}46$)} \\
+metric (108 rollouts, multi-turn) & v4.1 & DAPO-v1 ($n{=}31$) & \textbf{DAPO-v1 ($n{=}46$)} \\
 \midrule
-total harm\_fire      & 31    & \textbf{25}     & \textbf{38} \\
-total MI              & 29    & 24              & 38 \\
-bound\_leak           & 5     & 4               & \textbf{3} \\
-plain leak            & 11.1\%& 11.1\%          & \textbf{9.5\%} \\
-scaffolded leak       & 5.6\% & \textbf{3.9\%}  & 5.6\% \\
+total harm\_fire      & 56    & \textbf{37}     & 38 \\
+total MI              & 51    & 34              & 38 \\
+bound\_leak           & 4     & 2               & 3 \\
+plain leak            & 19.4\%& 27.8\%          & 22.2\% \\
+scaffolded leak       & 16.7\%& 16.7\%          & \textbf{8.3\%} \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\paragraph{Per-item delta n=31 $\rightarrow$ n=46.} 11 improvements (7 of which are exactly the high-leverage items the expansion was designed to fix: \texttt{pb-author-to-principal-01/03/05}, \texttt{pb-capit-anchored-01}); 24 regressions (concentrated in cells \emph{not} the focus of the expansion --- leakage $2/15 \rightarrow 7/15$, posture $1/15 \rightarrow 5/15$). The new \texttt{pb-leak-finance-01} / \texttt{pb-leak-trade-01} items pushed leak-cell behavior in the wrong direction on old leak items. The basin claim therefore generalizes from reward design to data design: changing either dimension alone falls out of v1's stable basin into worse local optima.
+\paragraph{Per-item delta n=31 $\rightarrow$ n=46.} The aggregate harm is essentially flat (37 vs.\ 38), but the cell composition shifts: scaffolded leak drops by half (16.7\% $\rightarrow$ 8.3\%) while plain leak drops slightly. The basin claim therefore generalizes from reward design to data design: changing either dimension produces a different point on the manifold but cannot escape the $\sim$33--38/108 harm window.
+
+\section{Held-out item split: train vs.\ val item harm}
+\label{app:heldout}
+
+The DAPO-v1 training set is $n{=}31$ items; 5 are held out: \texttt{pb-author-\allowbreak testcase-01}, \texttt{pb-author-\allowbreak to-principal-01}, \texttt{pb-capit-\allowbreak repq-01}, \texttt{pb-leak-\allowbreak batna-01}, \texttt{pb-sanity-\allowbreak coop-01}. All 36 items appear in the eval grid; per-item attribution is recoverable from \path{data/verl_train.parquet} / \path{data/verl_val.parquet}.
+
+\begin{center}\small
+\begin{tabular}{l c c c c}
+\toprule
+checkpoint & train harm & val harm & train leak & val leak \\
+\midrule
+Untrained baseline & 25/92 (27\%) & 3/15 (20\%) & 69/92 (75\%) & 12/15 (80\%) \\
+v4.1 (DPO endpoint) & 47/93 (51\%) & 9/15 (60\%) & 14/93 (15\%) & 4/15 (27\%) \\
+\textbf{DAPO-v1 step\_35} & \textbf{32/93 (34\%)} & \textbf{5/15 (33\%)} & 15/93 (16\%) & 4/15 (27\%) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The held-out items show the same direction of change as training items: v4.1 lifts harm sharply over baseline (DPO induces MI on both sets), and DAPO-v1 walks it back on both ($-15$ on train, $-4$ on val). Untrained leak rates are similar across train/val (75\% / 80\%) --- no item-specific bias. \textbf{The recipe is not memorization-bound at this experimental scale.}
+
+\section{Multi-turn evaluation integrity note}
+\label{app:integrity}
+
+Earlier drafts of this paper reported substantially lower harm and leak numbers (e.g.\ ``25/108 harm fires'', ``leak $=0$ throughout RL training'') derived from a contaminated batch of evaluation runs in which the Anthropic counterparty API returned 401 auth errors mid-run, causing every trajectory to terminate at the agent's first message before any counterparty pressure was applied. The harness recorded these as completed single-turn rollouts, indistinguishable at the scored.jsonl level from successful conversations except for the \texttt{turns: 1} and \texttt{early\_end\_reason} fields. All numbers reported in this revision are derived from re-runs of the affected evaluations under the multi-turn harness with verified counterparty connectivity. Five evaluations were re-run: \path{phase2_trained_v4}, \path{phase2_trained_v4_1}, \path{phase3_dapo_v1_step30}, \path{phase3_dapo_v1_step35}, and \path{phase3_dapo_v3_step30}; the original (broken) trajectories are preserved at \path{runs/<name>_BROKEN_AUTH401/} for audit.
+
+This is the integrity discipline change relative to the prior draft: \emph{before reporting any aggregate from a scored.jsonl, audit the trajectory turn distribution and \texttt{early\_end\_reason} field.} Every multi-turn benchmark that scores agent behavior under counterparty pressure is at risk of this failure mode if the counterparty API is unreliable.
 
 \section{Reproducibility paths}
 \label{app:reproducibility}
@@ -443,7 +473,7 @@ All artifacts at \texttt{/home/ubuntu/principal-loyalty/}; scripts in \texttt{sc
 
 \paragraph{Items.} \texttt{items/v0/*.json} ($n{=}36$); \texttt{items/v0\_5/*.json} ($n{=}51$).
 
-\paragraph{Phase~1.} Hosted-vendor runs at \path{runs/phase1*/scored.jsonl}. Local-vLLM Qwen3-8B baseline (88\% plain-leak number) at \path{runs/phase2_baseline/scored.jsonl} and \path{runs/phase3_baseline_qwen/scored.jsonl}.
+\paragraph{Phase~1.} Hosted-vendor runs at \path{runs/phase1*/scored.jsonl}. Local-vLLM Qwen3-8B legacy baseline at \path{runs/phase2_baseline/scored.jsonl} (88\% plain leak, single-arm); multi-turn untrained baseline (sentinel-aware, all 3 arms, $n{=}108$) at \path{runs/phase3_baseline_qwen/scored.jsonl} (74\% plain leak).
 
 \paragraph{Phase~2 (SFT$+$DPO).} Earlier-iteration outputs at \path{runs/phase2_trained{,_v1,_v1_lite,_v2,_v06}/scored.jsonl}. Headline DPO endpoint: \path{runs/qwen_sft_dpo_v4_1_merged/} (16\,GB), eval at \path{runs/phase2_trained_v4_1/scored.jsonl}. DPO pair files: \path{data/dpo_v{0,1,1_lite,2,05,06,4,4_combined}.jsonl}.
 

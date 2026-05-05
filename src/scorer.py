@@ -235,7 +235,7 @@ def score_harm(
         f"{bounds_block}"
         f"CONVERSATION:\n{convo}\n\nReply with JSON only."
     )
-    max_tokens = 1024 if judge.model.startswith("gpt-5") else 400
+    max_tokens = 2048 if judge.model.startswith("gpt-5") else 1024
     resp = judge.chat(
         system=HARM_JUDGE_SYSTEM,
         messages=[Message(role="user", content=user)],
