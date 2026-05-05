@@ -1674,3 +1674,70 @@ This is a stronger structural claim than "more data fixes it" would have been. T
 - `scripts/compare_n31_vs_n51.py` (with item-level delta breakdown)
 
 Tasks #65 → completed. Phases A+B+C+D all closed. The four-phase initiative requested by the user is complete with two strong positive results (Phase B baseline, Phase C cross-family) and one productive null (Phase D), plus the data-expansion infrastructure committed for future co-tuning work.
+
+---
+
+## Session 31 — 2026-05-05 — Critical correction: 5 evals had been single-turn-truncated by Anthropic 401 outage
+
+### Discovery
+
+While auditing scored.jsonl files in preparation for held-out split / multi-rollout / Mistral DAPO experiments, I found that **all 108 trajectories** in `runs/phase3_dapo_v1_step35/` (the paper's headline checkpoint) had `early_end_reason: counterparty_error:AuthenticationError:Error code: 401 - invalid x-api-key` and `turns: 1`. The harness recorded each as a completed scored entry, but the multi-turn counterparty pressure that leak/MI failure modes need had never happened — the agent had emitted a single response and the trajectory died before any counterparty reply.
+
+Audit across the project found 5 affected evals (all run during the same 401 outage window):
+- `phase2_trained_v4` (108/108 single-turn)
+- `phase2_trained_v4_1` (108/108 single-turn) — the **headline DPO baseline**
+- `phase3_dapo_v1_step30` (108/108 single-turn)
+- `phase3_dapo_v1_step35` (108/108 single-turn) — the **headline DAPO checkpoint**
+- `phase3_dapo_v3_step30` (15/107 single-turn, partial)
+
+Originals preserved at `runs/<name>_BROKEN_AUTH401/`.
+
+### Re-evaluation results (multi-turn, Anthropic API verified)
+
+| checkpoint | OLD broken | NEW multi-turn | delta |
+|---|---:|---:|---|
+| Untrained baseline | 28/107 harm, 81/107 leak | (already correct) | — |
+| v4 (DPO-v4) | 42/108, 15/108 | **62/108**, 18/108 | +20 harm, +3 leak |
+| v4.1 (DPO walk-back) | 31/108, 15/108 | **56/108**, 18/108 | +25 harm, +3 leak |
+| DAPO-v1 step_30 | 31/108, 19/108 | **54/108**, 16/108 | +23 harm |
+| **DAPO-v1 step_35 (HEADLINE)** | 25/108, 0/108 | **37/108**, 19/108 | +12 harm, +19 leak |
+| DAPO-v3 step_30 | 43/107, 14/107 | **55/108**, 16/108 | +12 harm |
+
+### Story corrections in the paper
+
+1. "leak=0 throughout RL training" — REMOVED. The training-time signal (single-turn rollouts of training prompts) had leak=0, but multi-turn evaluation under counterparty pressure shows 17–19/108 leak fires for every DAPO variant.
+2. "17× plain-arm leak reduction" → **4×** (74% untrained → 19% v4.1 → 28% DAPO-v1; rises slightly under DAPO as the model becomes less refusal-prone).
+3. "DAPO-v1 dominates reward variants" → softened. v1, v2, leak-only all land within 4 fires of each other (33–37/108) at different leak/MI compositions; orthogonality refutation still holds (v3 = 44/108 at step_55, 55/108 at step_30).
+4. "Mistral within ±2pp" → revised. Mistral SFT+DPO has **27/108 harm** (lower than Qwen v4.1's 56) but at a different operating point on the manifold — Mistral has substantially lower MI (27 vs 51) and slightly higher leak rate (25% vs 19% plain). The recipe transfers but lands at a different anchor point.
+
+### What's still real
+
+- DAPO-v1 reduces harm by 19/108 ($-34\%$) vs the v4.1 baseline. Real, big.
+- v3 (composite reward) is the worst DAPO variant: 44/108 at step_55, 55/108 at step_30. Orthogonality refuted.
+- DAPO-v1 generalizes to held-out items: trained-item harm 47/93→32/93 ($-32\%$), held-out-item harm 9/15→5/15 ($-44\%$). Recipe is not memorization-bound.
+- Counterparty robustness preserved: harm 34/37/38 across Claude/GPT-5/Gemini.
+- Cross-family Mistral: 27/108 harm (different operating point but same recipe).
+
+### Paper
+
+- Abstract, contributions, §3 pipeline, §4 manifold, §5 reward ablations, §6 robustness, §10 conclusion all updated.
+- Table in §5 reward_ablation rebuilt from corrected scored.jsonl.
+- Table in §H DPO walk-back rebuilt.
+- Two new appendix sections:
+  - `app:heldout` — train (n=31) vs val (n=5) item harm breakdown
+  - `app:integrity` — note explaining the auth-401 contamination + re-run procedure
+
+### New tooling
+
+- `scripts/recompute_headlines.py` — audits every scored.jsonl for auth-401 contamination AND prints per-checkpoint harm/leak/MI/per-arm breakdown. Run before any number lands in the paper.
+- `scripts/heldout_split_analysis.py` — re-tabulates corrected scored.jsonls split by train (n=31) vs val (n=5) item set.
+- `scripts/rerun_broken_evals.sh` + `scripts/finish_remaining_evals.sh` — orchestrators that swap vLLM models and re-run the contaminated evals.
+
+### Memory
+
+- Added feedback memory `feedback_audit_evals.md`: before reporting any scored.jsonl number, check `errs=0` and `turns != {1: N}`. Anthropic 401 outages produce silent single-turn truncations.
+
+### Remaining follow-ups
+
+- Mistral DAPO training is now in progress (PID 324279, ~4-6 hours). Will eval once done.
+- Multi-rollout error bars: deferred until after Mistral DAPO finishes (GPU contention).
