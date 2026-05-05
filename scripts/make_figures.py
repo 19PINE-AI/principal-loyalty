@@ -109,7 +109,8 @@ def fig1_manifold():
         "DAPO-v2":         ("runs/phase3_dapo_v2_step55/scored.jsonl", "^", COLORS["DAPO-v2"]),
         "leak-only":       ("runs/phase3_dapo_leakonly_step35/scored.jsonl", "v", COLORS["leak-only"]),
         "DAPO-v3":         ("runs/phase3_dapo_v3_step55/scored.jsonl", "D", COLORS["DAPO-v3"]),
-        "Mistral v4.1":    ("runs/phase3_mistral_sft_dpo/scored.jsonl", "p", COLORS["Mistral"]),
+        "Mistral SFT+DPO": ("runs/phase3_mistral_sft_dpo/scored.jsonl", "p", COLORS["Mistral"]),
+        "Mistral DAPO":    ("runs/phase3_mistral_dapo_v1_step35/scored.jsonl", "P", "#984ea3"),
     }
 
     fig, ax = plt.subplots(figsize=(4.6, 3.4))
@@ -130,7 +131,8 @@ def fig1_manifold():
             "DAPO-v2":         (1.0, 1.5),
             "leak-only":       (-3.0, 1.5),
             "DAPO-v3":         (1.0, 1.5),
-            "Mistral v4.1":    (1.0, 1.5),
+            "Mistral SFT+DPO": (1.0, 1.5),
+            "Mistral DAPO":    (1.0, -2.5),
         }
         dx, dy = offsets.get(label, (1.0, 1.5))
         ax.annotate(label, (leak_pct, a["mi"]), xytext=(dx, dy),
@@ -246,39 +248,42 @@ def fig3_counterparty():
 
 # --- Figure 4: cross-family replication --------------------------------------
 def fig4_crossfamily():
-    """Side-by-side Qwen v4.1 vs Mistral v4.1 across arms and per cell."""
-    qwen = aggregate(load("runs/phase2_trained_v4_1/scored.jsonl"))
-    mistral = aggregate(load("runs/phase3_mistral_sft_dpo/scored.jsonl"))
+    """Cross-family: Qwen vs Mistral × (SFT+DPO, +DAPO-v1) total harm and MI."""
+    runs = [
+        ("Qwen v4.1\n(SFT+DPO)",   "runs/phase2_trained_v4_1/scored.jsonl",         COLORS["v4.1"]),
+        ("Qwen DAPO-v1\n(+RL)",     "runs/phase3_dapo_v1_step35/scored.jsonl",       COLORS["DAPO-v1"]),
+        ("Mistral\n(SFT+DPO)",      "runs/phase3_mistral_sft_dpo/scored.jsonl",      COLORS["Mistral"]),
+        ("Mistral DAPO-v1\n(+RL)",  "runs/phase3_mistral_dapo_v1_step35/scored.jsonl", "#984ea3"),
+    ]
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.0, 3.0))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.0, 3.2))
+    labels = [r[0] for r in runs]
+    colors = [r[2] for r in runs]
+    aggs = [aggregate(load(r[1])) for r in runs]
 
-    # Panel A: leak by arm
-    arms = ["plain", "prompted", "scaffolded"]
-    qwen_leak = [100 * qwen["leak_plain"], 100 * qwen["leak_prompted"], 100 * qwen["leak_scaff"]]
-    mistral_leak = [100 * mistral["leak_plain"], 100 * mistral["leak_prompted"], 100 * mistral["leak_scaff"]]
-    x = np.arange(3)
-    width = 0.38
-    ax1.bar(x - width/2, qwen_leak, width, label="Qwen3-8B", color=COLORS["Qwen"], edgecolor="black", linewidth=0.4)
-    ax1.bar(x + width/2, mistral_leak, width, label="Mistral-7B", color=COLORS["Mistral"], edgecolor="black", linewidth=0.4)
-    ax1.set_xticks(x)
-    ax1.set_xticklabels(arms)
-    ax1.set_ylabel("leak rate (\\%)")
-    ax1.set_title("(a) Leak rate by arm")
-    ax1.legend(loc="upper right")
-    for i, (q, m) in enumerate(zip(qwen_leak, mistral_leak)):
-        ax1.text(i - width/2, q + 0.3, f"{q:.1f}", ha="center", fontsize=7)
-        ax1.text(i + width/2, m + 0.3, f"{m:.1f}", ha="center", fontsize=7)
+    harm = [a["harm"] for a in aggs]
+    mi   = [a["mi"]   for a in aggs]
+    x = np.arange(len(runs))
 
-    # Panel B: harm per cell
-    qwen_cell = [qwen["cell_harm"].get(c, 0) for c in CELLS]
-    mistral_cell = [mistral["cell_harm"].get(c, 0) for c in CELLS]
-    x = np.arange(len(CELLS))
-    ax2.bar(x - width/2, qwen_cell, width, label="Qwen3-8B", color=COLORS["Qwen"], edgecolor="black", linewidth=0.4)
-    ax2.bar(x + width/2, mistral_cell, width, label="Mistral-7B", color=COLORS["Mistral"], edgecolor="black", linewidth=0.4)
-    ax2.set_xticks(x)
-    ax2.set_xticklabels(CELLS, rotation=20, ha="right")
-    ax2.set_ylabel("harm\\_fire (count per cell)")
-    ax2.set_title("(b) Harm per cell")
+    bars1 = ax1.bar(x, harm, color=colors, edgecolor="black", linewidth=0.4)
+    ax1.set_xticks(x); ax1.set_xticklabels(labels, fontsize=7)
+    ax1.set_ylabel("total harm\\_fire (of 108)")
+    ax1.set_title("(a) Total harm by base $\\times$ stage")
+    for b, v in zip(bars1, harm):
+        ax1.text(b.get_x() + b.get_width()/2, b.get_height() + 0.7, f"{v}", ha="center", fontsize=8)
+
+    bars2 = ax2.bar(x, mi, color=colors, edgecolor="black", linewidth=0.4)
+    ax2.set_xticks(x); ax2.set_xticklabels(labels, fontsize=7)
+    ax2.set_ylabel("missed\\_instruction fires")
+    ax2.set_title("(b) MI fires (drives the basin)")
+    for b, v in zip(bars2, mi):
+        ax2.text(b.get_x() + b.get_width()/2, b.get_height() + 0.7, f"{v}", ha="center", fontsize=8)
+
+    # Annotation arrow pointing to the regression
+    ax1.annotate("DAPO regresses\non Mistral",
+                 xy=(3, harm[3]), xytext=(2.3, harm[3] + 12),
+                 fontsize=7, ha="center", color="#984ea3",
+                 arrowprops=dict(arrowstyle="->", color="#984ea3", lw=0.7))
 
     plt.tight_layout()
     out = FIG_DIR / "fig4_crossfamily.pdf"

@@ -18,7 +18,7 @@ WAIT_TIMEOUT=300
 if [ -z "$STEP" ]; then
   STEP=$(ls -d "$DAPO_DIR"/global_step_* 2>/dev/null | sort -V | tail -1 | sed 's|.*global_step_||')
 fi
-ADAPTER="$DAPO_DIR/global_step_${STEP}/actor"
+ADAPTER="$DAPO_DIR/global_step_${STEP}/actor/lora_adapter"
 if [ ! -d "$ADAPTER" ]; then
   echo "no adapter at $ADAPTER"; exit 1
 fi
