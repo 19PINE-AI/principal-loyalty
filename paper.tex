@@ -827,6 +827,22 @@ missed\_instruction                       & 44.4                 & 37.2 $\pm$ 3.
 
 Five seeds: 33, 40, 42, 37, 44 (mean 39.2). \textbf{Harm $p = 0.0114$ is statistically significant at $\alpha = 0.05$} --- per-token KL is the \emph{first distillation variant in this work where the harm improvement at $n{=}5$ is not statistically indistinguishable from noise.} For context, the per-turn SFT variant (Variant 1) achieved $p = 0.104$ on the same test, and DAPO-v1 achieved $p = 0.903$. Cell-robust harm (cells that fire under every one of 5 seeds) drops from 15 to 6 ($-60\%$) for Variant 3, larger than Variant 1's $15 \rightarrow 8$. MI at $p = 0.055$ is borderline but in the same direction.
 
+\paragraph{Multi-seed paired Wilcoxon vs v4.1 (Variant 3 iter 2, the leak-minimum).} We additionally tested whether the leak-minimum iter 2 checkpoint's improvement holds under multi-seed evaluation. The eval budget allowed three valid replicate seeds (concurrent GPU contention on the shared box caused two further seed attempts to fail their integrity audits after exhausting the per-seed retry budget; we report the three clean seeds).
+\begin{center}\small
+\begin{tabular}{l r r r r}
+\toprule
+metric (per-cell paired Wilcoxon, $n{=}3$) & v4.1 mean                     & Variant 3 iter 2 mean         & cell-robust v4.1$\rightarrow$V3-iter2 & $p$ \\
+\midrule
+total harm                                 & 51.7                          & \textbf{41.3 $\pm$ 3.5}        & 32 $\rightarrow$ 13                   & \textbf{0.0121} \\
+total leak                                 & 17.3                          & 11.7 $\pm$ 3.8                 & 5  $\rightarrow$ 2                    & 0.214 \\
+bound\_leak                                & 4.3                           & 2.7 $\pm$ 0.6                  & 2  $\rightarrow$ 0                    & 0.717 \\
+missed\_instruction                        & 46.0                          & 40.0 $\pm$ 5.0                 & 26 $\rightarrow$ 12                   & 0.114 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Three seeds: 38, 45, 41 (mean 41.3). \textbf{Harm $p = 0.0121$ is significant at $\alpha = 0.05$}: \emph{both} per-token KL stopping points (iter 1, harm-minimum and iter 2, leak/bound-minimum) survive multi-seed scrutiny. Single-seed iter 2 (38/9/2/35) sat at the low tail; the population mean is 41/12/3/40 with cell-robust harm $32 \rightarrow 13$ (59\% reduction). The leak, bound, and MI improvements have the expected sign but do not reach significance at $n{=}3$; this is a sample-size limitation, not evidence that they are noise.
+
 \paragraph{Held-out generalization on items/v0\_75/ (Variant 3).} 24 fresh items × 3 arms = 72 trajectories (held-out from training set). Variant 3 iter 1 achieves: harm 29/72 (40.3\%), leak 17/72 (23.6\%), bound 8/72, MI 27/72. The held-out rate is higher than on training items (40.3\% vs 30.6\% harm), a 10pp generalization gap. By contrast, Variant 1 iter 2 had nearly zero gap on the same held-out items (34.8\% vs 34.3\% on training). The denser per-token supervision in Variant 3 may overfit more on the 113-record training set; this is the main caveat we attach to the headline.
 
 \paragraph{Counterparty robustness (Variant 3).} Replacing the counterparty from \texttt{claude-sonnet} to other vendors on the same iter 1 checkpoint: Claude 33, GPT-5 38, Gemini-3-flash 49. Range 33-49 (32\% spread on harm; Variant 1 iter 2's was 36/34/41 = 19\%). Variant 3 is more counterparty-sensitive on harm than Variant 1 was, but \emph{less} counterparty-sensitive on leak (13/14/20 vs Variant 1 iter 2's 24/17/30). The leak-axis improvement transfers across counterparties more cleanly than the harm-axis improvement does.
