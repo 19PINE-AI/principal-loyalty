@@ -230,7 +230,16 @@ class OpenAICompatVendor(Vendor):
             "model": self.model,
             "messages": api_messages,
         }
-        if self.model.startswith("gpt-5") and not self.model.startswith("gpt-5-2025"):
+        # gpt-5 family requires max_completion_tokens (no temperature param).
+        # Match direct OpenAI ("gpt-5*") and OpenRouter-routed ("openai/gpt-5*")
+        # spellings; "gpt-5-2025" preview is the exception that still takes
+        # max_tokens+temperature.
+        _is_gpt5 = (
+            (self.model.startswith("gpt-5") or self.model.startswith("openai/gpt-5"))
+            and not self.model.startswith("gpt-5-2025")
+            and not self.model.startswith("openai/gpt-5-2025")
+        )
+        if _is_gpt5:
             kwargs["max_completion_tokens"] = max_tokens
         else:
             kwargs["max_tokens"] = max_tokens
@@ -411,10 +420,12 @@ def get_vendor(spec: str) -> Vendor:
     if spec == "claude-haiku":
         return AnthropicVendor("claude-haiku-4-5-20251001")
     if spec == "gpt-5":
+        # Route through OpenRouter since the direct OPENAI_API_KEY on this box
+        # lacks the `model.request` scope (see project memory openai_scope_issue).
         return OpenAICompatVendor(
-            model="gpt-5",
-            base_url=None,
-            api_key_env="OPENAI_API_KEY",
+            model="openai/gpt-5",
+            base_url="https://openrouter.ai/api/v1",
+            api_key_env="OPENROUTER_API_KEY",
             name="openai",
         )
     if spec == "gemini-flash":
@@ -455,6 +466,17 @@ def get_vendor(spec: str) -> Vendor:
             name="qwen-32b",
         )
     if spec == "gpt-5-mini":
+        # The direct OpenAI key on this box lost the `model.request` scope
+        # in 2026-05; route through OpenRouter to the same underlying model
+        # so historical comparisons hold. To force the direct route again,
+        # use vendor spec "gpt-5-mini-direct".
+        return OpenAICompatVendor(
+            model="openai/gpt-5-mini",
+            base_url="https://openrouter.ai/api/v1",
+            api_key_env="OPENROUTER_API_KEY",
+            name="gpt-5-mini",
+        )
+    if spec == "gpt-5-mini-direct":
         return OpenAICompatVendor(
             model="gpt-5-mini",
             base_url=None,
@@ -485,5 +507,14 @@ def get_vendor(spec: str) -> Vendor:
             base_url="http://localhost:8000/v1",
             api_key_env="OPENROUTER_API_KEY",  # unused for local
             name="qwen-8b-local",
+        )
+    if spec == "qwen-32b-local":
+        # vLLM serves Qwen3-32B-AWQ from runs/ or HF cache, exposed under this name.
+        # Used as the on-policy distillation teacher.
+        return OpenAICompatVendor(
+            model="Qwen/Qwen3-32B",
+            base_url="http://localhost:8001/v1",
+            api_key_env="OPENROUTER_API_KEY",  # unused for local
+            name="qwen-32b-local",
         )
     raise ValueError(f"unknown vendor spec: {spec}")
