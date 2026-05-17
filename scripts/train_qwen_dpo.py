@@ -20,7 +20,7 @@ from pathlib import Path
 
 import torch
 from datasets import Dataset
-from peft import PeftModel
+from peft import LoraConfig, PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from trl import DPOConfig, DPOTrainer
 
@@ -73,11 +73,23 @@ def main() -> None:
         device_map="auto",
         dtype=torch.bfloat16,
     )
+    peft_config = None
     if SFT_DIR.exists():
         model = PeftModel.from_pretrained(base, str(SFT_DIR), is_trainable=True)
     else:
-        print(f"[dpo] warning: no SFT adapter at {SFT_DIR}; training DPO from base.")
+        print(f"[dpo] no prior SFT adapter at {SFT_DIR}; attaching a fresh LoRA for DPO on the quantized base.")
         model = base
+        # When the base is 4-bit quantized, DPOTrainer needs a LoRA peft_config
+        # to attach trainable adapters; can't fine-tune a purely quantized model.
+        peft_config = LoraConfig(
+            r=16,
+            lora_alpha=32,
+            lora_dropout=0.05,
+            bias="none",
+            task_type="CAUSAL_LM",
+            target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                            "gate_proj", "up_proj", "down_proj"],
+        )
 
     raw = load_jsonl(DPO_PATH)
     print(f"[dpo] {len(raw)} preference pairs")
@@ -98,12 +110,15 @@ def main() -> None:
         gradient_checkpointing=True,
         report_to=[],
     )
-    trainer = DPOTrainer(
+    trainer_kwargs = dict(
         model=model,
         args=cfg,
         train_dataset=ds,
         processing_class=tokenizer,
     )
+    if peft_config is not None:
+        trainer_kwargs["peft_config"] = peft_config
+    trainer = DPOTrainer(**trainer_kwargs)
     trainer.train()
     trainer.save_model(str(OUT_DIR))
     tokenizer.save_pretrained(str(OUT_DIR))
