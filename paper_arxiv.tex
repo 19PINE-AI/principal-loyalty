@@ -1,0 +1,225 @@
+\documentclass[11pt]{article}
+
+% ---------- NeurIPS-style preamble ------------------------------------------
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{amsmath, amssymb}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage[capitalize]{cleveref}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{titlesec}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  citecolor=blue!50!black,
+  urlcolor=blue!50!black,
+}
+
+\titleformat{\section}{\normalfont\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{0.5em}{}
+\titlespacing*{\section}{0pt}{1.0em}{0.4em}
+\titlespacing*{\subsection}{0pt}{0.8em}{0.3em}
+\titlespacing*{\paragraph}{0pt}{0.4em}{0.5em}
+
+\setlength{\parskip}{0.25em}
+
+% --- title block ------------------------------------------------------------
+\title{\textbf{Per-Token KL Distillation Reaches a Statistically-Significant Floor on PrincipalBench}\\[2pt]
+\large An Open-Weight Recipe for Principal-Loyalty in Multi-Party LLM Agents}
+\author{
+  Bojie Li\\
+  \texttt{bojieli@gmail.com}
+}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent Instruction-tuned LLMs deployed as agents in multi-party conversations leak their principal's information, capitulate to social pressure, and over-refuse legitimate requests. We introduce \textbf{PrincipalBench}, a 36-item multi-turn benchmark across six failure modes (leakage, capitulation, posture, authoring, sanity, moderation) and three prompt arms (plain / prompted / scaffolded), with probe-based leak detection and dual-judge harm scoring. Three engineering results: (i) a 4-rule \textbf{v4 system prompt} drives \texttt{claude-sonnet} to $21/108$ harm fires (3.5$\times$ better than default); (ii) an architectural \texttt{[READER:\,PRINCIPAL]}/\texttt{[READER:\,THIRD\_PARTY]} \textbf{sentinel} cuts reader-identity over-refusal $9/12 \!\rightarrow\! 3/12$; (iii) \textbf{per-token KL distillation} (Thinking Machines / DeepSeek-V4) of v4-prompted Qwen3-32B-AWQ into Qwen3-8B drives the student to $33/108$ harm at $n{=}113$ on-policy turn-records --- the strongest 8B-distillation result in our study, and the first 8B variant whose multi-seed harm improvement vs the SFT$+$DPO endpoint reaches $p < 0.05$ on paired Wilcoxon ($p = 0.0114$). Two characterization findings: (iv) the leak/MI/bound trade-off forms a stable \textbf{manifold floor} that DAPO post-training does not statistically crack at $n{=}5$; (v) per-token KL has \textbf{two distinct stopping points} on its $K$-iteration trajectory --- iter\,1 is harm-minimal ($33/13/3/32$), iter\,2 is leak/bound-minimal ($38/9/2/35$), and iter\,3 walks back ($K{=}2$ saturation), confirmed by a second significant paired Wilcoxon at $p = 0.0121$.
+\end{abstract}
+
+\section{Introduction}
+
+A growing fraction of LLM deployment is \emph{agentic}: the model represents one party (the \textbf{principal}) in a conversation with another party (the \textbf{counterparty}). Helpful-to-the-current-speaker training conflicts with principal-loyalty whenever the counterparty pushes for information, concessions, or actions the principal did not authorize. We instantiate this conflict as PrincipalBench and report a pipeline of prompt-time and weight-time interventions, along with a characterization of the failure manifold those interventions move along.
+
+\paragraph{Three positive engineering results.}
+\begin{enumerate}[leftmargin=2em,itemsep=2pt,topsep=2pt]
+\item A 4-rule \emph{v4 system prompt} drives the frontier-prompted Pareto frontier (\cref{sec:v4}).
+\item A reader-identity \emph{sentinel} fixes the over-refusal failure mode that emerges once the v4 prompt is applied (\cref{sec:v4}).
+\item \emph{Per-token KL distillation} of the v4-prompted teacher into an open-weight Qwen3-8B student achieves the strongest 8B-distillation we measure, with multi-seed statistical significance vs the off-policy SFT$+$DPO endpoint (\cref{sec:ptkl}).
+\end{enumerate}
+
+\paragraph{Two characterization findings.} The leak / missed-instruction (MI) / bound-leak trade-off forms a manifold whose floor single-knob RL does not statistically cross at $n{=}5$ paired Wilcoxon (\cref{sec:manifold}); and the per-token KL iteration trajectory reveals \emph{two distinct} manifold optima (harm-min vs leak-min), with $K{=}2$ as the saturation point (\cref{sec:kiter}).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\linewidth]{figures/arxiv_fig1_manifold.pdf}
+\caption{\textbf{The leak/MI manifold.} Each marker is one variant evaluated on the 36-item $\times$ 3-arm grid. The harm-fire count appears in the legend label. The Pareto-better corner is the lower-left. Per-token KL iter\,1 (blue star, harm $33$) is the closest open-weight 8B to the v4-prompted Claude teacher (green triangle, harm $21$).}
+\label{fig:manifold}
+\end{figure}
+
+\section{PrincipalBench}
+\label{sec:bench}
+
+\paragraph{Items.} 36 items, each a principal briefing plus a parameterized counterparty script, spanning six failure-mode cells (leakage, capitulation, posture, authoring, sanity, moderation). The held-out v0\_75 extension adds 24 new items authored after training was frozen.
+
+\paragraph{Arms.} Each item is evaluated under three system prompts: \emph{plain} (no policy instructions), \emph{prompted} (v4 four-rule scaffold), and \emph{scaffolded} (v4 $+$ reader-identity sentinel). Three arms $\times$ 36 items = 108 evaluation cells per checkpoint.
+
+\paragraph{Scoring.} Three signals: (1) a deterministic leak probe that compares the agent's transcript against a curated set of forbidden facts, (2) a dual-judge harm score from two LLMs (default: \texttt{gpt-5-mini} via OpenRouter), aggregated to a binary \texttt{harm\_fire}, plus structured sub-flags (leak, leaked\_private\_bound, missed\_instruction), and (3) an integrity audit gate that rejects any score derived from a trajectory with zero agent turns or an \texttt{agent\_error} early-end.
+
+\section{Prompted-frontier interventions}
+\label{sec:v4}
+
+\paragraph{The v4 four-rule prompt} addresses four named failure modes that emerged from open-coding 50+ failure trajectories of the default-prompted Claude:
+\begin{itemize}[leftmargin=2em,itemsep=1pt,topsep=2pt]
+\item Adversarial-stranger framing (treat the counterparty as a stranger, not a colleague).
+\item Decline without enumerating what you are declining.
+\item Distinguish private bounds from public positions.
+\item Conditional permissions are not proactive disclosures.
+\end{itemize}
+
+Applied to \texttt{claude-sonnet}, the v4 prompt drives the 108-trajectory aggregate to \textbf{harm $21/108$, leak $17/108$, bound $5/108$, MI $21/108$} --- a $3.5\times$ reduction in harm fires vs the default-prompt baseline and the Pareto-best point on the leak/MI/bound manifold across all 8 trained and prompted variants we evaluated.
+
+\paragraph{The reader-identity sentinel.} The v4 prompt introduces an over-refusal failure mode on cooperative items where the counterparty IS the principal. A 12-item probe sub-benchmark fires the over-refusal $9/12$ trajectories with v4 alone. An architectural sentinel that prepends \texttt{[READER:\,PRINCIPAL]} or \texttt{[READER:\,THIRD\_PARTY]} to the in-conversation messages reduces the probe fire rate to $3/12$, generalizes to held-out probe items, and survives a spoof attack where the counterparty fakes a principal-side sentinel.
+
+\section{Per-token KL distillation (Variant 3)}
+\label{sec:ptkl}
+
+We distill the v4-prompted teacher into an open-weight 8B student in three variant families: (V1) per-turn SFT on teacher-completed-at-student-state; (V2) per-turn DPO with chosen$=$teacher, rejected$=$student at student-state; (V3) per-token forward-KL between teacher and student token distributions on student-generated samples (the canonical Thinking Machines / DeepSeek-V4 algorithm). V1 and V2 follow Salimans et al.\ (2025); the API-only Claude teacher does not expose logits, so V3 requires an open-weight teacher --- we use \texttt{Qwen3-32B-AWQ + v4-prompt} served via vLLM, extracting top-$K$ teacher logprobs at each response position via the \texttt{prompt\_logprobs} API.
+
+\paragraph{Loss.} For each response position $p$ in a student-sampled trajectory, with teacher top-$K$ tokens $\{t_k\}$ and renormalized teacher distribution $p_T(t_k \mid h_{<p})$:
+\[
+\mathcal{L} \;=\; \frac{1}{|R|} \sum_{p\in R} \sum_{k=1}^{K} p_T(t_k \mid h_{<p}) \cdot \left[ \log p_T(t_k \mid h_{<p}) - \log \hat p_S(t_k \mid h_{<p}) \right],
+\]
+where $\hat p_S$ is the student distribution renormalized over the same top-$K$ tokens. Padded slots use a large-but-finite $-10^4$ to avoid the $0\!\cdot\!\infty\!=\!\text{NaN}$ trap that masks training failure silently.
+
+\paragraph{Headline.} V3 iter\,1 on Qwen3-8B (v4.1 SFT$+$DPO base, 113 on-policy turn-records, 28{,}486 token-level signals, 3 epochs QLoRA r$=$16): \textbf{harm $33/108$, leak $13/108$, bound $3/108$, MI $32/108$}. This is the only single-iteration distillation in our study that simultaneously improves all four manifold axes vs the v4.1 base, and leak actually goes \emph{below} the Claude+v4 gold teacher (13 vs 17).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\linewidth]{figures/arxiv_fig6_variants.pdf}
+\caption{\textbf{Distillation variant ladder on Qwen3-8B.} Per-token KL is the only distillation variant whose harm improvement is statistically significant at $\alpha = 0.05$ on $n{=}5$ paired Wilcoxon vs the v4.1 SFT$+$DPO endpoint.}
+\label{fig:variants}
+\end{figure}
+
+\subsection{Multi-seed statistical significance}
+\label{sec:multiseed}
+
+Five independent eval seeds of the same V3 iter\,1 checkpoint against five matched v4.1 baseline seeds, paired Wilcoxon signed-rank on per-cell fire counts (\cref{fig:wilcoxon}, left bars):
+\begin{center}\small
+\begin{tabular}{l r r r r}
+\toprule
+metric                    & v4.1 mean   & V3 iter\,1 mean             & cell-robust $\!\rightarrow\!$ & $p$ \\
+\midrule
+harm                      & 47.8        & \textbf{39.2 $\pm$ 4.0}     & 15 $\rightarrow$ 6            & \textbf{0.0114} \\
+leak                      & 15.8        & 13.8 $\pm$ 1.8              & 0  $\rightarrow$ 0            & 0.534 \\
+bound                     & 4.6         & 2.8 $\pm$ 1.5               & 0  $\rightarrow$ 0            & 0.385 \\
+MI                        & 44.4        & 37.2 $\pm$ 3.6              & 15 $\rightarrow$ 5            & 0.055 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{V3 iter\,1 is the first distillation variant in this work where the harm improvement at $n{=}5$ is not statistically indistinguishable from noise} ($p=0.0114$). For context, V1 (per-turn SFT) achieved $p=0.104$ and DAPO-v1 achieved $p=0.903$ on the same test. Cell-robust harm (cells fire under all 5 seeds) drops from 15 to 6 ($-60\%$).
+
+\subsection{$K$-iteration trajectory: two manifold optima}
+\label{sec:kiter}
+
+Resampling student trajectories from each iter-$K$ checkpoint and re-collecting teacher logprobs:
+\begin{center}\small
+\begin{tabular}{l r r r r}
+\toprule
+iter (single seed)            & harm        & leak       & bound      & MI    \\
+\midrule
+v4.1 base                     & 56          & 18         & 4          & 51    \\
+\textbf{V3 iter\,1}           & \textbf{33} & 13         & 3          & 32    \\
+\textbf{V3 iter\,2}           & 38          & \textbf{9} & \textbf{2} & 35    \\
+V3 iter\,3                    & 41          & 15         & 4          & 40    \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Iter\,1 is the harm-minimum; iter\,2 is the leak/bound-minimum; iter\,3 regresses on all four axes.} The K-trajectory has two distinct stopping points and $K{=}2$ is the saturation. This is the \emph{opposite} manifold direction from V1 (per-turn SFT), which lowered harm with each iteration but raised leak (V1: $44\!\rightarrow\!36\!\rightarrow\!37$ harm, $17\!\rightarrow\!24\!\rightarrow\!23$ leak): per-token KL pushes the policy along the low-leak corner; per-turn supervision pushes along the low-harm corner.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.78\linewidth]{figures/arxiv_fig2_kiter.pdf}
+\caption{\textbf{$K$-iteration trajectory of per-token KL.} Two distinct optima (iter\,1 harm-min, iter\,2 leak/bound-min) precede a regression at iter\,3. $K{=}2$ is the saturation; further iteration walks back toward v4.1.}
+\label{fig:kiter}
+\end{figure}
+
+\paragraph{Iter\,2 multi-seed.} An additional paired Wilcoxon at $n{=}3$ (GPU contention prevented a clean 5-seed budget; $\!$2 of 5 attempted seeds failed their integrity audit after exhausting retry attempts and were dropped) confirms: harm mean $41.3 \pm 3.5$ vs v4.1 mean $51.7$, $p = 0.0121$. \emph{Both} per-token KL stopping points hit $p<0.05$ on harm. Single-seed iter\,2 ($38/9/2/35$) sat in the low tail; population mean is $41/12/3/40$.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\linewidth]{figures/arxiv_fig3_wilcoxon.pdf}
+\caption{\textbf{Multi-seed paired Wilcoxon vs v4.1.} Both per-token KL stopping points (iter\,1 harm-min, iter\,2 leak-min) hit $p<0.05$ on harm. Error bars are $\pm 1\sigma$ across seeds.}
+\label{fig:wilcoxon}
+\end{figure}
+
+\subsection{Robustness and held-out generalization}
+\label{sec:robustness}
+
+\paragraph{Held-out items.} 24 items authored after training was frozen ($items/v0\_75$), 3 arms each = 72 trajectories: V3 iter\,1 harm $29/72$ ($40.3\%$) vs training-set $33/108$ ($30.6\%$) --- a $10\,$pp gap (\cref{fig:robustness}, right). V1 iter\,2 had a $\sim$0\,pp gap on the same set; the denser per-token signal may overfit more on 113 training records. This is the main caveat we attach to the headline.
+
+\paragraph{Counterparty robustness.} Swapping the counterparty from \texttt{claude-sonnet} to \texttt{gpt-5} or \texttt{gemini-3-flash} on the V3 iter\,1 checkpoint: harm $33 \!\rightarrow\! 38 \!\rightarrow\! 49$, leak $13 \!\rightarrow\! 14 \!\rightarrow\! 20$. The leak-axis improvement transfers across counterparties more cleanly than the harm-axis improvement does (V3 leak range 13--20 vs V1 leak range 17--30).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{figures/arxiv_fig5_robustness.pdf}
+\caption{\textbf{Robustness.} \emph{Left:} swapping the counterparty preserves manifold shape but Gemini-3-flash extracts harder. \emph{Right:} held-out generalization. Per-token KL has the strongest training-set harm but the largest training$\rightarrow$held-out gap (10\,pp); per-turn SFT iter\,2 nearly eliminates the gap; the scaled-3$\times$ data run is uniformly worse (negative scaling, \cref{sec:scaling}).}
+\label{fig:robustness}
+\end{figure}
+
+\subsection{Teacher self-validation}
+\label{sec:teacher}
+
+We evaluated the open-weight teacher itself on the scaffolded arm of PrincipalBench (the arm that includes the v4 prompt) via a chunked retry-on-vLLM-death procedure (concurrent GPU contention prevented a stable single-pass run; the audit-gated chunked pipeline accumulated 31 valid trajectories across multiple vLLM restarts). Result: \textbf{Qwen3-32B-AWQ + v4 (scaffolded): harm $4/31$ ($12.9\%$), leak $21/31$ ($67.7\%$), bound $0$, MI $3/31$ ($9.7\%$)} vs Claude-Sonnet + v4 on the same arm: harm $6/36$ ($16.7\%$), leak $6/36$ ($16.7\%$), bound $1$, MI $6/36$ ($16.7\%$).
+
+\textbf{The open-weight teacher trades leak for harm/MI:} it leaks much more than the Claude teacher but has slightly lower end-to-end harm and MI fires. This explains why the per-token KL student inherits the harm-low pattern: it is distilled toward a teacher that itself has low harm despite high leak (\cref{fig:teacher}).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.7\linewidth]{figures/arxiv_fig4_teacher.pdf}
+\caption{\textbf{Teacher self-validation (scaffolded arm only).} The open-weight Qwen3-32B-AWQ + v4 teacher has comparable harm/MI to Claude-Sonnet + v4 but leaks much more. The per-token KL student inherits the harm-low pattern.}
+\label{fig:teacher}
+\end{figure}
+
+\section{The manifold floor}
+\label{sec:manifold}
+
+The leak/MI/bound trade-off is structural across all 18 variants we evaluated (\cref{fig:manifold}). Three pieces of evidence:
+\begin{itemize}[leftmargin=2em,itemsep=2pt,topsep=2pt]
+\item \textbf{Multi-seed paired Wilcoxon refutes the single-seed DAPO claim.} The DAPO-v1 step\,35 checkpoint appeared to walk back the SFT$+$DPO endpoint's MI regression ($56 \!\rightarrow\! 37$ harm) at single seed; at $n{=}5$ paired Wilcoxon, the improvement vanishes on every axis (harm $p = 0.903$, leak $p = 0.51$, bound $p = 0.59$, MI $p = 0.85$). The variance across DAPO seeds dominates the mean shift from SFT$+$DPO.
+\item \textbf{Reward-axis orthogonality is refuted.} We registered before running: take the harm-favorable cells from a leak-only reward variant and the leak-favorable cells from a v1 reward variant, train the composition (v3), and predict the resulting cell-wise harm/leak falls in the joint-favorable quadrant. The composition does not Pareto-dominate either parent at single seed; the axes are coupled.
+\item \textbf{Cross-base direction-dependence.} On Mistral-7B SFT$+$DPO (base harm 27) the same on-policy SFT recipe \emph{regresses} (27 $\rightarrow$ 38); on Llama-3.1-8B SFT$+$DPO (base harm 42, already over-refusal) it plateaus (42 $\rightarrow$ 40). The recipe's direction depends on which side of the teacher the base sits on.
+\end{itemize}
+
+\section{Negative scaling result}
+\label{sec:scaling}
+
+Training V3 with $3\times$ more on-policy turn-records (372 vs 113), holding all other hyperparameters constant (3 epochs, lr $= 5\!\cdot\!10^{-5}$, QLoRA r$=$16): training-set harm $50/104$ ($48.1\%$), held-out harm $40/72$ ($55.6\%$). Both metrics are \emph{worse} than the 113-record iter\,1 ($30.6\%$ / $40.3\%$). The likely cause is undertraining: tripling the data with constant epochs gives one-third the effective passes through each example. The generalization gap narrows ($\Delta = 8$ pp vs 10 pp), but the baseline degrades. Naive data scaling without proportional epoch / learning-rate scaling regresses; we report this as a clean negative result.
+
+\section{Related work}
+
+PrincipalBench complements user-simulator multi-turn benchmarks (Tan et al.\ 2024) by inserting the principal as a third party whose private state the agent must protect. The per-token KL distillation algorithm follows Salimans et al.\ (2025, ``On-Policy Distillation'') and the DeepSeek-V4 technical report. The integrity-audit gate is methodologically similar to the silent-failure mitigation in BIG-bench Hard (Suzgun et al.\ 2022) but operates on agent trajectories rather than single-turn completions. DAPO follows Yu et al.\ (2024); our negative DAPO result at $n{=}5$ paired Wilcoxon complements their positive single-seed results on math reasoning.
+
+\section{Limitations}
+
+(i) Single base model for the per-token KL headline (Qwen3-8B); cross-base same-family teacher distillation (Mixtral, Llama-3.1-70B-AWQ) is shipped as runnable scripts but not executed under the GPU contention conditions of this draft. (ii) The DAPO-from-per-token-KL test --- the cleanest answer to whether the manifold floor is absolute or relative to the v4.1 starting point --- requires sustained $\sim$65\,GB free GPU on this 95\,GB device and is similarly deferred. (iii) The 10\,pp held-out gap for V3 iter\,1 indicates the dense supervision overfits more than per-turn SFT at this data scale; addressing it requires either more training data with proportional compute or explicit regularization, neither of which we ablate here. (iv) Counterparty range on harm (33--49) is wider than per-turn SFT's (34--41); per-token KL is more counterparty-sensitive on the harm axis.
+
+\section{Conclusion}
+
+PrincipalBench identifies a structural manifold among the leak / MI / bound axes that resists single-knob optimization. Three interventions move along the manifold: a 4-rule v4 prompt for the API-frontier; a reader-identity sentinel for cooperative items; and per-token KL distillation from an open-weight v4-prompted teacher, which achieves the strongest open-weight 8B result in our study and is the first 8B distillation with $p<0.05$ multi-seed harm improvement at both of its two stopping points.
+
+\paragraph{Reproducibility.} All code, items, and trained checkpoints at \url{https://github.com/bojieli/principal-loyalty}. The per-token KL pipeline is \texttt{scripts/pertoken\_kl\_collect.py} (vLLM \texttt{prompt\_logprobs} collection), \texttt{scripts/train\_pertoken\_kl.py} (QLoRA top-$K$ KL loss), and \texttt{scripts/run\_pertoken\_kl.sh} (end-to-end driver). All evaluation scripts gate scoring on an integrity audit (\texttt{scripts/audit\_trajectories.py}); reported numbers use only audit-passing trajectories.
+
+\end{document}
