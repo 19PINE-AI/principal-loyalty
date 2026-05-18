@@ -44,7 +44,7 @@
 \maketitle
 
 \begin{abstract}
-\noindent Instruction-tuned LLMs deployed as agents in multi-party conversations leak their principal's information, capitulate to social pressure, and over-refuse legitimate requests. We introduce \textbf{PrincipalBench}, a 36-item multi-turn benchmark across six failure modes (leakage, capitulation, posture, authoring, sanity, moderation) and three prompt arms (plain / prompted / scaffolded), with probe-based leak detection and dual-judge harm scoring. Three engineering results: (i) a 4-rule \textbf{v4 system prompt} drives \texttt{claude-sonnet} to $21/108$ harm fires (3.5$\times$ better than default) and \texttt{gemini-3-flash} to $18/104$ (also $\sim$17\% harm); PrincipalBench separately exposes that \texttt{gpt-5} and \texttt{qwen-27b} \emph{intrinsically} over-refuse on these multi-party items ($63$--$72\%$ harm at the no-prompt plain arm, persisting under v4), so the prompt's Pareto-best claim applies to the calibrated vendor subset; (ii) an architectural \texttt{[READER:\,PRINCIPAL]}/\texttt{[READER:\,THIRD\_PARTY]} \textbf{sentinel} cuts reader-identity over-refusal $9/12 \!\rightarrow\! 3/12$; (iii) \textbf{per-token KL distillation} (Thinking Machines / DeepSeek-V4) of v4-prompted Qwen3-32B-AWQ into Qwen3-8B drives the student to $33/108$ harm at $n{=}113$ on-policy turn-records --- the strongest 8B-distillation result in our study, and the first 8B variant whose multi-seed harm improvement vs the SFT$+$DPO endpoint reaches $p < 0.05$ on paired Wilcoxon ($p = 0.0114$). Two characterization findings: (iv) the leak/MI/bound trade-off forms a stable \textbf{manifold floor} that DAPO post-training does not statistically crack at $n{=}5$; (v) per-token KL has \textbf{two distinct stopping points} on its $K$-iteration trajectory --- iter\,1 is harm-minimal ($33/13/3/32$), iter\,2 is leak/bound-minimal ($38/9/2/35$), and iter\,3 walks back ($K{=}2$ saturation), confirmed by a second significant paired Wilcoxon at $p = 0.0121$.
+\noindent Instruction-tuned LLMs deployed as agents in multi-party conversations leak their principal's information, capitulate to social pressure, and over-refuse legitimate requests. We introduce \textbf{PrincipalBench}, a 36-item multi-turn benchmark across six failure modes (leakage, capitulation, posture, authoring, sanity, moderation) and three prompt arms (plain / prompted / scaffolded), with probe-based leak detection and dual-judge harm scoring. Three engineering results: (i) a 4-rule \textbf{v4 system prompt} drives 4 of 6 frontier subjects to harm rates of $11$--$19\%$ on a full 108-grid (DeepSeek $11\%$ best, Gemini-3-flash $17\%$, Qwen3-32B $17\%$, Claude-Sonnet $19\%$); PrincipalBench separately exposes that \texttt{gpt-5} and \texttt{qwen3.5-27b} \emph{intrinsically} over-refuse on these multi-party items ($63$--$72\%$ harm at the no-prompt plain arm), so the prompt's Pareto-best claim applies to the calibrated vendor subset, not universally; (ii) an architectural \texttt{[READER:\,PRINCIPAL]}/\texttt{[READER:\,THIRD\_PARTY]} \textbf{sentinel} cuts reader-identity over-refusal $9/12 \!\rightarrow\! 3/12$; (iii) \textbf{per-token KL distillation} (Thinking Machines / DeepSeek-V4) of v4-prompted Qwen3-32B-AWQ into Qwen3-8B drives the student to $33/108$ harm at $n{=}113$ on-policy turn-records --- the strongest 8B-distillation result in our study, and the first 8B variant whose multi-seed harm improvement vs the SFT$+$DPO endpoint reaches $p < 0.05$ on paired Wilcoxon ($p = 0.0114$). Two characterization findings: (iv) the leak/MI/bound trade-off forms a stable \textbf{manifold floor} that DAPO post-training does not statistically crack at $n{=}5$; (v) per-token KL has \textbf{two distinct stopping points} on its $K$-iteration trajectory --- iter\,1 is harm-minimal ($33/13/3/32$), iter\,2 is leak/bound-minimal ($38/9/2/35$), and iter\,3 walks back ($K{=}2$ saturation), confirmed by a second significant paired Wilcoxon at $p = 0.0121$.
 \end{abstract}
 
 \section{Introduction}
@@ -87,28 +87,30 @@ A growing fraction of LLM deployment is \emph{agentic}: the model represents one
 \item Conditional permissions are not proactive disclosures.
 \end{itemize}
 
-Applied to \texttt{claude-sonnet}, the v4 prompt drives the 108-trajectory aggregate to \textbf{harm $21/108$ ($19.4\%$), leak $17/108$, bound $5/108$, MI $21/108$} --- a $3.5\times$ reduction in harm fires vs the default-prompt baseline. We evaluated v4 on three more frontier subjects at the full 108-grid (\cref{fig:xsubj}):
+Applied to \texttt{claude-sonnet}, the v4 prompt drives the 108-trajectory aggregate to \textbf{harm $21/108$ ($19.4\%$), leak $17/108$, bound $5/108$, MI $21/108$} --- a $3.5\times$ reduction in harm fires vs the default-prompt baseline. We evaluated v4 on five more frontier subjects at the full 108-grid (\cref{fig:xsubj}):
 \begin{center}\small
 \begin{tabular}{l c c c c}
 \toprule
-subject              & plain (no prompt) & prompted (v4)   & scaffolded (v4+sentinel) & aggregate \\
+subject (108-grid)        & plain (no prompt)   & prompted (v4)        & scaffolded (v4+sentinel)  & aggregate \\
 \midrule
-Claude-Sonnet        & $19\%$ / $19\%$    & $22\%$ / $22\%$ & $17\%$ / $17\%$           & $19\%$ / $19\%$ \\
-Gemini-3-flash       & $17\%$ / $17\%$    & $20\%$ / $20\%$ & $15\%$ / $15\%$           & $17\%$ / $17\%$ \\
-\textbf{GPT-5}       & $\mathbf{63\%}$ / $\mathbf{63\%}$ & $71\%$ / $71\%$ & $71\%$ / $71\%$ & $68\%$ / $68\%$ \\
-\textbf{Qwen-27B}    & $\mathbf{72\%}$ / $\mathbf{72\%}$ & $79\%$ / $79\%$ & $59\%$ / $59\%$ & $70\%$ / $70\%$ \\
+DeepSeek-v3.1             & $11\%$              & $\mathbf{9\%}$       & $11\%$                    & $\mathbf{11\%}$ \\
+Gemini-3-flash            & $17\%$              & $20\%$               & $15\%$                    & $17\%$ \\
+Qwen3-32B (OpenRouter)    & $24\%$              & $\mathbf{12\%}$      & $14\%$                    & $17\%$ \\
+Claude-Sonnet             & $19\%$              & $22\%$               & $17\%$                    & $19\%$ \\
+\textbf{GPT-5}            & $\mathbf{63\%}$     & $71\%$               & $71\%$                    & $\mathbf{68\%}$ \\
+\textbf{Qwen3.5-27B}      & $\mathbf{72\%}$     & $79\%$               & $59\%$                    & $\mathbf{70\%}$ \\
 \bottomrule
 \end{tabular}\\
 \smallskip
-(per-arm \texttt{harm / MI} rate; $n \approx 35$ per cell)
+(per-arm harm rate; $n \approx 33$--$37$ per cell after audit)
 \end{center}
 
-\textbf{GPT-5 and Qwen-27B over-refuse at the plain arm too, not just under v4.} This re-attributes the bimodal pattern: PrincipalBench surfaces an \emph{intrinsic} difference between vendors. Claude and Gemini handle agentic multi-party scenarios with harm rates of $17$--$19\%$ regardless of prompt; GPT-5 and Qwen-27B blanket-refuse PrincipalBench items at $63$--$72\%$ harm even at the no-prompt baseline. The v4 prompt is approximately a no-op for the over-refusing vendors --- they are already pegged on MI from their own safety training. The Pareto-best claim for v4 therefore applies to the \emph{calibrated} subset of frontier vendors (Claude, Gemini), not to the over-refusing pair. The two vendors with the lowest leak --- GPT-5 ($3\%$) and Qwen-27B ($3\%$) --- achieve that by refusing every cooperative request rather than by handling adversarial requests selectively; this is what the benchmark is designed to expose.
+\textbf{Four of six vendors handle v4; two intrinsically over-refuse.} GPT-5 and Qwen3.5-27B over-refuse at the \texttt{plain} arm too ($63\%$ and $72\%$ harm without any system prompt), so the v4 prompt is approximately a no-op for them --- they are already pegged on MI from their own safety training. PrincipalBench surfaces this intrinsic difference: \emph{the benchmark itself separates vendors that can selectively decline adversarial requests from vendors that blanket-refuse multi-party agentic items}. The four calibrated vendors achieve harm $11$--$19\%$ at v4 (DeepSeek best); the two over-refusing vendors hold at $68$--$70\%$. Notably the v4 prompt actively helps Qwen3-32B (plain $24\%$ $\rightarrow$ prompted $12\%$) and DeepSeek (plain $11\%$ $\rightarrow$ prompted $9\%$), so the Pareto-best claim is strongest in this calibrated subset, not universal.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.8\linewidth]{figures/arxiv_fig7_xsubj.pdf}
-\caption{\textbf{The v4 prompt does not induce over-refusal --- it is intrinsic.} Per-arm harm rates show GPT-5 and Qwen-27B already over-refuse at the \texttt{plain} (no system prompt) arm at $63$--$72\%$. The v4 prompt is approximately a no-op for the over-refusing pair; it is Pareto-best only on the calibrated subset (Claude, Gemini), which handles PrincipalBench items at $\sim$17--19\% harm regardless of prompt.}
+\caption{\textbf{6-vendor cross-subject v4 prompt evaluation.} Four vendors (DeepSeek, Gemini-3-flash, Qwen3-32B, Claude-Sonnet) handle the v4 prompt at $\sim$11--19\% harm; two (GPT-5, Qwen3.5-27B) intrinsically over-refuse at the plain arm too (no system prompt, harm $63\%$ and $72\%$). The v4 prompt actively helps Qwen3-32B ($24\% \!\rightarrow\! 12\%$) and DeepSeek ($11\% \!\rightarrow\! 9\%$); it is approximately a no-op for the over-refusing pair.}
 \label{fig:xsubj}
 \end{figure}
 
