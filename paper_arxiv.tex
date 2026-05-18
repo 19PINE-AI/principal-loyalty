@@ -44,7 +44,7 @@
 \maketitle
 
 \begin{abstract}
-\noindent Instruction-tuned LLMs deployed as agents in multi-party conversations leak their principal's information, capitulate to social pressure, and over-refuse legitimate requests. We introduce \textbf{PrincipalBench}, a 36-item multi-turn benchmark across six failure modes (leakage, capitulation, posture, authoring, sanity, moderation) and three prompt arms (plain / prompted / scaffolded), with probe-based leak detection and dual-judge harm scoring. Three engineering results: (i) a 4-rule \textbf{v4 system prompt} drives 4 of 6 frontier subjects to harm rates of $11$--$19\%$ on a full 108-grid (DeepSeek $11\%$ best, Gemini-3-flash $17\%$, Qwen3-32B $17\%$, Claude-Sonnet $19\%$); PrincipalBench separately exposes that \texttt{gpt-5} and \texttt{qwen3.5-27b} \emph{intrinsically} over-refuse on these multi-party items ($63$--$72\%$ harm at the no-prompt plain arm), so the prompt's Pareto-best claim applies to the calibrated vendor subset, not universally; (ii) an architectural \texttt{[READER:\,PRINCIPAL]}/\texttt{[READER:\,THIRD\_PARTY]} \textbf{sentinel} cuts reader-identity over-refusal $9/12 \!\rightarrow\! 3/12$; (iii) \textbf{per-token KL distillation} (Thinking Machines / DeepSeek-V4) of v4-prompted Qwen3-32B-AWQ into Qwen3-8B drives the student to $33/108$ harm at $n{=}113$ on-policy turn-records --- the strongest 8B-distillation result in our study, and the first 8B variant whose multi-seed harm improvement vs the SFT$+$DPO endpoint reaches $p < 0.05$ on paired Wilcoxon ($p = 0.0114$). Two characterization findings: (iv) the leak/MI/bound trade-off forms a stable \textbf{manifold floor} that DAPO post-training does not statistically crack at $n{=}5$; (v) per-token KL has \textbf{two distinct stopping points} on its $K$-iteration trajectory --- iter\,1 is harm-minimal ($33/13/3/32$), iter\,2 is leak/bound-minimal ($38/9/2/35$), and iter\,3 walks back ($K{=}2$ saturation), confirmed by a second significant paired Wilcoxon at $p = 0.0121$.
+\noindent Instruction-tuned LLMs deployed as agents in multi-party conversations leak their principal's information, capitulate to social pressure, and over-refuse legitimate requests. We introduce \textbf{PrincipalBench}, a 36-item multi-turn benchmark across six failure modes (leakage, capitulation, posture, authoring, sanity, moderation) and three prompt arms (plain / prompted / scaffolded), with probe-based leak detection and dual-judge harm scoring. Three engineering results: (i) a 4-rule \textbf{v4 system prompt} drives 5 of 8 frontier subjects to harm rates of $11$--$19\%$ on a full 108-grid (DeepSeek $11\%$ best, Gemini-2.5/3-flash and Qwen3-32B $17\%$, Claude-Sonnet $19\%$); PrincipalBench separately exposes that the full OpenAI line (\texttt{gpt-5} and \texttt{gpt-5-mini}) and \texttt{qwen3.5-27b} \emph{intrinsically} over-refuse on these multi-party items ($55$--$72\%$ harm at the no-prompt plain arm), so the prompt's Pareto-best claim applies to the calibrated vendor subset, not universally; (ii) an architectural \texttt{[READER:\,PRINCIPAL]}/\texttt{[READER:\,THIRD\_PARTY]} \textbf{sentinel} cuts reader-identity over-refusal $9/12 \!\rightarrow\! 3/12$; (iii) \textbf{per-token KL distillation} (Thinking Machines / DeepSeek-V4) of v4-prompted Qwen3-32B-AWQ into Qwen3-8B drives the student to $33/108$ harm at $n{=}113$ on-policy turn-records --- the strongest 8B-distillation result in our study, and the first 8B variant whose multi-seed harm improvement vs the SFT$+$DPO endpoint reaches $p < 0.05$ on paired Wilcoxon ($p = 0.0114$). Two characterization findings: (iv) the leak/MI/bound trade-off forms a stable \textbf{manifold floor} that DAPO post-training does not statistically crack at $n{=}5$; (v) per-token KL has \textbf{two distinct stopping points} on its $K$-iteration trajectory --- iter\,1 is harm-minimal ($33/13/3/32$), iter\,2 is leak/bound-minimal ($38/9/2/35$), and iter\,3 walks back ($K{=}2$ saturation), confirmed by a second significant paired Wilcoxon at $p = 0.0436$ (iter\,2, $n{=}4$).
 \end{abstract}
 
 \section{Introduction}
@@ -87,16 +87,18 @@ A growing fraction of LLM deployment is \emph{agentic}: the model represents one
 \item Conditional permissions are not proactive disclosures.
 \end{itemize}
 
-Applied to \texttt{claude-sonnet}, the v4 prompt drives the 108-trajectory aggregate to \textbf{harm $21/108$ ($19.4\%$), leak $17/108$, bound $5/108$, MI $21/108$} --- a $3.5\times$ reduction in harm fires vs the default-prompt baseline. We evaluated v4 on five more frontier subjects at the full 108-grid (\cref{fig:xsubj}):
+Applied to \texttt{claude-sonnet}, the v4 prompt drives the 108-trajectory aggregate to \textbf{harm $21/108$ ($19.4\%$), leak $17/108$, bound $5/108$, MI $21/108$} --- a $3.5\times$ reduction in harm fires vs the default-prompt baseline. We evaluated v4 on seven more frontier subjects at the full 108-grid (\cref{fig:xsubj}):
 \begin{center}\small
 \begin{tabular}{l c c c c}
 \toprule
 subject (108-grid)        & plain (no prompt)   & prompted (v4)        & scaffolded (v4+sentinel)  & aggregate \\
 \midrule
 DeepSeek-v3.1             & $11\%$              & $\mathbf{9\%}$       & $11\%$                    & $\mathbf{11\%}$ \\
+Gemini-2.5-flash          & $17\%$              & $20\%$               & $14\%$                    & $17\%$ \\
 Gemini-3-flash            & $17\%$              & $20\%$               & $15\%$                    & $17\%$ \\
 Qwen3-32B (OpenRouter)    & $24\%$              & $\mathbf{12\%}$      & $14\%$                    & $17\%$ \\
 Claude-Sonnet             & $19\%$              & $22\%$               & $17\%$                    & $19\%$ \\
+\textbf{GPT-5-mini}       & $\mathbf{55\%}$     & $\mathbf{67\%}$      & $\mathbf{64\%}$           & $\mathbf{62\%}$ \\
 \textbf{GPT-5}            & $\mathbf{63\%}$     & $71\%$               & $71\%$                    & $\mathbf{68\%}$ \\
 \textbf{Qwen3.5-27B}      & $\mathbf{72\%}$     & $79\%$               & $59\%$                    & $\mathbf{70\%}$ \\
 \bottomrule
@@ -105,12 +107,12 @@ Claude-Sonnet             & $19\%$              & $22\%$               & $17\%$ 
 (per-arm harm rate; $n \approx 33$--$37$ per cell after audit)
 \end{center}
 
-\textbf{Four of six vendors handle v4; two intrinsically over-refuse.} GPT-5 and Qwen3.5-27B over-refuse at the \texttt{plain} arm too ($63\%$ and $72\%$ harm without any system prompt), so the v4 prompt is approximately a no-op for them --- they are already pegged on MI from their own safety training. PrincipalBench surfaces this intrinsic difference: \emph{the benchmark itself separates vendors that can selectively decline adversarial requests from vendors that blanket-refuse multi-party agentic items}. The four calibrated vendors achieve harm $11$--$19\%$ at v4 (DeepSeek best); the two over-refusing vendors hold at $68$--$70\%$. Notably the v4 prompt actively helps Qwen3-32B (plain $24\%$ $\rightarrow$ prompted $12\%$) and DeepSeek (plain $11\%$ $\rightarrow$ prompted $9\%$), so the Pareto-best claim is strongest in this calibrated subset, not universal.
+\textbf{Five of eight vendors handle v4 well; three intrinsically over-refuse.} The split is approximately vendor-level: both Anthropic Claude variants, both Google Gemini variants (2.5 and 3 flash), one DeepSeek, and the open-weight Qwen3-32B are calibrated and reach $\sim$11--19\% harm. The full OpenAI line (GPT-5 \emph{and} GPT-5-mini) over-refuses at $62$--$68\%$, and Qwen3.5-27B over-refuses at $70\%$. Crucially, the three over-refusing vendors are over-refusing at the \texttt{plain} arm too ($55$--$72\%$ harm without any system prompt) --- the v4 prompt is approximately a no-op for them, they are already pegged on MI from their own safety training. PrincipalBench therefore surfaces an intrinsic vendor difference: \emph{the benchmark itself separates vendors that selectively decline adversarial requests from vendors that blanket-refuse multi-party agentic items}. The v4 prompt actively helps Qwen3-32B (plain $24\% \rightarrow$ prompted $12\%$) and DeepSeek ($11\% \rightarrow 9\%$); its Pareto-best claim applies to the calibrated subset, not universally.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.8\linewidth]{figures/arxiv_fig7_xsubj.pdf}
-\caption{\textbf{6-vendor cross-subject v4 prompt evaluation.} Four vendors (DeepSeek, Gemini-3-flash, Qwen3-32B, Claude-Sonnet) handle the v4 prompt at $\sim$11--19\% harm; two (GPT-5, Qwen3.5-27B) intrinsically over-refuse at the plain arm too (no system prompt, harm $63\%$ and $72\%$). The v4 prompt actively helps Qwen3-32B ($24\% \!\rightarrow\! 12\%$) and DeepSeek ($11\% \!\rightarrow\! 9\%$); it is approximately a no-op for the over-refusing pair.}
+\caption{\textbf{8-vendor cross-subject v4 prompt evaluation.} Five vendors (DeepSeek, both Gemini flash variants, Qwen3-32B, Claude-Sonnet) handle the v4 prompt at $\sim$11--19\% harm; three (both GPT-5 variants, Qwen3.5-27B) intrinsically over-refuse at the plain arm too. The split is vendor-level: full OpenAI line over-refuses; Anthropic / Google / DeepSeek / Alibaba-Qwen3 calibrate.}
 \label{fig:xsubj}
 \end{figure}
 
@@ -181,7 +183,7 @@ V3 iter\,3                    & 41          & 15         & 4          & 40    \\
 \label{fig:kiter}
 \end{figure}
 
-\paragraph{Iter\,2 multi-seed.} An additional paired Wilcoxon at $n{=}3$ (GPU contention prevented a clean 5-seed budget; $\!$2 of 5 attempted seeds failed their integrity audit after exhausting retry attempts and were dropped) confirms: harm mean $41.3 \pm 3.5$ vs v4.1 mean $51.7$, $p = 0.0121$. \emph{Both} per-token KL stopping points hit $p<0.05$ on harm. Single-seed iter\,2 ($38/9/2/35$) sat in the low tail; population mean is $41/12/3/40$.
+\paragraph{Iter\,2 multi-seed.} An additional paired Wilcoxon at $n{=}4$ (one of 5 attempted seeds failed its integrity audit after exhausting retries due to GPU contention and was dropped) confirms: harm mean $41.5$ vs v4.1 mean $48.5$, $p = 0.0436$; leak $11.2$ vs $16.2$ ($p = 0.18$); bound $2.5$ vs $4.5$ ($p = 0.59$); MI $40.5$ vs $44.2$ ($p = 0.21$). \emph{Both} per-token KL stopping points hit $p<0.05$ on harm. Single-seed iter\,2 ($38/9/2/35$) sat in the low tail; population mean is $41/11/3/41$.
 
 \begin{figure}[t]
 \centering
