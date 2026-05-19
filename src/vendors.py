@@ -458,6 +458,27 @@ def get_vendor(spec: str) -> Vendor:
             api_key_env="OPENROUTER_API_KEY",
             name="qwen-27b",
         )
+    if spec == "llama-70b":
+        return OpenAICompatVendor(
+            model="meta-llama/llama-3.1-70b-instruct",
+            base_url="https://openrouter.ai/api/v1",
+            api_key_env="OPENROUTER_API_KEY",
+            name="llama-70b",
+        )
+    if spec == "mistral-large":
+        return OpenAICompatVendor(
+            model="mistralai/mistral-large-2411",
+            base_url="https://openrouter.ai/api/v1",
+            api_key_env="OPENROUTER_API_KEY",
+            name="mistral-large",
+        )
+    if spec == "glm-4.6":
+        return OpenAICompatVendor(
+            model="z-ai/glm-4.6",
+            base_url="https://openrouter.ai/api/v1",
+            api_key_env="OPENROUTER_API_KEY",
+            name="glm-4.6",
+        )
     if spec == "qwen-32b":
         return OpenAICompatVendor(
             model="qwen/qwen3-32b",
