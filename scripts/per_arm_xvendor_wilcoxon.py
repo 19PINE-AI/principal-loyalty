@@ -28,7 +28,6 @@ VENDORS = {
     "calibrated": [
         ("deepseek", "deepseek"),
         ("gemini3p1_lite", "Gemini-3p1-flash-lite"),
-        ("gpt5_nano", "GPT-5-nano"),
         ("claude_opus", "Claude-Opus"),
         ("gemini25flash", "Gemini-2.5-flash"),
         ("gemini3flash", "Gemini-3-flash"),
@@ -39,6 +38,7 @@ VENDORS = {
     ],
     "intermediate": [("glm46", "GLM-4.6")],
     "over_refuse": [
+        ("gpt5_nano", "GPT-5-nano (OR)"),
         ("gpt5mini", "GPT-5-mini"),
         ("gpt5", "GPT-5"),
         ("qwen27b", "Qwen3.5-27B"),

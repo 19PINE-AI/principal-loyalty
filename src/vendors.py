@@ -176,9 +176,14 @@ def _merge_consecutive_user_assistant(api_messages: list[dict]) -> list[dict]:
 
 
 class OpenAICompatVendor(Vendor):
-    def __init__(self, model: str, base_url: str | None, api_key_env: str, name: str):
+    def __init__(self, model: str, base_url: str | None, api_key_env: str, name: str,
+                 extra_body: dict | None = None):
         self.model = model
         self.name = name
+        # extra_body is forwarded to chat.completions.create on every call.
+        # On OpenRouter, use this to pin provider routing, e.g.
+        #   {"provider": {"only": ["mistral"], "allow_fallbacks": False}}
+        self.extra_body = extra_body
         self.client = OpenAI(
             api_key=os.environ[api_key_env],
             base_url=base_url,
@@ -247,6 +252,8 @@ class OpenAICompatVendor(Vendor):
         if tools:
             kwargs["tools"] = [_openai_tool(t) for t in tools]
             kwargs["tool_choice"] = "auto"
+        if self.extra_body:
+            kwargs["extra_body"] = self.extra_body
 
         t0 = time.time()
         resp = self.client.chat.completions.create(**kwargs)
@@ -466,11 +473,15 @@ def get_vendor(spec: str) -> Vendor:
             name="llama-70b",
         )
     if spec == "mistral-large":
+        # This OpenRouter account's default routing requests google-vertex et al.
+        # but mistral-large is only served by the 'mistral' provider on this
+        # account. Pin to mistral explicitly via extra_body.
         return OpenAICompatVendor(
             model="mistralai/mistral-large-2411",
             base_url="https://openrouter.ai/api/v1",
             api_key_env="OPENROUTER_API_KEY",
             name="mistral-large",
+            extra_body={"provider": {"only": ["mistral"], "allow_fallbacks": False}},
         )
     if spec == "glm-4.6":
         return OpenAICompatVendor(
