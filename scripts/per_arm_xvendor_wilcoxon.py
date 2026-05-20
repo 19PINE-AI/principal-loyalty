@@ -84,28 +84,29 @@ def main():
                 continue
             all_rows[label] = rows
 
-    # ---- H1: v4 effect on calibrated, paired by item, across vendors ----
-    print("\n## H1: v4 (prompted) vs plain on calibrated vendors")
-    print("    paired by (vendor, item), Wilcoxon signed-rank")
-    diffs = []
-    for label, name in VENDORS["calibrated"]:
-        if label not in all_rows:
-            continue
-        plain = per_item_harm(all_rows[label], "plain")
-        prompted = per_item_harm(all_rows[label], "prompted")
-        common = sorted(set(plain) & set(prompted))
-        for iid in common:
-            diffs.append(prompted[iid] - plain[iid])
-    n_pos = sum(1 for d in diffs if d > 0)
-    n_neg = sum(1 for d in diffs if d < 0)
-    n_zero = sum(1 for d in diffs if d == 0)
-    print(f"    n_pairs={len(diffs)} pos={n_pos} neg={n_neg} zero={n_zero}")
-    if diffs and (n_pos + n_neg) > 0:
-        try:
-            res = wilcoxon(diffs, zero_method="wilcox")
-            print(f"    Wilcoxon: stat={res.statistic:.2f}  p={res.pvalue:.4f}")
-        except Exception as e:
-            print(f"    Wilcoxon error: {e}")
+    # ---- H1 / H1': v4 effect within each cluster, paired by (vendor, item) ----
+    for cluster_name in ("calibrated", "over_refuse"):
+        print(f"\n## H1 ({cluster_name}): v4 (prompted) vs plain")
+        print("    paired by (vendor, item), Wilcoxon signed-rank")
+        diffs = []
+        for label, name in VENDORS[cluster_name]:
+            if label not in all_rows:
+                continue
+            plain = per_item_harm(all_rows[label], "plain")
+            prompted = per_item_harm(all_rows[label], "prompted")
+            common = sorted(set(plain) & set(prompted))
+            for iid in common:
+                diffs.append(prompted[iid] - plain[iid])
+        n_pos = sum(1 for d in diffs if d > 0)
+        n_neg = sum(1 for d in diffs if d < 0)
+        n_zero = sum(1 for d in diffs if d == 0)
+        print(f"    n_pairs={len(diffs)} pos={n_pos} neg={n_neg} zero={n_zero}")
+        if diffs and (n_pos + n_neg) > 0:
+            try:
+                res = wilcoxon(diffs, zero_method="wilcox")
+                print(f"    Wilcoxon: stat={res.statistic:.2f}  p={res.pvalue:.4f}")
+            except Exception as e:
+                print(f"    Wilcoxon error: {e}")
 
     # ---- H2: calibrated vs over_refuse, per arm, paired by item ----
     print("\n## H2: calibrated cluster vs over-refuse cluster, per arm")
