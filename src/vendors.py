@@ -512,6 +512,15 @@ def get_vendor(spec: str) -> Vendor:
             name="gpt-5.4",
         )
     if spec == "gpt-5-nano":
+        # Direct OpenAI key on this box lacks gpt-5-nano scope (403); route
+        # through OpenRouter to the same underlying model.
+        return OpenAICompatVendor(
+            model="openai/gpt-5-nano",
+            base_url="https://openrouter.ai/api/v1",
+            api_key_env="OPENROUTER_API_KEY",
+            name="gpt-5-nano",
+        )
+    if spec == "gpt-5-nano-direct":
         return OpenAICompatVendor(
             model="gpt-5-nano",
             base_url=None,
