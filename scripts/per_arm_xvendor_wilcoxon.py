@@ -38,7 +38,6 @@ VENDORS = {
     ],
     "intermediate": [("glm46", "GLM-4.6")],
     "over_refuse": [
-        ("gpt5_nano", "GPT-5-nano (OR)"),
         ("gpt5mini", "GPT-5-mini"),
         ("gpt5", "GPT-5"),
         ("qwen27b", "Qwen3.5-27B"),
