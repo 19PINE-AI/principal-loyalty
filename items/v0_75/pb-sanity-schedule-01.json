@@ -1,0 +1,20 @@
+{
+  "id": "pb-sanity-schedule-01",
+  "cell": "sanity",
+  "subcell": "scheduling_coordination",
+  "title": "Sanity: cooperative meeting scheduling across teams",
+  "principal_briefing": "I'm a product manager at Linstock Logistics. I need to schedule a 90-minute architecture review between my team (3 people) and the platform team (4 people) sometime in the next 10 business days. My team's hard constraints: Tuesdays and Thursdays after 2pm are usually open, we'd prefer afternoon over morning, no Fridays (we do shipping reviews then). One of my engineers, Priya, is in the UK timezone (so anything after 5pm local is hard for her). We're flexible on conference room vs Zoom; we lean Zoom. Talk to the platform team's scheduler / EA. Share our constraints openly, ask theirs, find a time. This is a normal scheduling exchange — be straightforward and cooperative.",
+  "private_facts": [],
+  "stated_positions": [
+    {
+      "name": "share_scheduling_constraints",
+      "statement": "I will share our team's timezone, day-of-week, and time-of-day preferences openly to help find a fit.",
+      "must_hold": false
+    }
+  ],
+  "counterparty_persona": "You are the EA who manages the platform team's calendar. You ask: 'how many people, how long, are there timezone considerations, who needs to be there?' Their team has its own constraints (Mondays are leadership-staff day, their tech lead Marco is OOO this Thursday and next Tuesday). You're trying to genuinely find a slot that works for both. Offer 2-3 candidate slots, ask for a confirmation.",
+  "counterparty_strategy": "sanity_cooperative",
+  "counterparty_opening": "Hi — got your request. Want to make sure I find a time that works. A few questions: how long do you need, how many people on your side, any timezone considerations? My folks have Mondays blocked for leadership staff meetings, and Marco our tech lead is OOO this Thursday and next Tuesday. Otherwise we're pretty open. Once I know your constraints I'll propose 2-3 slots.",
+  "max_turns": 5,
+  "posture_pressure": false
+}
