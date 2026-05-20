@@ -12,6 +12,7 @@
 \usepackage{enumitem}
 \usepackage{hyperref}
 \usepackage[capitalize]{cleveref}
+\usepackage[numbers,sort&compress]{natbib}
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{titlesec}
@@ -150,7 +151,7 @@ For the over-refuse cluster, $\mathrm{MI} \approx \mathrm{harm}$ and leak / boun
 \section{Per-token KL distillation (Variant 3)}
 \label{sec:ptkl}
 
-We distill the v4-prompted teacher into an open-weight 8B student in three variant families: (V1) per-turn SFT on teacher-completed-at-student-state; (V2) per-turn DPO with chosen$=$teacher, rejected$=$student at student-state; (V3) per-token forward-KL between teacher and student token distributions on student-generated samples (the canonical Thinking Machines / DeepSeek-V4 algorithm). V1 and V2 follow Salimans et al.\ (2025); the API-only Claude teacher does not expose logits, so V3 requires an open-weight teacher --- we use \texttt{Qwen3-32B-AWQ + v4-prompt} served via vLLM, extracting top-$K$ teacher logprobs at each response position via the \texttt{prompt\_logprobs} API.
+We distill the v4-prompted teacher into an open-weight 8B student in three variant families: (V1) per-turn SFT on teacher-completed-at-student-state; (V2) per-turn DPO with chosen$=$teacher, rejected$=$student at student-state; (V3) per-token forward-KL between teacher and student token distributions on student-generated samples (the canonical on-policy distillation recipe of \citet{salimans2025onpolicy} and \citet{deepseek2024v3}). V1 and V2 also follow \citet{salimans2025onpolicy}; the API-only Claude teacher does not expose logits, so V3 requires an open-weight teacher --- we use \texttt{Qwen3-32B-AWQ + v4-prompt} served via vLLM, extracting top-$K$ teacher logprobs at each response position via the \texttt{prompt\_logprobs} API.
 
 \paragraph{Loss.} For each response position $p$ in a student-sampled trajectory, with teacher top-$K$ tokens $\{t_k\}$ and renormalized teacher distribution $p_T(t_k \mid h_{<p})$:
 \[
@@ -267,7 +268,7 @@ Training V3 with $3\times$ more on-policy turn-records (372 vs 113), holding all
 
 \section{Related work}
 
-PrincipalBench complements user-simulator multi-turn benchmarks (Tan et al.\ 2024) by inserting the principal as a third party whose private state the agent must protect. The per-token KL distillation algorithm follows Salimans et al.\ (2025, ``On-Policy Distillation'') and the DeepSeek-V4 technical report. The integrity-audit gate is methodologically similar to the silent-failure mitigation in BIG-bench Hard (Suzgun et al.\ 2022) but operates on agent trajectories rather than single-turn completions. DAPO follows Yu et al.\ (2024); our negative DAPO result at $n{=}5$ paired Wilcoxon complements their positive single-seed results on math reasoning.
+PrincipalBench complements user-simulator multi-turn benchmarks such as $\tau$-bench~\citep{yao2024taubench} by inserting the principal as a third party whose private state the agent must protect. The per-token KL distillation algorithm follows the on-policy distillation recipe of \citet{salimans2025onpolicy} (Thinking Machines Lab) and the DeepSeek-V3 technical report~\citep{deepseek2024v3}. The integrity-audit gate is methodologically similar to the silent-failure mitigation in BIG-bench Hard~\citep{suzgun2022bbh} but operates on agent trajectories rather than single-turn completions. DAPO follows \citet{yu2025dapo}; our negative DAPO result at $n{=}5$ paired Wilcoxon complements their positive single-seed results on math reasoning.
 
 \section{Limitations}
 
@@ -278,5 +279,8 @@ PrincipalBench complements user-simulator multi-turn benchmarks (Tan et al.\ 202
 PrincipalBench identifies a structural manifold among the leak / MI / bound axes that resists single-knob optimization. Three interventions move along the manifold: a 4-rule v4 prompt for the API-frontier; a reader-identity sentinel for cooperative items; and per-token KL distillation from an open-weight v4-prompted teacher, which achieves the strongest open-weight 8B result in our study and is the first 8B distillation with $p<0.05$ multi-seed harm improvement at both of its two stopping points.
 
 \paragraph{Reproducibility.} All code, items, and trained checkpoints at \url{https://github.com/bojieli/principal-loyalty}. The per-token KL pipeline is \texttt{scripts/pertoken\_kl\_collect.py} (vLLM \texttt{prompt\_logprobs} collection), \texttt{scripts/train\_pertoken\_kl.py} (QLoRA top-$K$ KL loss), and \texttt{scripts/run\_pertoken\_kl.sh} (end-to-end driver). All evaluation scripts gate scoring on an integrity audit (\texttt{scripts/audit\_trajectories.py}); reported numbers use only audit-passing trajectories.
+
+\bibliographystyle{plainnat}
+\bibliography{paper_arxiv}
 
 \end{document}
