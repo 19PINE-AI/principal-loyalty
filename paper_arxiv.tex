@@ -98,13 +98,13 @@ DeepSeek-v3.1                 & $11\%$              & $\mathbf{9\%}$       & $11
 Gemini-3p1-flash-lite         & $17\%$              & $17\%$               & $0\%$                     & $11\%$ \\
 Mistral-Large                 & $11\%$              & $14\%$               & $11\%$                    & $12\%$ \\
 Llama-3.1-70B-Instruct        & $9\%$               & $14\%$               & $22\%$                    & $16\%$ \\
-Claude-Opus                   & $11\%$              & $19\%$               & $19\%$                    & $17\%$ \\
+Claude-Opus                   & $11\%$              & $19\%$               & $19\%$                    & $17\%$ ($18.1 \pm 2.8\%$, $n{=}5$)\\
 Gemini-2.5-flash              & $17\%$              & $20\%$               & $14\%$                    & $17\%$ \\
 Gemini-3-flash                & $17\%$              & $20\%$               & $15\%$                    & $17\%$ \\
 Qwen3-32B (OpenRouter)        & $24\%$              & $\mathbf{12\%}$      & $14\%$                    & $17\%$ \\
 Claude-Sonnet                 & $19\%$              & $22\%$               & $17\%$                    & $19\%$ \\
-\textit{GLM-4.6 (intermediate)} & $51\%$            & $52\%$               & $43\%$                    & $\mathit{49\%}$ \\
-\textbf{GPT-5-mini}           & $\mathbf{55\%}$     & $\mathbf{67\%}$      & $\mathbf{64\%}$           & $\mathbf{62\%}$ \\
+\textit{GLM-4.6 (intermediate)} & $51\%$            & $52\%$               & $43\%$                    & $\mathit{49\%}$ ($46.0 \pm 2.9\%$, $n{=}5$)\\
+\textbf{GPT-5-mini}           & $\mathbf{55\%}$     & $\mathbf{67\%}$      & $\mathbf{64\%}$           & $\mathbf{62\%}$ ($53.6 \pm 5.1\%$, $n{=}5$)\\
 \textbf{GPT-5}                & $\mathbf{63\%}$     & $71\%$               & $71\%$                    & $\mathbf{68\%}$ \\
 \textbf{Qwen3.5-27B}          & $\mathbf{72\%}$     & $79\%$               & $59\%$                    & $\mathbf{70\%}$ \\
 \bottomrule
@@ -134,7 +134,7 @@ For the over-refuse cluster, $\mathrm{MI} \approx \mathrm{harm}$ and leak / boun
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.8\linewidth]{figures/arxiv_fig7_xsubj.pdf}
-\caption{\textbf{13-subject cross-vendor v4 prompt evaluation, sorted ascending; multi-seed error bars where available.} Nine subjects form a calibrated cluster at $11$--$19\%$ harm; GLM-4.6 is intermediate at $49\%$; three over-refuse at $62$--$70\%$. Error bars are $\pm 1\sigma$ across $n{=}5$ eval seeds for the five subjects that bracket the gap (Claude-Sonnet, DeepSeek, Gemini-3-flash, GPT-5, Qwen3.5-27B).}
+\caption{\textbf{13-subject cross-vendor v4 prompt evaluation, sorted ascending; multi-seed error bars where available.} Nine subjects form a calibrated cluster at $11$--$19\%$ harm; GLM-4.6 is intermediate at $46\%$; three over-refuse at $54$--$75\%$. Error bars are $\pm 1\sigma$ across $n{=}5$ eval seeds for eight subjects (DeepSeek, Claude-Opus, Claude-Sonnet, Gemini-3-flash, GLM-4.6, GPT-5-mini, GPT-5, Qwen3.5-27B). Multi-seed lowers the GPT-5-mini point estimate from single-seed $62\%$ to $53.6 \pm 5.1\%$; the cluster boundary still cleanly separates calibrated ($\le 19.5\%$) from over-refuse ($\ge 53.6\%$).}
 \label{fig:xsubj}
 \end{figure}
 
