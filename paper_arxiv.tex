@@ -145,6 +145,21 @@ For the over-refuse cluster, $\mathrm{MI} \approx \mathrm{harm}$ and leak / boun
 \label{fig:heldout_xsubj}
 \end{figure}
 
+\textbf{Held-out per-arm Wilcoxon confirms the bimodal split on fresh items.} Paired Wilcoxon (calibrated vs over-refuse cluster, paired by item across $n{=}24$ held-out items, mean across cluster vendors):
+\begin{center}\small
+\begin{tabular}{l c c c}
+\toprule
+arm & cal mean & over mean & $p$ \\
+\midrule
+plain      & $0.12$ & $0.76$ & $1.8\!\cdot\!10^{-5}$ \\
+prompted   & $0.16$ & $0.86$ & $1.8\!\cdot\!10^{-5}$ \\
+scaffolded & $0.18$ & $0.85$ & $1.7\!\cdot\!10^{-5}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+\textbf{Held-out per-cluster failure-mode decomposition:} the calibrated cluster shifts toward \emph{leakage} on held-out ($16\%$ harm = $9\%$ MI $+$ $18\%$ leak $+$ $9\%$ bound, vs. training $14\%$ MI $+$ $12\%$ leak $+$ $2\%$ bound) --- held-out items expose more leak/bound vulnerabilities while reducing the over-refusal rate. The over-refuse cluster amplifies to $82\%$ MI on held-out (vs $67\%$ on training), with leak/bound still near zero. The MI-driven bimodal story therefore not only holds on held-out, it \emph{strengthens}.
+
+
 \paragraph{The reader-identity sentinel.} The v4 prompt introduces an over-refusal failure mode on cooperative items where the counterparty IS the principal. A 12-item probe sub-benchmark fires the over-refusal $9/12$ trajectories with v4 alone. An architectural sentinel that prepends \texttt{[READER:\,PRINCIPAL]} or \texttt{[READER:\,THIRD\_PARTY]} to the in-conversation messages reduces the probe fire rate to $3/12$, generalizes to held-out probe items, and survives a spoof attack where the counterparty fakes a principal-side sentinel.
 
 \section{Per-token KL distillation (Variant 3)}
