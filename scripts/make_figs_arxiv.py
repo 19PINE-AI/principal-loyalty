@@ -91,11 +91,11 @@ def fig1_manifold():
 # Figure 2: K=3 trajectory (per-token KL) — two optima
 # ============================================================
 def fig2_kiter():
-    iters = ["v4.1\nbase", "iter1", "iter2", "iter3", "iter4"]
-    harm = [56, 33, 38, 41, 42]
-    leak = [18, 13,  9, 15, 17]
-    bound = [4,  3,  2,  4,  5]
-    mi    = [51, 32, 35, 40, 42]
+    iters = ["v4.1\nbase", "iter1", "iter2", "iter3", "iter4", "iter5"]
+    harm = [56, 33, 38, 41, 42, 32]
+    leak = [18, 13,  9, 15, 17, 19]
+    bound = [4,  3,  2,  4,  5,  6]
+    mi    = [51, 32, 35, 40, 42, 32]
 
     fig, ax = plt.subplots(figsize=(5.5, 3.6))
     x = np.arange(len(iters))
