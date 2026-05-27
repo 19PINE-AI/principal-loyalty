@@ -15,7 +15,7 @@ mkdir -p logs "${OUT_DIR}"
 # Wait for adequate GPU
 while :; do
   free_gb=$(/home/ubuntu/aoi-env/bin/python -c "import torch; print(int(torch.cuda.mem_get_info(0)[0]/1e9))" 2>/dev/null || echo 0)
-  if [ "$free_gb" -ge 45 ]; then echo "[gpu] free=${free_gb}GB OK"; break; fi
+  if [ "$free_gb" -ge 50 ]; then echo "[gpu] free=${free_gb}GB OK"; break; fi
   echo "[gpu] free=${free_gb}GB, need 45; sleeping 60s"; sleep 60
 done
 
@@ -40,10 +40,10 @@ python3 -m verl.trainer.main_ppo \
   actor_rollout_ref.rollout.name=vllm \
   actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
   actor_rollout_ref.rollout.checkpoint_engine.update_weights_bucket_megabytes=4096 \
-  actor_rollout_ref.rollout.n=4 \
+  actor_rollout_ref.rollout.n=2 \
   actor_rollout_ref.rollout.temperature=0.9 \
-  actor_rollout_ref.rollout.response_length=384 \
-  actor_rollout_ref.rollout.gpu_memory_utilization=0.18 \
+  actor_rollout_ref.rollout.response_length=256 \
+  actor_rollout_ref.rollout.gpu_memory_utilization=0.40 \
   actor_rollout_ref.rollout.free_cache_engine=true \
   actor_rollout_ref.rollout.max_model_len=4096 \
   actor_rollout_ref.rollout.enforce_eager=true \
