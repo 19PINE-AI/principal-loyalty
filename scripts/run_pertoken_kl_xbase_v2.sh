@@ -61,18 +61,22 @@ run_xbase() {
     kill_vllm
     wait_for_gpu 40
     echo "[vllm-teacher] starting $TEACHER_MODEL on :$TEACHER_PORT"
+    # --enforce-eager + bumped engine-ready timeout to avoid CUDA-graph
+    # capture timing out on large AWQ models (see project_awq32b_vllm memory).
+    VLLM_ENGINE_READY_TIMEOUT_S=1800 \
     nohup /home/ubuntu/aoi-env/bin/python -m vllm.entrypoints.openai.api_server \
       --model "$TEACHER_MODEL" \
       --served-model-name "$TEACHER_VENDOR" \
       --dtype auto --quantization awq --max-model-len 8192 \
       --gpu-memory-utilization "$TEACHER_GPU_UTIL" \
+      --enforce-eager \
       --port $TEACHER_PORT > "logs/vllm_teacher_${NAME}.log" 2>&1 &
     local pid=$!
     local t=0
     until curl -sf http://localhost:$TEACHER_PORT/v1/models >/dev/null 2>&1; do
       sleep 15; t=$((t+15))
       if ! kill -0 $pid 2>/dev/null; then echo "[teacher] DIED"; tail -20 logs/vllm_teacher_${NAME}.log; return 1; fi
-      if [ $t -ge 600 ]; then echo "[teacher] timeout"; return 1; fi
+      if [ $t -ge 1500 ]; then echo "[teacher] timeout"; return 1; fi
     done
     echo "[vllm-teacher] ready after ${t}s"
 
@@ -143,9 +147,9 @@ items = load_items("items/v0")
 run_grid(items=items, subjects=["qwen-8b-local"],
          arms=["plain","prompted","scaffolded"],
          out_path="$EVAL_DIR/trajectories.jsonl",
-         counterparty_spec="claude-sonnet", parallel=4)
+         counterparty_spec="claude-sonnet", parallel=1)
 PYEOF
-    /home/ubuntu/aoi-env/bin/python scripts/audit_trajectories.py "$EVAL_DIR/trajectories.jsonl" --require 100 || true
+    /home/ubuntu/aoi-env/bin/python scripts/audit_trajectories.py "$EVAL_DIR/trajectories.jsonl" --require 100 --allow-error-frac 0.05
     /home/ubuntu/aoi-env/bin/python - <<PYEOF
 import sys; sys.path.insert(0, ".")
 from src.items import load_items
@@ -171,18 +175,17 @@ print(f'[summary] ${NAME}_pertoken_kl: harm={harm}/{n} leak={leak} bound={bound}
 "
 }
 
-# Run Llama family first (Llama-3.1-70B-Instruct-AWQ teacher → Llama-3.1-8B student)
+# Run Llama family (Llama-3.1-70B-Instruct-AWQ teacher → Llama-3.1-8B student).
+# 70B-AWQ weights eat ~35GB; bumped util 0.40 -> 0.60 to leave headroom for KV.
+# STUDENT_SERVED_NAME is Qwen/Qwen3-8B so the harness's qwen-8b-local vendor
+# (which expects model="Qwen/Qwen3-8B") can route to it.
 run_xbase llama runs/llama_sft_dpo_v4_1_merged \
   hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4 \
-  meta-llama/Llama-3.1-8B-Instruct \
+  Qwen/Qwen3-8B \
   llama-70b-teacher \
-  0.40
+  0.60
 
-# Run Mistral family (Mixtral-8x7B-Instruct-AWQ teacher → Mistral-7B student)
-run_xbase mistral runs/mistral_sft_dpo_v4_1_merged \
-  TheBloke/Mixtral-8x7B-Instruct-v0.1-AWQ \
-  mistralai/Mistral-7B-Instruct-v0.3 \
-  mixtral-teacher \
-  0.35
+# Mistral variant deferred: pertoken_kl_collect.py returns 0 records on
+# mistral trajectories (silent filter — needs debugging).
 
 echo "[DONE] Cross-base per-token KL complete"
