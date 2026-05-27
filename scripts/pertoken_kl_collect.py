@@ -194,8 +194,11 @@ def collect_for_item(item: Item, traj: dict, tokenizer, top_k: int,
             #     "logprob": float, "rank": int, "decoded_token": str }.
             # Wait, actually vLLM returns it as {tok_id_str: {"logprob": ..., "decoded_token": ..., "rank": ...}}
             # Slice to response positions
-            assert len(prompt_logprobs) == len(full_ids), \
-                f"prompt_logprobs length {len(prompt_logprobs)} != tokens {len(full_ids)}"
+            if len(prompt_logprobs) != len(full_ids):
+                # Some servers (e.g. AWQ Mixtral with different tokenizer settings)
+                # return a different length. Skip rather than abort the whole batch.
+                print(f"  [skip] prompt_logprobs length {len(prompt_logprobs)} != tokens {len(full_ids)} for {item.id} turn {t['turn']}")
+                continue
 
             response_topk = []
             for pos in range(response_start, len(full_ids)):
