@@ -54,7 +54,7 @@ echo "[llama-iter4] $(wc -l < $TRAJ) student trajectories"
 # 2. Collect Llama-70B-AWQ teacher top-K
 if [ ! -f "$TOPK" ] || [ "$(wc -l < $TOPK)" -lt 30 ]; then
   kill_vllm
-  wait_for_gpu 50
+  wait_for_gpu 60
   VLLM_ENGINE_READY_TIMEOUT_S=1800 \
   nohup /home/ubuntu/aoi-env/bin/python -m vllm.entrypoints.openai.api_server \
     --model hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4 \
