@@ -222,7 +222,19 @@ V3 iter\,5                    & \textbf{32} & 19         & 6          & \textbf{
 
 \textbf{The K-trajectory oscillates along the manifold rather than monotonically converging.} Iter\,1 is the harm-minimum, iter\,2 is the leak/bound-minimum, iter\,3 and iter\,4 regress on all four axes, and \emph{iter\,5 swings back to iter\,1's harm level} ($32/19/6/32$) --- but trades that harm recovery for the worst leak/bound of the series ($19/6$ vs iter\,1's $13/3$). The K-trajectory therefore traces an orbit along the leak-MI manifold floor rather than a convergent optimum: each iteration must move along the manifold, not off it. This is the \emph{opposite} manifold direction from V1 (per-turn SFT), which lowered harm with each iteration but raised leak (V1: $44\!\rightarrow\!36\!\rightarrow\!37$ harm, $17\!\rightarrow\!24\!\rightarrow\!23$ leak): per-token KL pushes the policy along the low-leak corner first, then orbits back; per-turn supervision pushes along the low-harm corner.
 
-\textbf{Cross-family generalization: the manifold floor is family-invariant, the optimal $K$ is not.} The per-token KL recipe transfers to a different model family: Llama-3.1-8B distilled from Llama-3.1-70B-Instruct-AWQ-INT4 (same tokenizer). Llama iter\,1 reaches $27/106$ harm ($25\%$, $3$ leak / $2$ bound / $25$ MI on the original 36-item grid, single seed), and Llama iter\,2 \emph{improves} the harm rate to $22/105$ ($21\%$, $9$ leak / $2$ bound / $20$ MI) --- the same leak/MI trade-off as the Qwen3 chain (lower harm at higher leak), but with the harm-minimum occurring one iteration later. Across both families the $K$-trajectory orbits the same leak/MI manifold; the specific stopping point depends on the base model.
+\textbf{Cross-family generalization: the K-trajectory is monotonic on Llama, oscillatory on Qwen.} The per-token KL recipe transfers to a different model family: Llama-3.1-8B distilled from Llama-3.1-70B-Instruct-AWQ-INT4 (same tokenizer). The Llama chain at single seed on the original 36-item grid:
+\begin{center}\small
+\begin{tabular}{l r r r r}
+\toprule
+iter (Llama)                & harm        & leak       & bound      & MI    \\
+\midrule
+Llama iter\,1               & 27          & \textbf{3} & 2          & 25 \\
+Llama iter\,2               & 22          & 9          & 2          & 20 \\
+Llama iter\,3               & \textbf{17} & 7          & 3          & \textbf{15} \\
+\bottomrule
+\end{tabular}
+\end{center}
+Unlike the Qwen3 chain (which saturates at K{=}2 and orbits), Llama-3.1-8B \emph{continues to improve through iter\,3 on every axis}: harm $27\!\to\!22\!\to\!17$, MI $25\!\to\!20\!\to\!15$. The leak rate peaks at iter\,2 ($9$) and partially recovers at iter\,3 ($7$). The qualitative K-shape therefore depends on the base model: the manifold floor exists for both families but the iteration count needed to hit it differs.
 
 \textbf{DAPO from iter\,1 cannot cross the floor either.} Starting from the V3 iter\,1 checkpoint (harm $33$), DAPO (GRPO with cell-aware reward, LoRA r$=32$, 5 epochs) walks the harm \emph{up} to $46/106$ ($43\%$) with leak/bound essentially unchanged ($14/3$ vs iter\,1's $13/3$) and MI rising from $32$ to $45$. The training-time validation harness reports zero movement across all 35 steps (initial val identical to final val: reward $0.2$, refused $0.6$, leak $0.0$). Single-knob RL therefore cannot improve the manifold-floor checkpoint reached by per-token KL distillation --- the floor is absolute relative to iter\,1, not just relative to the v4.1 starting point we established with the original DAPO-v1 result.
 
