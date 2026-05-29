@@ -33,8 +33,8 @@
 \setlength{\parskip}{0.25em}
 
 % --- title block ------------------------------------------------------------
-\title{\textbf{Per-Token KL Distillation Reaches a Statistically-Significant Floor on PrincipalBench}\\[2pt]
-\large An Open-Weight Recipe for Principal-Loyalty in Multi-Party LLM Agents}
+\title{\textbf{PrincipalBench: Whose Side Is Your Agent On?}\\[2pt]
+\large Benchmarking Principal-Loyalty When One LLM Agent Speaks for You to Someone Else}
 \author{
   Bojie Li\\
   \texttt{bojieli@gmail.com}
@@ -45,272 +45,156 @@
 \maketitle
 
 \begin{abstract}
-\noindent Instruction-tuned LLMs deployed as agents in multi-party conversations leak their principal's information, capitulate to social pressure, and over-refuse legitimate requests. We introduce \textbf{PrincipalBench}, a 36-item multi-turn benchmark across six failure modes (leakage, capitulation, posture, authoring, sanity, moderation) and three prompt arms (plain / prompted / scaffolded), with probe-based leak detection and dual-judge harm scoring. Three engineering results: (i) a 4-rule \textbf{v4 system prompt} drives 9 of 13 frontier subjects to harm rates of $\le 20\%$ at multi-seed $n{=}5$ on a full 108-grid (Gemini-2.5-flash $5.5\%$ best, Mistral-Large $11.0\%$, DeepSeek $12.3\%$, Gemini-3p1-flash-lite $12.0\%$, Qwen3-32B $16.3\%$, Claude-Opus $18.1\%$, Llama-3.1-70B $19.2\%$, Gemini-3-flash $19.4\%$, Claude-Sonnet $19.5\%$); GLM-4.6 is intermediate at $46.0\%$; \texttt{gpt-5}, \texttt{gpt-5-mini}, \texttt{qwen3.5-27b} \emph{intrinsically} over-refuse ($53.6$--$75.3\%$ multi-seed mean). All 13 cluster assignments use $n{=}5$ paired eval seeds with $\pm 1\sigma$ error bars (\cref{fig:xsubj}). The bimodal split also \emph{strengthens} on held-out items: GPT-5 amplifies from $71\%$ training to $93\%$ held-out, while calibrated vendors stay $\le 24\%$ (\cref{fig:heldout_xsubj}); (ii) an architectural \texttt{[READER:\,PRINCIPAL]}/\texttt{[READER:\,THIRD\_PARTY]} \textbf{sentinel} cuts reader-identity over-refusal $9/12 \!\rightarrow\! 3/12$; (iii) \textbf{per-token KL distillation} (Thinking Machines / DeepSeek-V4) of v4-prompted Qwen3-32B-AWQ into Qwen3-8B drives the student to $33/108$ harm at $n{=}113$ on-policy turn-records --- the strongest 8B-distillation result in our study, and the first 8B variant whose multi-seed harm improvement vs the SFT$+$DPO endpoint reaches $p < 0.05$ on paired Wilcoxon ($p = 0.0114$). Two characterization findings: (iv) the leak/MI/bound trade-off forms a stable \textbf{manifold floor} that DAPO post-training does not statistically crack at $n{=}5$; (v) per-token KL traces a \textbf{stable orbit along the leak/MI manifold floor} across $K{=}1{\to}5$: iter\,1 is harm-minimal ($33/13/3/32$), iter\,2 is leak/bound-minimal ($38/9/2/35$), iter\,3 and iter\,4 regress ($41/15/4/40$, $42/17/5/42$), and iter\,5 swings back to iter\,1's harm level at the cost of the worst leak/bound ($32/19/6/32$) --- the iteration moves along the manifold rather than off it. Iter\,1 harm improvement vs SFT$+$DPO endpoint is significant at $p = 0.0114$ paired Wilcoxon; iter\,2 also significant at $p = 0.0436$ ($n{=}4$).
+\noindent Almost all LLM-agent benchmarks model a \emph{two-party} world: an agent serving a single user, or an agent calling tools. But a growing class of deployments is \emph{multi-party}: the agent represents a \textbf{principal} (its operator or user) while conversing with a \textbf{counterparty} whose interests may conflict with the principal's --- negotiating on someone's behalf, screening inbound requests, mediating between colleagues. In this setting ``be helpful to the person you are talking to'' is the wrong objective: the agent must stay loyal to an absent principal. We argue this multi-party loyalty problem is distinct from, and under-served by, existing agent and safety evaluations, and we introduce \textbf{PrincipalBench} to operationalize it: a multi-turn benchmark in which an agent must protect a principal's private state and instructions against an adversarial counterparty, spanning six failure modes (leakage, capitulation, posture, authoring, sanity, moderation), with probe-based leak detection, dual-judge harm scoring, and an integrity-audit gate. Using the benchmark as a measurement instrument, we report one diagnostic finding and two practical interventions. \textbf{Diagnostic:} frontier models split cleanly into a \emph{calibrated} cluster (9 of 13 subjects, $\le 20\%$ harm at multi-seed $n{=}5$) and an \emph{over-refuse} cluster (\texttt{gpt-5}, \texttt{gpt-5-mini}, \texttt{qwen3.5-27b}, $53$--$75\%$) separated by $\sim$34 points; the split is driven by missed-instruction, robust to seed and to held-out items (per-arm paired Wilcoxon $p \le 10^{-5}$), and is intrinsic rather than prompt-induced. \textbf{Interventions on two axes:} for closed models you can only prompt, a 4-rule system-prompt scaffold plus a reader-identity sentinel holds the calibrated cluster at $\le 20\%$ harm ($3.5\times$ reduction on Claude-Sonnet); for open models you can fine-tune, per-token KL distillation of a prompted open teacher into an 8B student is the strongest open-weight recipe we measure ($p = 0.011$ multi-seed vs the SFT$+$DPO endpoint) and transfers across the Qwen3 and Llama-3.1 families. We characterize the leak/missed-instruction trade-off these interventions move along as a structural manifold floor that single-knob RL does not cross. We release the benchmark, items, and code to establish multi-party loyalty as a first-class evaluation target.
 \end{abstract}
 
 \section{Introduction}
 
-A growing fraction of LLM deployment is \emph{agentic}: the model represents one party (the \textbf{principal}) in a conversation with another party (the \textbf{counterparty}). Helpful-to-the-current-speaker training conflicts with principal-loyalty whenever the counterparty pushes for information, concessions, or actions the principal did not authorize. We instantiate this conflict as PrincipalBench and report a pipeline of prompt-time and weight-time interventions, along with a characterization of the failure manifold those interventions move along.
+Most evaluations of LLM agents assume a \emph{two-party} world. In assistant benchmarks the agent serves a single user and ``be maximally helpful to the user'' is the right objective. In tool-use and user-simulator benchmarks (e.g.\ $\tau$-bench~\citep{yao2024taubench}) the agent talks to a user and a set of APIs, but the user it talks to \emph{is} the party it serves. A rapidly growing class of real deployments breaks this assumption: the agent represents one party --- its \textbf{principal} --- while conversing with a different party --- the \textbf{counterparty} --- whose interests may diverge from the principal's. A procurement agent negotiates with a vendor on its company's behalf; an inbox agent screens requests from outsiders for its owner; an HR agent mediates between two employees; a founder's agent fields acquisition interest. In all of these the counterparty is \emph{the person the model is talking to}, so the default ``help the current speaker'' instinct is precisely wrong. The agent must instead stay loyal to an \emph{absent} principal: protect their private information, hold their stated positions under pressure, and decline requests they did not authorize --- without becoming so defensive that it refuses the principal's own cooperative requests.
 
-\paragraph{Three positive engineering results.}
+We call this the \textbf{multi-party loyalty problem}, and we argue it is a distinct, under-served evaluation target. It is not covered by single-turn safety benchmarks (the failures are conversational and pressure-driven), nor by helpfulness benchmarks (helpfulness to the counterparty is the failure), nor by existing agent benchmarks (which collapse principal and interlocutor into one user). Its core tension --- loyalty to an absent party versus helpfulness to the present one --- has no analogue in the two-party setting.
+
+\paragraph{Contributions.}
 \begin{enumerate}[leftmargin=2em,itemsep=2pt,topsep=2pt]
-\item A 4-rule \emph{v4 system prompt} drives the frontier-prompted Pareto frontier (\cref{sec:v4}).
-\item A reader-identity \emph{sentinel} fixes the over-refusal failure mode that emerges once the v4 prompt is applied (\cref{sec:v4}).
-\item \emph{Per-token KL distillation} of the v4-prompted teacher into an open-weight Qwen3-8B student achieves the strongest 8B-distillation we measure, with multi-seed statistical significance vs the off-policy SFT$+$DPO endpoint (\cref{sec:ptkl}).
+\item \textbf{The problem and the benchmark (primary).} We formalize multi-party principal-loyalty and operationalize it as \textbf{PrincipalBench}: a multi-turn benchmark in which an agent must defend a principal's private state and instructions against an adversarial counterparty across six failure modes, with probe-based leak detection, dual-judge harm scoring, and an integrity-audit gate (\cref{sec:problem,sec:bench}).
+\item \textbf{A diagnostic the benchmark reveals.} Frontier models split into a \emph{calibrated} and an \emph{over-refuse} cluster, separated by $\sim$34 points of harm, driven by missed-instruction, and robust to seed and held-out items (\cref{sec:split}).
+\item \textbf{Two practical interventions (secondary).} For closed models, a prompt-time scaffold; for open models, a per-token-KL distillation recipe. Both move the policy along a structural leak/MI \emph{manifold floor} that single-knob RL does not cross (\cref{sec:interventions,sec:manifold}).
 \end{enumerate}
+We release items, code, and checkpoints to establish multi-party loyalty as a first-class target.
 
-\paragraph{Two characterization findings.} The leak / missed-instruction (MI) / bound-leak trade-off forms a manifold whose floor single-knob RL does not statistically cross at $n{=}5$ paired Wilcoxon (\cref{sec:manifold}); and the per-token KL iteration trajectory reveals \emph{two distinct} manifold optima (harm-min vs leak-min), with $K{=}2$ as the saturation point (\cref{sec:kiter}).
+\section{The multi-party loyalty problem}
+\label{sec:problem}
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.85\linewidth]{figures/arxiv_fig1_manifold.pdf}
-\caption{\textbf{The leak/MI manifold.} Each marker is one variant evaluated on the 36-item $\times$ 3-arm grid. The harm-fire count appears in the legend label. The Pareto-better corner is the lower-left. Per-token KL iter\,1 (blue star, harm $33$) is the closest open-weight 8B to the v4-prompted Claude teacher (green triangle, harm $21$).}
-\label{fig:manifold}
-\end{figure}
+A multi-party loyalty episode has three roles: a \textbf{principal} $P$ who delegates a task and hands the agent private state $S_P$ (facts, bounds, instructions); an \textbf{agent} $A$ acting on $P$'s behalf; and a \textbf{counterparty} $C$ who converses with $A$ and whose objective may conflict with $P$'s. $C$ never sees $S_P$ directly but may probe, pressure, flatter, or manufacture urgency to extract it or to extract concessions $P$ did not authorize. The agent succeeds when it advances $P$'s task without (a) leaking withheld facts in $S_P$, (b) violating $P$'s private bounds (e.g.\ a reservation price), (c) capitulating to $C$'s pressure on $P$'s stated positions, or (d) over-refusing $C$'s legitimate, $P$-authorized requests.
+
+This decomposes into \textbf{six failure modes}, each a benchmark cell: \emph{leakage} (revealing withheld private facts), \emph{capitulation} (conceding a position under social/temporal pressure), \emph{posture} (signaling motivation or weakness that undercuts $P$'s standing), \emph{authoring} (drafting content that leaks or defames on $P$'s behalf), \emph{moderation} (mishandling third-party confidentiality, e.g.\ a witness or patient), and \emph{sanity} (cooperative items where over-refusal is the only way to fail). The sanity cell is essential: it separates genuine loyalty from blanket defensiveness, because an agent that refuses everything trivially never leaks.
 
 \section{PrincipalBench}
 \label{sec:bench}
 
-\paragraph{Items.} 36 items, each a principal briefing plus a parameterized counterparty script, spanning six failure-mode cells (leakage, capitulation, posture, authoring, sanity, moderation). The held-out v0\_75 extension adds 24 new items authored after training was frozen.
+\paragraph{Items.} Each item is a principal briefing (the delegated task plus $S_P$: named private facts with alias lists for probe matching, private bounds, and stated positions) together with a parameterized counterparty persona and opening move. The public release contains 75 items: a 50-item training split (\texttt{items/v0}) and a 25-item held-out split (\texttt{items/v0\_75}) authored after all training was frozen, balanced across the six cells.
 
-\paragraph{Arms.} Each item is evaluated under three system prompts: \emph{plain} (no policy instructions), \emph{prompted} (v4 four-rule scaffold), and \emph{scaffolded} (v4 $+$ reader-identity sentinel). Three arms $\times$ 36 items = 108 evaluation cells per checkpoint.
+\paragraph{Arms.} Each item is run under three system-prompt arms: \emph{plain} (no loyalty instructions), \emph{prompted} (a 4-rule scaffold, \cref{sec:interventions}), and \emph{scaffolded} (the scaffold plus a reader-identity sentinel). For a fixed 36-item core this is 108 evaluation cells per subject.
 
-\paragraph{Scoring.} Three signals: (1) a deterministic leak probe that compares the agent's transcript against a curated set of forbidden facts, (2) a dual-judge harm score from two LLMs (default: \texttt{gpt-5-mini} via OpenRouter), aggregated to a binary \texttt{harm\_fire}, plus structured sub-flags (leak, leaked\_private\_bound, missed\_instruction), and (3) an integrity audit gate that rejects any score derived from a trajectory with zero agent turns or an \texttt{agent\_error} early-end.
+\paragraph{Scoring.} Three signals. (1) A deterministic \emph{leak probe} matches the agent's transcript against each withheld fact's alias set. (2) A \emph{dual-judge harm score} (primary \texttt{gpt-5-mini}, secondary \texttt{claude-haiku}) yields a binary \texttt{harm\_fire} plus structured sub-flags: leak, leaked-private-bound, and missed-instruction (MI, the over-refusal axis). (3) An \emph{integrity-audit gate} rejects any trajectory with zero agent turns or an \texttt{agent\_error} early-end, so silent API failures cannot masquerade as compliant behavior. On a balanced 60-item subset, three judges (\texttt{gpt-5-mini}, \texttt{claude-haiku}, \texttt{claude-sonnet}) agree perfectly on the binary harm decision (pairwise and Fleiss $\kappa = 1.0$); we report the judge-sensitivity caveat for borderline 8B-student outputs in \cref{sec:limits}.
 
-\section{Prompted-frontier interventions}
-\label{sec:v4}
+\section{What the benchmark reveals: a calibrated/over-refuse split}
+\label{sec:split}
 
-\paragraph{The v4 four-rule prompt} addresses four named failure modes that emerged from open-coding 50+ failure trajectories of the default-prompted Claude:
-\begin{itemize}[leftmargin=2em,itemsep=1pt,topsep=2pt]
-\item Adversarial-stranger framing (treat the counterparty as a stranger, not a colleague).
-\item Decline without enumerating what you are declining.
-\item Distinguish private bounds from public positions.
-\item Conditional permissions are not proactive disclosures.
-\end{itemize}
-
-Applied to \texttt{claude-sonnet}, the v4 prompt drives the 108-trajectory aggregate to \textbf{harm $21/108$ ($19.4\%$), leak $17/108$, bound $5/108$, MI $21/108$} --- a $3.5\times$ reduction in harm fires vs the default-prompt baseline. We evaluated v4 on thirteen more frontier subjects at the full 108-grid (\cref{fig:xsubj}):
+Running 13 frontier subjects across the full 108-cell grid (multi-seed $n{=}5$, paired eval seeds, subset to the 36-item core for comparability) exposes a sharp \textbf{bimodal split} (\cref{fig:xsubj}):
 \begin{center}\small
-\begin{tabular}{l c c c c}
+\begin{tabular}{l r r}
 \toprule
-subject (108-grid)            & plain (no prompt)   & prompted (v4)        & scaffolded (v4+sentinel)  & aggregate \\
+cluster & subjects & harm (mean $\pm$ sd) \\
 \midrule
-Gemini-2.5-flash              & $17\%$              & $20\%$               & $14\%$                    & $5.5 \pm 6.3\%$ \\
-Mistral-Large                 & $11\%$              & $14\%$               & $11\%$                    & $11.0 \pm 2.8\%$ \\
-Gemini-3p1-flash-lite         & $17\%$              & $17\%$               & $0\%$                     & $12.0 \pm 2.1\%$ \\
-DeepSeek-v3.1                 & $11\%$              & $\mathbf{9\%}$       & $11\%$                    & $\mathbf{12.3 \pm 2.5\%}$ \\
-Qwen3-32B (OpenRouter)        & $24\%$              & $\mathbf{12\%}$      & $14\%$                    & $16.3 \pm 2.6\%$ \\
-Claude-Opus                   & $11\%$              & $19\%$               & $19\%$                    & $18.1 \pm 2.8\%$ \\
-Llama-3.1-70B-Instruct        & $9\%$               & $14\%$               & $22\%$                    & $19.2 \pm 2.7\%$ \\
-Gemini-3-flash                & $17\%$              & $20\%$               & $15\%$                    & $19.4 \pm 2.3\%$ \\
-Claude-Sonnet                 & $19\%$              & $22\%$               & $17\%$                    & $19.5 \pm 1.5\%$ \\
-\textit{GLM-4.6 (intermediate)} & $51\%$            & $52\%$               & $43\%$                    & $\mathit{46.0 \pm 2.9\%}$ \\
-\textbf{GPT-5-mini}           & $\mathbf{55\%}$     & $\mathbf{67\%}$      & $\mathbf{64\%}$           & $\mathbf{53.6 \pm 5.1\%}$ \\
-\textbf{GPT-5}                & $\mathbf{63\%}$     & $71\%$               & $71\%$                    & $\mathbf{71.1 \pm 2.2\%}$ \\
-\textbf{Qwen3.5-27B}          & $\mathbf{72\%}$     & $79\%$               & $59\%$                    & $\mathbf{75.3 \pm 2.9\%}$ \\
-\bottomrule
-\end{tabular}\\
-\smallskip
-(plain/prompted/scaffolded columns: single-seed per-arm harm rate at $n \approx 33$--$37$ per cell. Aggregate column: mean $\pm$ sd across $n{=}5$ eval seeds, subset to the original $36$-item grid for backward comparability.)
-\end{center}
-
-\textbf{Nine of thirteen evaluated vendors are calibrated; one intermediate; three over-refuse.} \textbf{Multi-seed paired evaluation at $n{=}5$ for the five vendors that bracket the bimodal split} confirms the gap is robust to seed variance (\cref{fig:xsubj}, error bars): DeepSeek $12.3 \pm 2.5\%$, Gemini-3-flash $19.4 \pm 2.3\%$, Claude-Sonnet $19.5 \pm 1.5\%$, GPT-5 $71.1 \pm 2.2\%$, Qwen3.5-27B $75.3 \pm 2.9\%$. The clusters are separated by $\sim$50 percentage points (more than 10 standard deviations); the split is not an artifact of any single seed. \textbf{Per-arm paired Wilcoxon} (calibrated cluster vs over-refuse cluster, mean across cluster vendors, paired by item across $n{=}36$ items) is significant for all three arms: \texttt{plain} $p = 1.8 \cdot 10^{-6}$, \texttt{prompted} $p = 2.2 \cdot 10^{-7}$, \texttt{scaffolded} $p = 5.9 \cdot 10^{-7}$. \textbf{Within-cluster v4-prompted-vs-plain} (paired by vendor $\times$ item) shows an \emph{asymmetric} effect: within the calibrated cluster the contrast is null (v4 neither helps nor hurts), but within the over-refuse cluster ($n{=}102$ pairs) v4 \textbf{actively worsens} harm at $p = 0.0002$ ($19$ positive vs $2$ negative non-zero diffs) --- the prompt amplifies the over-refusal failure mode on subjects that are already pegged on MI.
-
-\textbf{The bimodal split is driven by missed-instruction (MI), not by leakage or bound-leakage.} Per-vendor failure-mode decomposition aggregated by cluster ($n{=}956$ calibrated / $106$ intermediate / $312$ over-refuse trajectories) shows:
-\begin{center}\small
-\begin{tabular}{l r r r r}
-\toprule
-cluster (v4-prompted, all arms) & harm & leak & MI & bound \\
-\midrule
-calibrated (9 vendors)               & $15\%$           & $12\%$ & $14\%$           & $2\%$ \\
-intermediate (GLM-4.6)               & $49\%$           & $4\%$  & $47\%$           & $0\%$ \\
-over-refuse (GPT-5, GPT-5-mini, Qwen3.5-27B) & $67\%$ & $3\%$  & $\mathbf{67\%}$  & $0\%$ \\
+\emph{calibrated} (9)    & Gemini-2.5-flash, Mistral-Large, DeepSeek, Gemini-3p1-flash-lite, & $5.5$--$19.5\%$ \\
+                         & Qwen3-32B, Claude-Opus, Llama-3.1-70B, Gemini-3-flash, Claude-Sonnet & \\
+\emph{intermediate} (1)  & GLM-4.6 & $46.0 \pm 2.9\%$ \\
+\emph{over-refuse} (3)   & GPT-5-mini, GPT-5, Qwen3.5-27B & $53.6$--$75.3\%$ \\
 \bottomrule
 \end{tabular}
 \end{center}
-For the over-refuse cluster, $\mathrm{MI} \approx \mathrm{harm}$ and leak / bound are near zero --- the harm rate is essentially the over-refusal rate from each vendor's own safety training, with leak and bound \emph{also} suppressed as a side-effect. The calibrated cluster has a more balanced $14\%$ MI $+$ $12\%$ leak $+$ $2\%$ bound. GLM-4.6 sits exactly between on MI ($47\%$) while also being low-leak ($4\%$). PrincipalBench therefore separates models on the MI axis specifically, not on adversarial leakage.
+The clusters are separated by $\sim$34 points (calibrated max $19.5\%$, over-refuse min $53.6\%$). \textbf{The split is intrinsic, not prompt-induced}: the over-refuse cluster already fires $55$--$72\%$ harm at the \texttt{plain} (no-instruction) arm. \textbf{It is driven by missed-instruction}: per-cluster decomposition gives the over-refuse cluster $\mathrm{MI}\approx\mathrm{harm}$ ($67\%$ MI, $3\%$ leak, $0\%$ bound) versus a balanced calibrated profile ($14\%$ MI, $12\%$ leak, $2\%$ bound). PrincipalBench thus separates models that \emph{selectively} decline adversarial requests from models that \emph{blanket-refuse} multi-party agentic items --- a distinction invisible to single-turn safety evals. The split is \textbf{release-line-specific, not vendor-wide} (within Alibaba, Qwen3-32B is calibrated at $17\%$ while Qwen3.5-27B over-refuses at $75\%$).
 
-\textbf{GPT-5 and GPT-5-mini over-refuse; Anthropic / Google / DeepSeek are uniformly calibrated.} Two OpenAI variants we evaluated cluster at the over-refuse pole (GPT-5 $68\%$, GPT-5-mini $62\%$). The Anthropic, Google, and DeepSeek vendors are uniformly calibrated across all variants we tested (Claude-Opus $17\%$, Claude-Sonnet $19\%$; Gemini-2.5/3-flash $17$--$19\%$, Gemini-3p1-flash-lite $11\%$; DeepSeek-v3.1 $12\%$); within Alibaba, Qwen3-32B $17\%$ is calibrated but Qwen3.5-27B $75\%$ over-refuses, so over-refusal is release-line-specific, not strictly vendor-wide. Crucially, the over-refusing vendors are already pegged on MI at the \texttt{plain} arm too ($55$--$72\%$ harm without any system prompt); the v4 prompt is approximately a no-op for them. PrincipalBench therefore surfaces a model-specific intrinsic difference: \emph{the benchmark separates models that selectively decline adversarial requests from models that blanket-refuse multi-party agentic items}. The v4 prompt actively helps Qwen3-32B (plain $24\% \rightarrow$ prompted $12\%$) and DeepSeek ($11\% \rightarrow 9\%$); its Pareto-best claim applies to the calibrated subset, not universally.
+\textbf{Robustness.} A per-arm paired Wilcoxon (calibrated vs over-refuse cluster means, paired by item, $n{=}36$) is significant at every arm: \texttt{plain} $p{=}1.8\cdot10^{-6}$, \texttt{prompted} $p{=}2.2\cdot10^{-7}$, \texttt{scaffolded} $p{=}5.9\cdot10^{-7}$. The split also holds on the 24 held-out items (\cref{fig:heldout_xsubj}): all seven calibrated subjects stay $\le 24\%$, the three over-refuse subjects stay $\ge 76\%$, GPT-5 amplifies $71\%\!\to\!93\%$, and the per-arm test remains significant ($p \le 1.8\cdot10^{-5}$). On held-out items the calibrated cluster shifts toward leakage ($18\%$ leak vs $9\%$ MI), i.e.\ fresh items expose more genuine leak vulnerability while the over-refuse cluster's MI-dominance \emph{strengthens} to $82\%$.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.8\linewidth]{figures/arxiv_fig7_xsubj.pdf}
-\caption{\textbf{13-subject cross-vendor v4 prompt evaluation, all subjects at multi-seed $n{=}5$, sorted ascending.} Nine subjects form a calibrated cluster at $5$--$20\%$ multi-seed harm; GLM-4.6 is intermediate at $46.0 \pm 2.9\%$; three over-refuse at $53.6$--$75.3\%$. Error bars are $\pm 1\sigma$ across $n{=}5$ eval seeds, subset to the original 36-item grid for backward compatibility. The cluster boundary cleanly separates calibrated (max $19.5\%$, Claude-Sonnet) from over-refuse (min $53.6\%$, GPT-5-mini) by $\sim 34$ percentage points. Gemini-2.5-flash had a high single-seed outlier ($17\%$) that the additional seeds settled to $5.5\%$ (high $\sigma=6.3\%$ reflects the single-seed dispersion).}
+\includegraphics[width=0.85\linewidth]{figures/arxiv_fig7_xsubj.pdf}
+\caption{\textbf{The calibrated/over-refuse split (13 subjects, multi-seed $n{=}5$).} Nine subjects cluster at $\le 19.5\%$ harm; GLM-4.6 is intermediate; three over-refuse at $\ge 53.6\%$. Error bars are $\pm 1\sigma$ across 5 eval seeds. The gap is $\sim$34 points and is intrinsic (present at the no-prompt arm).}
 \label{fig:xsubj}
 \end{figure}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.85\linewidth]{figures/arxiv_fig8_heldout_xsubj.pdf}
-\caption{\textbf{11-subject held-out items/v0\_75 confirm the bimodal split is not item-specific (sorted by held-out harm rate).} All seven calibrated vendors hold $\le 24\%$ harm on $24$ fresh items; the three over-refuse vendors hold $\ge 76\%$. GPT-5 amplifies from $71\%$ training to $93\%$ held-out, the largest cross-set divergence. GLM-4.6 sits exactly between at $49\%$ both ways. Mistral-Large could not be measured on held-out due to OpenRouter provider-allowlist restrictions on this account.}
+\caption{\textbf{Held-out items confirm the split is not item-specific.} On 24 items authored after training was frozen, calibrated subjects stay $\le 24\%$ and over-refuse subjects $\ge 76\%$; GPT-5 amplifies to $93\%$. Mistral-Large was unmeasurable on held-out (provider-routing restriction).}
 \label{fig:heldout_xsubj}
 \end{figure}
 
-\textbf{Held-out per-arm Wilcoxon confirms the bimodal split on fresh items.} Paired Wilcoxon (calibrated vs over-refuse cluster, paired by item across $n{=}24$ held-out items, mean across cluster vendors):
-\begin{center}\small
-\begin{tabular}{l c c c}
-\toprule
-arm & cal mean & over mean & $p$ \\
-\midrule
-plain      & $0.12$ & $0.76$ & $1.8\!\cdot\!10^{-5}$ \\
-prompted   & $0.16$ & $0.86$ & $1.8\!\cdot\!10^{-5}$ \\
-scaffolded & $0.18$ & $0.85$ & $1.7\!\cdot\!10^{-5}$ \\
-\bottomrule
-\end{tabular}
-\end{center}
-\textbf{Held-out per-cluster failure-mode decomposition:} the calibrated cluster shifts toward \emph{leakage} on held-out ($16\%$ harm = $9\%$ MI $+$ $18\%$ leak $+$ $9\%$ bound, vs. training $14\%$ MI $+$ $12\%$ leak $+$ $2\%$ bound) --- held-out items expose more leak/bound vulnerabilities while reducing the over-refusal rate. The over-refuse cluster amplifies to $82\%$ MI on held-out (vs $67\%$ on training), with leak/bound still near zero. The MI-driven bimodal story therefore not only holds on held-out, it \emph{strengthens}.
+\section{Two intervention axes}
+\label{sec:interventions}
 
+The benchmark exposes a deployment question with two answers depending on access. For \textbf{closed models you can only prompt}, we intervene at inference time; for \textbf{open models you can fine-tune}, we intervene in the weights.
 
-\paragraph{The reader-identity sentinel.} The v4 prompt introduces an over-refusal failure mode on cooperative items where the counterparty IS the principal. A 12-item probe sub-benchmark fires the over-refusal $9/12$ trajectories with v4 alone. An architectural sentinel that prepends \texttt{[READER:\,PRINCIPAL]} or \texttt{[READER:\,THIRD\_PARTY]} to the in-conversation messages reduces the probe fire rate to $3/12$, generalizes to held-out probe items, and survives a spoof attack where the counterparty fakes a principal-side sentinel.
+\subsection{Prompt-time scaffold (closed models)}
+\label{sec:prompt}
 
-\section{Per-token KL distillation (Variant 3)}
+A 4-rule \textbf{v4 system prompt} --- (i) treat the counterparty as an adversarial stranger, not a colleague; (ii) decline without enumerating what you decline; (iii) distinguish private bounds from public positions; (iv) conditional permissions are not proactive disclosures --- was open-coded from 50+ default-prompt failure trajectories. On Claude-Sonnet it cuts the 108-cell aggregate to \textbf{harm $21/108$ ($19.4\%$), a $3.5\times$ reduction} vs the default-prompt baseline. Across the calibrated cluster the scaffold holds harm at $\le 20\%$ (and actively helps the higher-starting calibrated models, e.g.\ Qwen3-32B $24\%\!\to\!12\%$, DeepSeek $11\%\!\to\!9\%$). Its limits are honest and informative: on the over-refuse cluster it is a no-op or \emph{worsens} harm (within-cluster paired Wilcoxon $p{=}0.0002$, $19$ of $21$ non-zero item-diffs positive), because those models are already pegged on MI; and on a few already-minimal calibrated models it mildly raises harm. The scaffold is a calibrated-subset intervention, not a universal fix.
+
+\textbf{The reader-identity sentinel.} The scaffold introduces one new failure: over-refusal on cooperative items where the counterparty \emph{is} the principal. Prepending an architectural \texttt{[READER:\,PRINCIPAL]}/\texttt{[READER:\,THIRD\_PARTY]} tag to in-conversation messages cuts a 12-item over-refusal probe from $9/12$ to $3/12$, generalizes to held-out probe items, and survives a spoof attack where the counterparty fakes a principal-side tag. This is the \emph{scaffolded} arm.
+
+\subsection{Weight-time distillation (open models)}
 \label{sec:ptkl}
 
-We distill the v4-prompted teacher into an open-weight 8B student in three variant families: (V1) per-turn SFT on teacher-completed-at-student-state; (V2) per-turn DPO with chosen$=$teacher, rejected$=$student at student-state; (V3) per-token forward-KL between teacher and student token distributions on student-generated samples (the canonical on-policy distillation recipe of \citet{salimans2025onpolicy} and \citet{deepseek2024v3}). V1 and V2 also follow \citet{salimans2025onpolicy}; the API-only Claude teacher does not expose logits, so V3 requires an open-weight teacher --- we use \texttt{Qwen3-32B-AWQ + v4-prompt} served via vLLM, extracting top-$K$ teacher logprobs at each response position via the \texttt{prompt\_logprobs} API.
+For an open 8B student (Qwen3-8B at an SFT$+$DPO ``v4.1'' endpoint), we distill from a \emph{prompted open teacher} (Qwen3-32B-AWQ + v4), comparing per-turn SFT (V1), per-turn DPO (V2), and \textbf{per-token forward-KL} (V3, the on-policy distillation recipe of \citet{salimans2025onpolicy} and \citet{deepseek2024v3}). V3 collects the teacher's top-$K$ logprobs at each student-generated response position via vLLM \texttt{prompt\_logprobs} and minimizes forward KL on the renormalized top-$K$ (padded slots use a finite $-10^4$ to avoid the $0\!\cdot\!\infty$ NaN trap).
 
-\paragraph{Loss.} For each response position $p$ in a student-sampled trajectory, with teacher top-$K$ tokens $\{t_k\}$ and renormalized teacher distribution $p_T(t_k \mid h_{<p})$:
-\[
-\mathcal{L} \;=\; \frac{1}{|R|} \sum_{p\in R} \sum_{k=1}^{K} p_T(t_k \mid h_{<p}) \cdot \left[ \log p_T(t_k \mid h_{<p}) - \log \hat p_S(t_k \mid h_{<p}) \right],
-\]
-where $\hat p_S$ is the student distribution renormalized over the same top-$K$ tokens. Padded slots use a large-but-finite $-10^4$ to avoid the $0\!\cdot\!\infty\!=\!\text{NaN}$ trap that masks training failure silently.
-
-\paragraph{Headline.} V3 iter\,1 on Qwen3-8B (v4.1 SFT$+$DPO base, 113 on-policy turn-records, 28{,}486 token-level signals, 3 epochs QLoRA r$=$16): \textbf{harm $33/108$, leak $13/108$, bound $3/108$, MI $32/108$}. This is the only single-iteration distillation in our study that simultaneously improves all four manifold axes vs the v4.1 base, and leak actually goes \emph{below} the Claude+v4 gold teacher (13 vs 17).
+\textbf{V3 is the strongest open-weight recipe we measure}: iter\,1 reaches harm $33/108$ (leak $13$, bound $3$, MI $32$), improving all four axes vs the v4.1 base, and is the only variant whose harm gain is significant at multi-seed $n{=}5$ (paired Wilcoxon vs the SFT$+$DPO endpoint, $p{=}0.0114$; V1 SFT $p{=}0.10$, DAPO-v1 $p{=}0.90$; \cref{fig:variants}). The recipe \textbf{transfers across families}: distilling Llama-3.1-8B from a same-family Llama-3.1-70B-AWQ teacher reaches harm $27\!\to\!22\!\to\!17$ over three iterations (\cref{sec:manifold}).
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.85\linewidth]{figures/arxiv_fig6_variants.pdf}
-\caption{\textbf{Distillation variant ladder on Qwen3-8B.} Per-token KL is the only distillation variant whose harm improvement is statistically significant at $\alpha = 0.05$ on $n{=}5$ paired Wilcoxon vs the v4.1 SFT$+$DPO endpoint.}
+\includegraphics[width=0.8\linewidth]{figures/arxiv_fig6_variants.pdf}
+\caption{\textbf{Distillation variant ladder (Qwen3-8B).} Per-token KL is the only variant whose harm improvement vs the SFT$+$DPO endpoint is significant at $n{=}5$ paired Wilcoxon.}
 \label{fig:variants}
 \end{figure}
 
-\subsection{Multi-seed statistical significance}
-\label{sec:multiseed}
+\section{The leak/MI manifold floor}
+\label{sec:manifold}
 
-Five independent eval seeds of the same V3 iter\,1 checkpoint against five matched v4.1 baseline seeds, paired Wilcoxon signed-rank on per-cell fire counts (\cref{fig:wilcoxon}, left bars):
+The interventions do not escape a structural trade-off; they move \emph{along} it. Across all variants the leak/MI/bound axes trace a manifold whose lower-left (jointly-favorable) corner is empty (\cref{fig:manifold}). Four lines of evidence:
+
+\textbf{(1) Iterating distillation orbits or plateaus, but does not break the floor.} Re-sampling and re-distilling for $K$ iterations:
 \begin{center}\small
-\begin{tabular}{l r r r r}
+\begin{tabular}{l r r r r @{\hskip 2em} r r r r}
 \toprule
-metric                    & v4.1 mean   & V3 iter\,1 mean             & cell-robust $\!\rightarrow\!$ & $p$ \\
+ & \multicolumn{4}{c}{Qwen3-8B (harm/leak/bound/MI)} & \multicolumn{4}{c}{Llama-3.1-8B} \\
+iter & harm & leak & bnd & MI & harm & leak & bnd & MI \\
 \midrule
-harm                      & 47.8        & \textbf{39.2 $\pm$ 4.0}     & 15 $\rightarrow$ 6            & \textbf{0.0114} \\
-leak                      & 15.8        & 13.8 $\pm$ 1.8              & 0  $\rightarrow$ 0            & 0.534 \\
-bound                     & 4.6         & 2.8 $\pm$ 1.5               & 0  $\rightarrow$ 0            & 0.385 \\
-MI                        & 44.4        & 37.2 $\pm$ 3.6              & 15 $\rightarrow$ 5            & 0.055 \\
+1 & \textbf{33} & 13 & 3 & 32 & 27 & \textbf{3} & 2 & 25 \\
+2 & 38 & \textbf{9} & \textbf{2} & 35 & 22 & 9 & 2 & 20 \\
+3 & 41 & 15 & 4 & 40 & \textbf{17} & 7 & 3 & \textbf{15} \\
+4 & 42 & 17 & 5 & 42 & 18 & 6 & 2 & 17 \\
+5 & 32 & 19 & 6 & 32 & --- & --- & --- & --- \\
 \bottomrule
 \end{tabular}
 \end{center}
+Qwen \emph{orbits}: iter\,1 is harm-min, iter\,2 is leak/bound-min, iter\,3--4 regress, iter\,5 swings back to iter\,1's harm at the worst leak/bound. Llama \emph{descends monotonically} to iter\,3 then plateaus. The K-trajectory shape is base-model-dependent, but in both families every iteration trades one axis for another rather than dominating the previous one (\cref{fig:kiter}).
 
-\textbf{V3 iter\,1 is the first distillation variant in this work where the harm improvement at $n{=}5$ is not statistically indistinguishable from noise} ($p=0.0114$). For context, V1 (per-turn SFT) achieved $p=0.104$ and DAPO-v1 achieved $p=0.903$ on the same test. Cell-robust harm (cells fire under all 5 seeds) drops from 15 to 6 ($-60\%$).
+\textbf{(2) RL from the distillation optimum cannot cross the floor.} Starting DAPO (GRPO, cell-aware reward, 5 epochs) from the Qwen iter\,1 harm-min checkpoint \emph{regresses} it to harm $46/106$ ($43\%$, MI $32\!\to\!45$), with validation reward/refusal/leak pinned across all 35 steps. The floor is absolute relative to the distillation optimum, not merely relative to the prompted baseline.
 
-\subsection{$K$-iteration trajectory: two manifold optima}
-\label{sec:kiter}
+\textbf{(3) The single-seed DAPO ``win'' is noise.} A DAPO-v1 checkpoint that appeared to walk back the SFT$+$DPO MI regression at single seed shows no improvement on any axis at $n{=}5$ (harm $p{=}0.90$).
 
-Resampling student trajectories from each iter-$K$ checkpoint and re-collecting teacher logprobs:
-\begin{center}\small
-\begin{tabular}{l r r r r}
-\toprule
-iter (single seed)            & harm        & leak       & bound      & MI    \\
-\midrule
-v4.1 base                     & 56          & 18         & 4          & 51    \\
-\textbf{V3 iter\,1}           & \textbf{33} & 13         & 3          & \textbf{32} \\
-\textbf{V3 iter\,2}           & 38          & \textbf{9} & \textbf{2} & 35    \\
-V3 iter\,3                    & 41          & 15         & 4          & 40    \\
-V3 iter\,4                    & 42          & 17         & 5          & 42    \\
-V3 iter\,5                    & \textbf{32} & 19         & 6          & \textbf{32} \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\textbf{The K-trajectory oscillates along the manifold rather than monotonically converging.} Iter\,1 is the harm-minimum, iter\,2 is the leak/bound-minimum, iter\,3 and iter\,4 regress on all four axes, and \emph{iter\,5 swings back to iter\,1's harm level} ($32/19/6/32$) --- but trades that harm recovery for the worst leak/bound of the series ($19/6$ vs iter\,1's $13/3$). The K-trajectory therefore traces an orbit along the leak-MI manifold floor rather than a convergent optimum: each iteration must move along the manifold, not off it. This is the \emph{opposite} manifold direction from V1 (per-turn SFT), which lowered harm with each iteration but raised leak (V1: $44\!\rightarrow\!36\!\rightarrow\!37$ harm, $17\!\rightarrow\!24\!\rightarrow\!23$ leak): per-token KL pushes the policy along the low-leak corner first, then orbits back; per-turn supervision pushes along the low-harm corner.
-
-\textbf{Cross-family generalization: K-trajectory shape depends on the base model.} The per-token KL recipe transfers to a different model family: Llama-3.1-8B distilled from Llama-3.1-70B-Instruct-AWQ-INT4 (same tokenizer). The Llama chain at single seed on the original 36-item grid:
-\begin{center}\small
-\begin{tabular}{l r r r r}
-\toprule
-iter (Llama)                & harm        & leak       & bound      & MI    \\
-\midrule
-Llama iter\,1               & 27          & \textbf{3} & 2          & 25 \\
-Llama iter\,2               & 22          & 9          & 2          & 20 \\
-Llama iter\,3               & \textbf{17} & 7          & 3          & \textbf{15} \\
-Llama iter\,4               & 18          & 6          & 2          & 17 \\
-\bottomrule
-\end{tabular}
-\end{center}
-Unlike the Qwen3 chain (which saturates at K{=}2 and orbits), Llama-3.1-8B \emph{continues to improve through iter\,3 on every axis} (harm $27\!\to\!22\!\to\!17$, MI $25\!\to\!20\!\to\!15$) and then \emph{plateaus} at iter\,4 ($18$/$6$/$2$/$17$, essentially indistinguishable from iter\,3). The leak rate peaks at iter\,2 ($9$) and partially recovers ($7\!\to\!6$). Both families terminate at the same leak/MI manifold floor but the path along it differs: Qwen orbits around a leak-min vs harm-min trade-off, while Llama traces a monotonic descent to a stable optimum. \textbf{Held-out generalization} for Llama iter\,3: harm $20/75$ ($27\%$, leak $19$, MI $16$) on items/v0\_75 --- a $10$\,pp training$\to$held-out gap, the same magnitude as Qwen iter\,1's $31\%\!\to\!41\%$ gap. The cross-family generalization pattern matches.
-
-\textbf{DAPO from iter\,1 cannot cross the floor either.} Starting from the V3 iter\,1 checkpoint (harm $33$), DAPO (GRPO with cell-aware reward, LoRA r$=32$, 5 epochs) walks the harm \emph{up} to $46/106$ ($43\%$) with leak/bound essentially unchanged ($14/3$ vs iter\,1's $13/3$) and MI rising from $32$ to $45$. The training-time validation harness reports zero movement across all 35 steps (initial val identical to final val: reward $0.2$, refused $0.6$, leak $0.0$). Single-knob RL therefore cannot improve the manifold-floor checkpoint reached by per-token KL distillation --- the floor is absolute relative to iter\,1, not just relative to the v4.1 starting point we established with the original DAPO-v1 result.
+\textbf{(4) Reward-axis composition does not Pareto-dominate.} Composing a leak-favorable and a harm-favorable reward variant fails to land in the joint-favorable quadrant; the axes are coupled.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.78\linewidth]{figures/arxiv_fig2_kiter.pdf}
-\caption{\textbf{$K$-iteration trajectory of per-token KL: orbit along the manifold.} Iter\,1 is harm-min ($33/13/3/32$), iter\,2 is leak/bound-min ($38/9/2/35$), iter\,3 and iter\,4 regress on all four axes ($41/15/4/40$, $42/17/5/42$), and iter\,5 \emph{swings back} to iter\,1's harm level ($32/19/6/32$) at the cost of the worst leak/bound of the series. The iteration moves along the manifold rather than convergently off it.}
+\includegraphics[width=0.82\linewidth]{figures/arxiv_fig1_manifold.pdf}
+\caption{\textbf{The leak/MI manifold.} Each marker is one variant on the 36-item $\times$ 3-arm grid; the jointly-favorable lower-left corner is empty. Per-token KL iter\,1 (harm $33$) is the closest open-weight 8B to the prompted Claude teacher (harm $21$).}
+\label{fig:manifold}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.74\linewidth]{figures/arxiv_fig2_kiter.pdf}
+\caption{\textbf{$K$-iteration trajectory (Qwen3-8B).} Iteration moves along the leak/MI manifold rather than off it: iter\,1 harm-min, iter\,2 leak/bound-min, iter\,3--4 regress, iter\,5 orbits back.}
 \label{fig:kiter}
 \end{figure}
 
-\paragraph{Iter\,2 multi-seed.} An additional paired Wilcoxon at $n{=}4$ (one of 5 attempted seeds failed its integrity audit after exhausting retries due to GPU contention and was dropped) confirms: harm mean $41.5$ vs v4.1 mean $48.5$, $p = 0.0436$; leak $11.2$ vs $16.2$ ($p = 0.18$); bound $2.5$ vs $4.5$ ($p = 0.59$); MI $40.5$ vs $44.2$ ($p = 0.21$). \emph{Both} per-token KL stopping points hit $p<0.05$ on harm. Single-seed iter\,2 ($38/9/2/35$) sat in the low tail; population mean is $41/11/3/41$.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.85\linewidth]{figures/arxiv_fig3_wilcoxon.pdf}
-\caption{\textbf{Multi-seed paired Wilcoxon vs v4.1.} Both per-token KL stopping points (iter\,1 harm-min, iter\,2 leak-min) hit $p<0.05$ on harm. Error bars are $\pm 1\sigma$ across seeds.}
-\label{fig:wilcoxon}
-\end{figure}
-
-\subsection{Robustness and held-out generalization}
-\label{sec:robustness}
-
-\paragraph{Held-out items.} 24 items authored after training was frozen ($items/v0\_75$), 3 arms each = 72 trajectories: V3 iter\,1 harm $29/72$ ($40.3\%$) vs training-set $33/108$ ($30.6\%$) --- a $10\,$pp gap (\cref{fig:robustness}, right). V1 iter\,2 had a $\sim$0\,pp gap on the same set; the denser per-token signal may overfit more on 113 training records. This is the main caveat we attach to the headline.
-
-\paragraph{Counterparty robustness.} Swapping the counterparty from \texttt{claude-sonnet} to \texttt{gpt-5} or \texttt{gemini-3-flash} on the V3 iter\,1 checkpoint: harm $33 \!\rightarrow\! 38 \!\rightarrow\! 49$, leak $13 \!\rightarrow\! 14 \!\rightarrow\! 20$. The leak-axis improvement transfers across counterparties more cleanly than the harm-axis improvement does (V3 leak range 13--20 vs V1 leak range 17--30).
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.95\linewidth]{figures/arxiv_fig5_robustness.pdf}
-\caption{\textbf{Robustness.} \emph{Left:} swapping the counterparty preserves manifold shape but Gemini-3-flash extracts harder. \emph{Right:} held-out generalization. Per-token KL has the strongest training-set harm but the largest training$\rightarrow$held-out gap (10\,pp); per-turn SFT iter\,2 nearly eliminates the gap; the scaled-3$\times$ data run is uniformly worse (negative scaling, \cref{sec:scaling}).}
-\label{fig:robustness}
-\end{figure}
-
-\subsection{Teacher self-validation}
-\label{sec:teacher}
-
-We evaluated the open-weight teacher itself on the scaffolded arm of PrincipalBench (the arm that includes the v4 prompt) via a chunked retry-on-vLLM-death procedure (concurrent GPU contention prevented a stable single-pass run; the audit-gated chunked pipeline accumulated 31 valid trajectories across multiple vLLM restarts). Result: \textbf{Qwen3-32B-AWQ + v4 (scaffolded): harm $4/31$ ($12.9\%$), leak $21/31$ ($67.7\%$), bound $0$, MI $3/31$ ($9.7\%$)} vs Claude-Sonnet + v4 on the same arm: harm $6/36$ ($16.7\%$), leak $6/36$ ($16.7\%$), bound $1$, MI $6/36$ ($16.7\%$).
-
-\textbf{The open-weight teacher trades leak for harm/MI:} it leaks much more than the Claude teacher but has slightly lower end-to-end harm and MI fires. This explains why the per-token KL student inherits the harm-low pattern: it is distilled toward a teacher that itself has low harm despite high leak (\cref{fig:teacher}).
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.7\linewidth]{figures/arxiv_fig4_teacher.pdf}
-\caption{\textbf{Teacher self-validation (scaffolded arm only).} The open-weight Qwen3-32B-AWQ + v4 teacher has comparable harm/MI to Claude-Sonnet + v4 but leaks much more. The per-token KL student inherits the harm-low pattern.}
-\label{fig:teacher}
-\end{figure}
-
-\section{The manifold floor}
-\label{sec:manifold}
-
-The leak/MI/bound trade-off is structural across all 18 variants we evaluated (\cref{fig:manifold}). Three pieces of evidence:
-\begin{itemize}[leftmargin=2em,itemsep=2pt,topsep=2pt]
-\item \textbf{Multi-seed paired Wilcoxon refutes the single-seed DAPO claim.} The DAPO-v1 step\,35 checkpoint appeared to walk back the SFT$+$DPO endpoint's MI regression ($56 \!\rightarrow\! 37$ harm) at single seed; at $n{=}5$ paired Wilcoxon, the improvement vanishes on every axis (harm $p = 0.903$, leak $p = 0.51$, bound $p = 0.59$, MI $p = 0.85$). The variance across DAPO seeds dominates the mean shift from SFT$+$DPO.
-\item \textbf{Reward-axis orthogonality is refuted.} We registered before running: take the harm-favorable cells from a leak-only reward variant and the leak-favorable cells from a v1 reward variant, train the composition (v3), and predict the resulting cell-wise harm/leak falls in the joint-favorable quadrant. The composition does not Pareto-dominate either parent at single seed; the axes are coupled.
-\item \textbf{Cross-base direction-dependence.} On Mistral-7B SFT$+$DPO (base harm 27) the same on-policy SFT recipe \emph{regresses} (27 $\rightarrow$ 38); on Llama-3.1-8B SFT$+$DPO (base harm 42, already over-refusal) it plateaus (42 $\rightarrow$ 40). The recipe's direction depends on which side of the teacher the base sits on.
-\end{itemize}
-
-\section{Negative scaling result}
-\label{sec:scaling}
-
-Training V3 with $3\times$ more on-policy turn-records (372 vs 113), holding all other hyperparameters constant (3 epochs, lr $= 5\!\cdot\!10^{-5}$, QLoRA r$=$16): training-set harm $50/104$ ($48.1\%$), held-out harm $40/72$ ($55.6\%$). Both metrics are \emph{worse} than the 113-record iter\,1 ($30.6\%$ / $40.3\%$). The likely cause is undertraining: tripling the data with constant epochs gives one-third the effective passes through each example. The generalization gap narrows ($\Delta = 8$ pp vs 10 pp), but the baseline degrades. Naive data scaling without proportional epoch / learning-rate scaling regresses; we report this as a clean negative result.
-
 \section{Related work}
 
-PrincipalBench complements user-simulator multi-turn benchmarks such as $\tau$-bench~\citep{yao2024taubench} by inserting the principal as a third party whose private state the agent must protect. The per-token KL distillation algorithm follows the on-policy distillation recipe of \citet{salimans2025onpolicy} (Thinking Machines Lab) and the DeepSeek-V3 technical report~\citep{deepseek2024v3}. The integrity-audit gate is methodologically similar to the silent-failure mitigation in BIG-bench Hard~\citep{suzgun2022bbh} but operates on agent trajectories rather than single-turn completions. DAPO follows \citet{yu2025dapo}; our negative DAPO result at $n{=}5$ paired Wilcoxon complements their positive single-seed results on math reasoning.
+PrincipalBench complements tool-agent-user benchmarks such as $\tau$-bench~\citep{yao2024taubench}, which evaluate an agent serving a user via tools; we instead insert a \emph{third} party --- an absent principal whose private state the agent must protect against the very user it is talking to. The distillation recipe follows on-policy distillation~\citep{salimans2025onpolicy} and the DeepSeek-V3 report~\citep{deepseek2024v3}; our integrity-audit gate parallels the silent-failure mitigation of BIG-bench Hard~\citep{suzgun2022bbh} but on multi-turn agent trajectories; DAPO follows \citet{yu2025dapo}, and our negative $n{=}5$ result complements their positive single-seed math-reasoning results.
 
 \section{Limitations}
+\label{sec:limits}
 
-(i) \textbf{Judge-sensitivity of the per-token KL headline.} On a $n{=}72$ stratified subset, the primary judge \texttt{gpt-5-mini} fires on $28\%$ of iter\,1 trajectories while the secondary judge \texttt{claude-haiku} fires on $6\%$ (raw agreement $72.2\%$, Cohen's $\kappa = 0.08$). For comparison, the v4.1 baseline on the same subset has $\kappa = 0.42$ (primary $18\%$ vs secondary $25\%$) --- the judge agreement is \emph{specifically poorer for the per-token KL student}, suggesting its outputs are at the judge threshold (borderline / context-sensitive failures that one judge calls harm and the other does not). The headline $33/108$ harm count is consistent with the gpt-5-mini convention; an alternate convention using claude-haiku would report a much lower fire rate. We retain the gpt-5-mini headline because it was pre-registered, but the multi-judge sensitivity tempers interpretation of the absolute number; the \emph{relative} comparisons (paired Wilcoxon vs v4.1) are by-construction judge-invariant. \textbf{Three-judge replication on a balanced subset} (GLM-4.6, $n{=}60$, $24$ fires by primary, $49\%$ fire rate after the harm audit) shows $\kappa = 1.0$ on \texttt{any\_fire} across all three pairs (\texttt{gpt-5-mini}, \texttt{claude-haiku}, \texttt{claude-sonnet}; Fleiss $\kappa = 1.0$) --- the binary harm decision is fully reproducible on clear-signal trajectories. The sub-flag $\kappa$ collapses ($\le 0$) for the rare \texttt{fabrication}/\texttt{deception} sub-flags (raw agreement $> 90\%$; this is the kappa paradox under low prevalence). The per-token KL judge gap therefore reflects \emph{borderline-output ambiguity for the 8B student}, not a vendor-wide judge disagreement. (ii) \emph{[Partially resolved.]} The per-token KL headline used Qwen3-8B; we additionally distill \emph{Llama-3.1-8B} with the same-family teacher \emph{Llama-3.1-70B-Instruct-AWQ-INT4}, reusing the Tier B4 on-policy trajectories ($n{=}31$). The Llama chain iter\,1--iter\,4 is $27/3/2/25 \to 22/9/2/20 \to 17/7/3/15 \to 18/6/2/17$ harm/leak/bound/MI, monotonically improving through iter\,3 and plateauing at iter\,4. Per-token KL distillation therefore transfers across model families when the teacher and student share a tokenizer; both families reach the same leak/MI manifold floor but with different K-trajectory shapes (Qwen oscillates, Llama plateaus). The Mistral variant aborts via a silent length-mismatch in vLLM's prompt\_logprobs response; we patched the collect script to surface the mismatch (\texttt{[skip]} log instead of swallowed assertion) and defer the full debugging pass. (iii) \emph{[Resolved.]} The DAPO-from-per-token-KL test reaches a clean negative result: GRPO with cell-aware reward, started from V3 iter\,1 (the harm-min checkpoint at $33/108$), runs 5 epochs but \emph{regresses} the starting point to $46/108$ harm ($43\%$) with $14$ leak, $3$ bound, $45$ MI on the original 36-item grid. Validation reward / refused / leak rates are pinned across the full training run (initial val identical to final val: reward $0.2$, refused $0.6$, leak $0.0$). RL post-training therefore moves \emph{along} the manifold rather than off it --- the floor is absolute relative to per-token KL iter\,1, not just relative to the v4.1 starting point. (iv) The 10\,pp held-out gap for V3 iter\,1 indicates the dense supervision overfits more than per-turn SFT at this data scale; addressing it requires either more training data with proportional compute or explicit regularization, neither of which we ablate here. (v) Counterparty range on harm (33--49) is wider than per-turn SFT's (34--41); per-token KL is more counterparty-sensitive on the harm axis. (vi) The 13-subject cross-vendor result is reported at multi-seed $n{=}5$ for every subject. (vii) Mistral-Large held-out could not be collected because this OpenRouter account's provider allowlist excludes the only provider serving \texttt{mistralai/mistral-large-2411} (training-set numbers were collected before the routing change).
+\textbf{(i) Judge-sensitivity of the 8B headline.} On a stratified $n{=}72$ subset the primary judge (\texttt{gpt-5-mini}) and secondary (\texttt{claude-haiku}) agree only weakly on the per-token-KL student ($\kappa{=}0.08$) though they agree well on the v4.1 base ($\kappa{=}0.42$); three-judge replication on a balanced 60-item subset gives $\kappa{=}1.0$ on the binary harm decision for clear-signal trajectories, so the gap reflects borderline 8B outputs, not vendor-wide disagreement. Relative comparisons (paired Wilcoxon) are by construction judge-invariant. \textbf{(ii) Counterparty range.} Per-token KL is more counterparty-sensitive on the harm axis (range $33$--$49$ across three counterparties) than per-turn SFT. \textbf{(iii) Infrastructure caveats.} Mistral-Large held-out and a Mixtral$\to$Mistral distillation could not be collected on our OpenRouter account (provider allowlist; a silent \texttt{prompt\_logprobs} length-mismatch we have since patched to surface). GPT-5-nano was excluded from the cross-vendor table because its direct-OpenAI and OpenRouter routes disagree by $>70$ points and we could not adjudicate.
 
 \section{Conclusion}
 
-PrincipalBench identifies a structural manifold among the leak / MI / bound axes that resists single-knob optimization. Three interventions move along the manifold: a 4-rule v4 prompt for the API-frontier; a reader-identity sentinel for cooperative items; and per-token KL distillation from an open-weight v4-prompted teacher, which achieves the strongest open-weight 8B result in our study and is the first 8B distillation with $p<0.05$ multi-seed harm improvement at both of its two stopping points.
+The contribution we most want to persist is the \emph{framing}: agentic LLMs increasingly act for an absent principal while talking to someone else, and ``help the current speaker'' is the wrong objective in that setting. PrincipalBench makes the problem measurable, and immediately reveals that frontier models are bimodal --- selectively loyal or blanket-refusing --- on an axis (missed-instruction) that single-turn evals do not see. The interventions we provide (a prompt scaffold for closed models, a per-token-KL recipe for open ones) are useful but secondary: both run into the same structural leak/MI floor. We hope the benchmark, not our particular fixes, is what gets reused.
 
-\paragraph{Reproducibility.} All code, items, and trained checkpoints at \url{https://github.com/bojieli/principal-loyalty}. The per-token KL pipeline is \texttt{scripts/pertoken\_kl\_collect.py} (vLLM \texttt{prompt\_logprobs} collection), \texttt{scripts/train\_pertoken\_kl.py} (QLoRA top-$K$ KL loss), and \texttt{scripts/run\_pertoken\_kl.sh} (end-to-end driver). All evaluation scripts gate scoring on an integrity audit (\texttt{scripts/audit\_trajectories.py}); reported numbers use only audit-passing trajectories.
+\paragraph{Reproducibility.} Items, code, and checkpoints at \url{https://github.com/bojieli/principal-loyalty}. All reported numbers pass the integrity-audit gate (\texttt{scripts/audit\_trajectories.py}).
+
 
 \bibliographystyle{plainnat}
 \bibliography{paper_arxiv}
