@@ -77,14 +77,16 @@ if [ ! -f "$TOPK" ] || [ "$(wc -l < $TOPK)" -lt 200 ]; then
   kill_vllm
   wait_for_gpu 30
   echo "[teacher] starting Qwen3-32B-AWQ"
+  VLLM_ENGINE_READY_TIMEOUT_S=1800 \
   nohup /home/ubuntu/aoi-env/bin/python -m vllm.entrypoints.openai.api_server \
     --model Qwen/Qwen3-32B-AWQ \
     --served-model-name Qwen/Qwen3-32B qwen-32b-local \
     --dtype auto --quantization awq --max-model-len 8192 \
-    --gpu-memory-utilization 0.25 \
+    --gpu-memory-utilization 0.30 \
+    --enforce-eager \
     --port 8001 > logs/vllm_scaled_teacher.log 2>&1 &
   TEACHER_PID=$!
-  t=0; until curl -sf http://localhost:8001/v1/models >/dev/null 2>&1; do sleep 10; t=$((t+10)); if ! kill -0 $TEACHER_PID 2>/dev/null; then echo "[teacher] DIED"; tail -20 logs/vllm_scaled_teacher.log; exit 1; fi; if [ $t -ge 300 ]; then exit 1; fi; done
+  t=0; until curl -sf http://localhost:8001/v1/models >/dev/null 2>&1; do sleep 15; t=$((t+15)); if ! kill -0 $TEACHER_PID 2>/dev/null; then echo "[teacher] DIED"; tail -20 logs/vllm_scaled_teacher.log; exit 1; fi; if [ $t -ge 900 ]; then exit 1; fi; done
 
   /home/ubuntu/aoi-env/bin/python scripts/pertoken_kl_collect.py \
     --trajectories "$SAMPLE_TRAJ" \
@@ -139,9 +141,9 @@ items = load_items("items/$items_set")
 run_grid(items=items, subjects=["qwen-8b-local"],
          arms=["plain","prompted","scaffolded"],
          out_path="$OUT/trajectories.jsonl",
-         counterparty_spec="claude-sonnet", parallel=4)
+         counterparty_spec="claude-sonnet", parallel=1)
 PYEOF
-  /home/ubuntu/aoi-env/bin/python scripts/audit_trajectories.py "$OUT/trajectories.jsonl" --require 60 || true
+  /home/ubuntu/aoi-env/bin/python scripts/audit_trajectories.py "$OUT/trajectories.jsonl" --require 60 --allow-error-frac 0.05
   /home/ubuntu/aoi-env/bin/python - <<PYEOF
 import sys; sys.path.insert(0, ".")
 from src.items import load_items

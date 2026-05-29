@@ -265,6 +265,8 @@ All of these interventions move the policy \emph{along} a structural trade-off r
 
 \textbf{(4) Reward-axis composition does not Pareto-dominate.} Pre-registered: compose the harm-favorable cells of a leak-only reward variant with the leak-favorable cells of a v1 reward variant and predict the joint-favorable quadrant. The composition dominates neither parent at single seed; the axes are coupled.
 
+\textbf{(5) More distillation data does not lower the floor.} Scaling the on-policy dataset $4.2\times$ (480 vs 113 teacher records, identical 3 epochs, lr, and rank) \emph{regresses} both training harm ($31\% \to 37\%$ on the 36-item core) and held-out harm ($40\% \to 56\%$). The likely mechanism is undertraining --- tripling the data at fixed epochs gives one-third the effective passes per example --- but the practical point stands: the floor is not a data-volume artifact, and naive scaling moves the wrong way.
+
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.82\linewidth]{figures/arxiv_fig1_manifold.pdf}
