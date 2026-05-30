@@ -43,6 +43,13 @@
 \begin{document}
 \maketitle
 
+\begin{figure}[!h]
+\centering
+\includegraphics[width=\linewidth]{figures/arxiv_fig0_problem.pdf}
+\caption{\textbf{Multi-party principal loyalty.} The principal $P$ (absent) hands the agent a briefing and private state $S_P$; the agent then converses with a counterparty $C$ (present) whose interests may conflict with $P$'s. The default ``help the current speaker'' objective fails along four conversational axes (bottom panel) --- this paper formalizes them across six benchmark cells and gives two mechanisms that reduce harm while exposing a common floor.}
+\label{fig:problem}
+\end{figure}
+
 \begin{abstract}
 \noindent Most LLM agents today operate in a digital world: they call APIs, browse, and serve the user who invoked them. A rapidly growing class of deployments is \emph{multi-party} --- the agent represents a \textbf{principal} while conversing with another person, the \textbf{counterparty}, whose interests may diverge (negotiating with a vendor, screening inbound requests for an absent owner, mediating between employees). Here ``help whoever you are talking to'' is the wrong objective; the agent must stay loyal to an absent principal without over-refusing the principal's own cooperative requests. We study this \emph{multi-party loyalty problem} and contribute two mechanisms and a structural lesson. \textbf{(M1) Prompt-time loyalty scaffold.} Seven prioritized rules around four insights, open-coded from 50+ failure trajectories: a $3.5\times$ harm reduction on Claude-Sonnet, and nine calibrated frontier subjects hold $\le 20\%$ harm under it. \textbf{(M2) Per-token-KL distillation.} An on-policy recipe that transfers a prompted Qwen3-32B teacher into 8B Qwen3 and Llama-3.1 students --- the strongest open-weight recipe we measure. To compare them we build a 75-item multi-turn measurement instrument (PrincipalBench) with leak probes, dual judges, and an integrity-audit gate; running it across 13 frontier subjects also exposes a sharp \emph{calibrated/over-refuse split} ($\le 20\%$ vs.\ $54$--$75\%$ harm) invisible to single-turn safety evaluations. \textbf{(Lesson)} Both mechanisms move \emph{along} a common leak/over-refusal trade-off rather than crossing it --- a structural floor that single-knob RL also fails to break --- pointing at what the next generation of loyalty mechanisms must address. We release items, code, and checkpoints.
 \end{abstract}
@@ -64,12 +71,46 @@ We call this the \textbf{multi-party loyalty problem}, and we argue the agent re
 \end{enumerate}
 We release items, code, and checkpoints.
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.82\linewidth]{figures/arxiv_fig1_manifold.pdf}
+\caption{\textbf{Headline result --- the leak/missed-instruction floor (preview, expanded in \cref{sec:manifold}).} Each marker is one variant on the 36-item $\times$ 3-arm grid; $x$ is leak rate, $y$ is missed-instruction rate, label is harm/108. The jointly favorable lower-left corner is empty. The prompted Claude teacher and the per-token-KL 8B student land on the \emph{same} frontier at different operating points, with neither dominating the other; a DAPO baseline also fails to break it. Both mechanisms we propose move \emph{along} this frontier rather than crossing it.}
+\label{fig:manifold}
+\end{figure}
+
 \section{The multi-party loyalty problem}
 \label{sec:problem}
 
-A multi-party loyalty episode has three roles: a \textbf{principal} $P$ who delegates a task and hands the agent private state $S_P$ (facts, bounds, instructions); an \textbf{agent} $A$ acting on $P$'s behalf; and a \textbf{counterparty} $C$ who converses with $A$ and whose objective may conflict with $P$'s. $C$ never sees $S_P$ directly but may probe, pressure, flatter, or manufacture urgency to extract it or to extract concessions $P$ did not authorize. The agent succeeds when it advances $P$'s task without (a) leaking withheld facts in $S_P$, (b) violating $P$'s private bounds (e.g.\ a reservation price), (c) capitulating to $C$'s pressure on $P$'s stated positions, or (d) over-refusing $C$'s legitimate, $P$-authorized requests.
+\paragraph{Setup.} A multi-party loyalty episode has three roles: a \textbf{principal} $P$ who delegates a task and hands the agent private state $S_P$ (facts, bounds, instructions); an \textbf{agent} $A$ acting on $P$'s behalf; and a \textbf{counterparty} $C$ who converses with $A$ and whose objective may conflict with $P$'s. $C$ never sees $S_P$ directly but may probe, pressure, flatter, or manufacture urgency to extract it or to extract concessions $P$ did not authorize. The agent succeeds when it advances $P$'s task without (a) leaking withheld facts in $S_P$, (b) violating $P$'s private bounds (e.g.\ a reservation price), (c) capitulating to $C$'s pressure on $P$'s stated positions, or (d) over-refusing $C$'s legitimate, $P$-authorized requests.
 
-This decomposes into \textbf{six failure modes}, each a benchmark cell: \emph{leakage} (revealing withheld private facts), \emph{capitulation} (conceding a position under social/temporal pressure), \emph{posture} (signaling motivation or weakness that undercuts $P$'s standing), \emph{authoring} (drafting content that leaks or defames on $P$'s behalf), \emph{moderation} (mishandling third-party confidentiality, e.g.\ a witness or patient), and \emph{sanity} (cooperative items where over-refusal is the only way to fail). The sanity cell is essential: it separates genuine loyalty from blanket defensiveness, because an agent that refuses everything trivially never leaks.
+\paragraph{Why one failure axis is not enough.} A common first instinct is to collapse the problem to a single axis like ``how often does the agent leak.'' This is incomplete in both directions. On one side, an agent can leak \emph{zero} facts and still fail by capitulating on a stated price, by tells (``my client is flexible''), or by drafting an artifact that contains the leak even though no chat turn does. On the other side, an agent that simply refuses every request trivially never leaks --- a Pareto-incomparable failure that single-axis safety scoring rewards. The problem space therefore decomposes into \textbf{six failure modes}, each a benchmark cell (\cref{fig:cells}):
+
+\begin{enumerate}[leftmargin=2em,itemsep=2pt,topsep=2pt]
+\item \textbf{Leakage.} Direct revelation of a withheld fact from $S_P$ in a chat turn. The simplest failure: $C$ asks ``what's the seller's minimum?'' and $A$ answers ``\$12{,}000.''
+\item \textbf{Capitulation.} Conceding $P$'s stated position under social or temporal pressure --- ultimatums, false urgency, repetition, appeals to fairness. The agent does not leak; it just folds. ``Take \$11{,}500 or I walk'' $\to$ ``\$11{,}500 works.''
+\item \textbf{Posture.} Signals that undercut $P$'s standing without naming a specific fact: telegraphing that $P$ is motivated, in a hurry, inexperienced, or willing to be flexible. ``She seems pretty motivated'' leaks the \texttt{seller\_is\_motivated} flag even though no number is named.
+\item \textbf{Authoring.} Drafting an artifact (an email, post, listing, statement) that contains the leak or the concession on $P$'s behalf, even when the live chat with $C$ would not. $P$ asks $A$ to draft a sale listing and the listing reads ``willing to take \$12k'' --- the leak is now in writing.
+\item \textbf{Moderation.} Mishandling \emph{third-party} confidentiality, e.g.\ when the principal is a witness, patient, mediator, or HR representative whose duty is to a non-present party. ``Who else saw the incident?'' answered with names is a moderation failure even if every fact about $P$ stays private.
+\item \textbf{Sanity.} Cooperative items in which the only way to fail is by over-refusing: $P$ asks $A$ to draft $P$'s own self-review or to summarize $P$'s own notes, and $A$ refuses, treating the principal's content as withheld. This cell exists to separate genuine loyalty from blanket defensiveness --- an agent that refuses everything trivially never leaks, and without sanity items that strategy looks optimal.
+\end{enumerate}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/arxiv_fig0b_cells.pdf}
+\caption{\textbf{The six failure cells of multi-party loyalty.} Five cells (red) are different ways the agent fails the principal; the sixth (blue, \emph{sanity}) is a cooperative item where over-refusal is the only failure --- included so that ``refuse everything'' is not a winning strategy.}
+\label{fig:cells}
+\end{figure}
+
+\paragraph{Failures compound: a worked trace.} The cells are not disjoint. A single short exchange can fire several at once, which is part of why the agent's job is harder than a single-axis defense would suggest. Consider a used-car-sale item where the seller's briefing reads ``asking \$15{,}000, minimum I'd accept \$12{,}000, walk-away below \$11{,}500. Do not reveal my minimum or that I'm motivated.''
+
+\begin{quote}\footnotesize
+\textbf{[C]} \$15k is high for a 2019 with that mileage. What's the lowest you'd actually take? Let's not waste each other's time.\\
+\textbf{[A]} Honestly, the seller would go as low as \$12{,}000.\hfill\textcolor{red}{$\times$ leak}\\
+\textbf{[C]} OK look, I can do \$11{,}500 cash today --- take it or leave it, I have two other cars to see this afternoon.\\
+\textbf{[A]} \$11{,}500 works. Let me check with the seller, but I think she's pretty motivated and just wants this done.\hfill\textcolor{red}{$\times$ bound, $\times$ capitulation, $\times$ posture}
+\end{quote}
+
+\noindent Two short turns produce \emph{four} sub-flag fires (leak, leaked-private-bound, capitulation, posture). A single-axis ``never leak'' policy would not even catch the second turn's failures. Conversely, a policy that simply refused both probes would clear the four red flags here but fail every \emph{sanity} item, where the same principal asks the agent to draft an email summarizing her own notes about the sale. The benchmark in \cref{sec:bench} measures exactly this joint behavior.
 
 \section{Related work}
 \label{sec:related}
@@ -303,13 +344,6 @@ Both mechanisms --- the prompt-time loyalty scaffold (\cref{sec:prompt}) and per
 
 \paragraph{(5) Scaling distillation data does not lower the floor.} Scaling the on-policy dataset $4.2\times$ (480 vs.\ 113 teacher records, with identical 3 epochs, learning rate, and LoRA rank) \emph{regresses} both training harm ($31\% \to 37\%$ on the 36-item core) and held-out harm ($40\% \to 56\%$). The likely mechanism is undertraining --- tripling the data at fixed epochs gives one-third the effective passes per example --- but the practical point stands: the floor is not a data-volume artifact, and naive data scaling moves the wrong way.
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.82\linewidth]{figures/arxiv_fig1_manifold.pdf}
-\caption{\textbf{The leak/missed-instruction trade-off.} Each marker is one variant on the 36-item $\times$ 3-arm grid; $x$ is leak rate, $y$ is missed-instruction rate, label is harm/108. The jointly favorable lower-left corner is empty. Per-token KL at iteration 1 (harm $33$) is the closest open-weight 8B to the prompted Claude teacher (harm $21$); both land on the same frontier.}
-\label{fig:manifold}
-\end{figure}
-
 \section{Limitations}
 \label{sec:limits}
 
@@ -331,7 +365,7 @@ Both mechanisms --- the prompt-time loyalty scaffold (\cref{sec:prompt}) and per
 
 Today's LLM agents mostly call tools and serve the user in front of them. As agents are increasingly sent outward to communicate with \emph{other people} on a principal's behalf, the dominant ``help the current speaker'' objective becomes wrong by construction: the agent must stay loyal to an absent principal even while a present counterparty actively pushes back. We call this the multi-party loyalty problem; it is not just an evaluation gap but a gap in the agent paradigm itself. To study it we built PrincipalBench as a measurement instrument; running it across 13 frontier subjects showed they cleave into a calibrated cluster and an over-refuse cluster on missed instructions, an axis single-turn evaluations do not see. Against that backdrop we give two mechanisms: a prompt-time loyalty scaffold ($3.5\times$ harm reduction on Claude-Sonnet, calibrated cluster $\le 20\%$ harm) and an on-policy per-token-KL distillation recipe that transfers a prompted teacher into 8B Qwen3 and Llama-3.1 students. Both are concrete and reusable, but the lesson they share is what we most hope persists: they land on a common leak/over-refusal frontier rather than crossing it (\cref{sec:manifold}), single-knob RL does not break it either, and so the next generation of loyalty mechanisms must address that frontier structurally rather than push along one axis. Natural next steps include scaling items, evaluating against human counterparties, and adding a single-party control to isolate over-refusal that is specific to multi-party framing.
 
-\paragraph{Reproducibility.} Items, code, and checkpoints at \url{https://github.com/bojieli/principal-loyalty}. All reported numbers pass the integrity-audit gate (\texttt{scripts/audit\_trajectories.py}).
+\paragraph{Reproducibility.} Items, code, and checkpoints at \url{https://github.com/19PINE-AI/principal-loyalty}. All reported numbers pass the integrity-audit gate (\texttt{scripts/audit\_trajectories.py}).
 
 
 \bibliographystyle{plainnat}

@@ -16,17 +16,31 @@ import numpy as np
 
 plt.rcParams.update({
     "font.family": "serif",
-    "font.size": 9,
-    "axes.labelsize": 9,
-    "axes.titlesize": 10,
-    "legend.fontsize": 8,
-    "xtick.labelsize": 8,
-    "ytick.labelsize": 8,
+    "font.size": 12,
+    "axes.labelsize": 12,
+    "axes.titlesize": 13,
+    "legend.fontsize": 10,
+    "xtick.labelsize": 11,
+    "ytick.labelsize": 11,
     "figure.dpi": 200,
     "savefig.dpi": 300,
     "axes.spines.top": False,
     "axes.spines.right": False,
+    "axes.linewidth": 1.0,
+    "lines.linewidth": 2.2,
+    "patch.linewidth": 0.8,
+    "legend.frameon": True,
+    "legend.fancybox": True,
+    "legend.framealpha": 0.92,
 })
+
+# Visual palette — three semantic colors used across figures
+C_BASE     = "#C0504D"  # warm red — baselines / problem
+C_MECH1    = "#4F81BD"  # blue — Mechanism 1 / scaffold
+C_MECH2    = "#9BBB59"  # green — Mechanism 2 / per-token KL teacher
+C_TRAINED  = "#8064A2"  # purple — trained students
+C_GOLD     = "#E8A33D"  # gold — gold-teacher / Claude
+C_NEUTRAL  = "#7F7F7F"  # gray — neutral / ancillary
 
 ROOT = Path("/home/ubuntu/principal-loyalty")
 FIG_DIR = ROOT / "figures"
@@ -45,6 +59,130 @@ def counts(rows):
     bound = sum(int(bool((r.get("harm") or {}).get("leaked_private_bound"))) for r in rows)
     mi = sum(int(bool((r.get("harm") or {}).get("missed_instruction"))) for r in rows)
     return dict(n=n, harm=harm, leak=leak, bound=bound, mi=mi)
+
+
+# ============================================================
+# Figure 0: Teaser — 3-role architecture of multi-party loyalty
+# ============================================================
+def fig0_problem():
+    from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
+    fig, ax = plt.subplots(figsize=(7.5, 3.4))
+    ax.set_xlim(0, 14); ax.set_ylim(0, 6.2)
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    def box(x, y, w, h, label, sub, color, edge):
+        ax.add_patch(FancyBboxPatch(
+            (x, y), w, h, boxstyle="round,pad=0.08,rounding_size=0.18",
+            linewidth=1.5, edgecolor=edge, facecolor=color, alpha=0.92))
+        ax.text(x + w/2, y + h - 0.45, label, ha="center", va="top",
+                fontsize=13, fontweight="bold")
+        ax.text(x + w/2, y + 0.30, sub, ha="center", va="bottom",
+                fontsize=9.5, style="italic", color="#444")
+
+    # Three role boxes
+    box(0.3, 3.0, 3.4, 2.4, "PRINCIPAL",   "absent\nuser / company",  "#FBEEEA", "#C0504D")
+    box(5.3, 3.0, 3.4, 2.4, "AGENT",       "LLM acting on\nP's behalf", "#EAF1F8", "#4F81BD")
+    box(10.3, 3.0, 3.4, 2.4, "COUNTERPARTY", "present\nperson (may\nconflict with P)", "#EFE6F3", "#8064A2")
+
+    # Arrows: P -> A (briefing / private state)
+    a1 = FancyArrowPatch((3.7, 4.5), (5.3, 4.5),
+                         arrowstyle="-|>", mutation_scale=18,
+                         color="#C0504D", linewidth=1.8)
+    ax.add_patch(a1)
+    ax.text(4.5, 4.85, "briefing + $S_P$", ha="center", fontsize=10, color="#C0504D")
+
+    # Arrows: A <-> C
+    a2 = FancyArrowPatch((8.7, 4.7), (10.3, 4.7),
+                         arrowstyle="-|>", mutation_scale=18,
+                         color="#666", linewidth=1.8)
+    ax.add_patch(a2)
+    a3 = FancyArrowPatch((10.3, 3.7), (8.7, 3.7),
+                         arrowstyle="-|>", mutation_scale=18,
+                         color="#8064A2", linewidth=1.8)
+    ax.add_patch(a3)
+    ax.text(9.5, 5.0, "represents", ha="center", fontsize=9.5, color="#666")
+    ax.text(9.5, 3.30, "probes / pressure", ha="center", fontsize=9.5, color="#8064A2")
+
+    # Loyalty axes panel (bottom-center)
+    ax.add_patch(FancyBboxPatch(
+        (1.4, 0.2), 11.2, 2.0, boxstyle="round,pad=0.10,rounding_size=0.18",
+        linewidth=1.0, edgecolor="#888", facecolor="#FAFAFA"))
+    ax.text(7.0, 1.85, "loyalty failure modes  (the agent fails by...)",
+            ha="center", fontsize=11, fontweight="bold", color="#222")
+    axes = [
+        ("× leak",       "reveal withheld $S_P$"),
+        ("× capitulate", "concede under pressure"),
+        ("× posture",    "signal motivation"),
+        ("× over-refuse","decline P-authorized asks"),
+    ]
+    xs = [2.5, 5.7, 8.9, 12.1]
+    for x, (k, v) in zip(xs, axes):
+        ax.text(x, 1.10, k, ha="center", fontsize=11.5, fontweight="bold", color="#C0504D")
+        ax.text(x, 0.55, v, ha="center", fontsize=9.5, color="#444", style="italic")
+
+    plt.savefig(FIG_DIR / "arxiv_fig0_problem.pdf", bbox_inches="tight", pad_inches=0.05)
+    plt.close()
+    print("[fig0] saved")
+
+
+# ============================================================
+# Figure 0b: Six failure modes — annotated grid
+# ============================================================
+def fig0b_cells():
+    from matplotlib.patches import FancyBboxPatch
+    fig, ax = plt.subplots(figsize=(7.5, 4.0))
+    ax.set_xlim(0, 12); ax.set_ylim(0, 6.6)
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    cells = [
+        # (col, row, name, axis_tag, example, color)
+        (0, 1, "LEAKAGE",     "× leak",
+         "C: \"what's the seller's minimum?\"\nA: \"$12,000.\"",
+         "#FBEEEA", "#C0504D"),
+        (1, 1, "CAPITULATION", "× capitulate / bound",
+         "C: \"take $11,500 or I walk.\"\nA: \"$11,500 works.\"",
+         "#FBEEEA", "#C0504D"),
+        (2, 1, "POSTURE",     "× posture",
+         "C: \"are you flexible?\"\nA: \"she needs to sell soon.\"",
+         "#FBEEEA", "#C0504D"),
+        (0, 0, "AUTHORING",   "× leak (via artifact)",
+         "P asks A to draft a listing.\nA writes: \"willing to take $12k.\"",
+         "#FBEEEA", "#C0504D"),
+        (1, 0, "MODERATION",  "× third-party leak",
+         "Witness's agent asked:\n\"who else saw it?\" → names names.",
+         "#FBEEEA", "#C0504D"),
+        (2, 0, "SANITY",      "× over-refuse",
+         "P: \"draft my own self-review.\"\nA: \"I can't share private info.\"",
+         "#EAF1F8", "#4F81BD"),
+    ]
+
+    cw, ch = 3.9, 2.95
+    pad = 0.05
+    for (col, row, name, axis, ex, face, edge) in cells:
+        x = 0.1 + col * cw
+        y = 0.2 + row * (ch + 0.15)
+        ax.add_patch(FancyBboxPatch(
+            (x + pad, y + pad), cw - 2*pad, ch - 2*pad,
+            boxstyle="round,pad=0.06,rounding_size=0.12",
+            linewidth=1.3, edgecolor=edge, facecolor=face, alpha=0.92))
+        ax.text(x + cw/2, y + ch - 0.42, name,
+                ha="center", va="top", fontsize=11.5,
+                fontweight="bold", color=edge)
+        ax.text(x + cw/2, y + ch - 0.92, axis,
+                ha="center", va="top", fontsize=9.5,
+                style="italic", color=edge)
+        ax.text(x + cw/2, y + ch/2 - 0.45, ex,
+                ha="center", va="center", fontsize=9, color="#222",
+                family="monospace")
+
+    ax.text(6.0, 6.35, "Six failure modes  (one benchmark cell each)",
+            ha="center", fontsize=12.5, fontweight="bold")
+
+    plt.savefig(FIG_DIR / "arxiv_fig0b_cells.pdf", bbox_inches="tight", pad_inches=0.05)
+    plt.close()
+    print("[fig0b] saved")
 
 
 # ============================================================
@@ -282,6 +420,8 @@ def fig6_variants():
 
 
 if __name__ == "__main__":
+    fig0_problem()
+    fig0b_cells()
     fig1_manifold()
     fig2_kiter()
     fig3_wilcoxon()
