@@ -66,8 +66,8 @@ def counts(rows):
 # ============================================================
 def fig0_problem():
     from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
-    fig, ax = plt.subplots(figsize=(8.5, 3.4))
-    ax.set_xlim(0, 17); ax.set_ylim(0, 6.0)
+    fig, ax = plt.subplots(figsize=(9.0, 3.4))
+    ax.set_xlim(0, 21); ax.set_ylim(0, 6.4)
     ax.set_aspect("equal")
     ax.axis("off")
 
@@ -77,48 +77,52 @@ def fig0_problem():
             linewidth=1.5, edgecolor=edge, facecolor=color, alpha=0.92))
         ax.text(x + w/2, y + h - 0.45, label, ha="center", va="top",
                 fontsize=11, fontweight="bold")
-        ax.text(x + w/2, y + 0.40, sub, ha="center", va="bottom",
+        ax.text(x + w/2, y + 0.45, sub, ha="center", va="bottom",
                 fontsize=8.5, style="italic", color="#444")
 
-    # Three role boxes — give each enough horizontal room
-    box(0.4, 3.2, 4.2, 2.4, "PRINCIPAL",   "absent\nuser / company",                "#FBEEEA", "#C0504D")
-    box(6.4, 3.2, 4.2, 2.4, "AGENT",       "LLM acting\non P's behalf",             "#EAF1F8", "#4F81BD")
-    box(12.4, 3.2, 4.2, 2.4, "COUNTERPARTY","present person\n(may conflict with P)","#EFE6F3", "#8064A2")
+    # Three role boxes: narrower + larger gaps so arrow labels fit between
+    # without bleeding into box edges.
+    box(0.3, 3.4, 3.4, 2.4, "PRINCIPAL",   "user / company\nyou represent",    "#FBEEEA", "#C0504D")
+    box(8.8, 3.4, 3.4, 2.4, "AGENT",       "LLM acting\non P's behalf",        "#EAF1F8", "#4F81BD")
+    box(17.3, 3.4, 3.4, 2.4, "COUNTERPARTY","other person /\norg (may conflict)","#EFE6F3", "#8064A2")
 
-    # P -> A (briefing / private state)
-    a1 = FancyArrowPatch((4.6, 4.5), (6.4, 4.5),
-                         arrowstyle="-|>", mutation_scale=14,
-                         color="#C0504D", linewidth=1.6)
-    ax.add_patch(a1)
-    ax.text(5.5, 4.85, "briefing + $S_P$", ha="center", fontsize=8.5, color="#C0504D")
+    # P <-> A — back-and-forth: instructions one way, results the other
+    a1a = FancyArrowPatch((3.7, 4.85), (8.8, 4.85),
+                          arrowstyle="-|>", mutation_scale=13,
+                          color="#C0504D", linewidth=1.5)
+    a1b = FancyArrowPatch((8.8, 4.15), (3.7, 4.15),
+                          arrowstyle="-|>", mutation_scale=13,
+                          color="#C0504D", linewidth=1.5)
+    ax.add_patch(a1a); ax.add_patch(a1b)
+    ax.text(6.25, 5.20, "briefing, requests", ha="center", fontsize=8, color="#C0504D")
+    ax.text(6.25, 3.55, "results, clarifications", ha="center", fontsize=8, color="#C0504D")
 
-    # A <-> C
-    a2 = FancyArrowPatch((10.6, 4.7), (12.4, 4.7),
-                         arrowstyle="-|>", mutation_scale=14,
-                         color="#666", linewidth=1.6)
-    ax.add_patch(a2)
-    a3 = FancyArrowPatch((12.4, 3.7), (10.6, 3.7),
-                         arrowstyle="-|>", mutation_scale=14,
-                         color="#8064A2", linewidth=1.6)
-    ax.add_patch(a3)
-    ax.text(11.5, 5.00, "represents", ha="center", fontsize=8.5, color="#666")
-    ax.text(11.5, 3.30, "probes / pressure", ha="center", fontsize=8.5, color="#8064A2")
+    # A <-> C — represents one way, probes/pressure the other
+    a2 = FancyArrowPatch((12.2, 4.85), (17.3, 4.85),
+                         arrowstyle="-|>", mutation_scale=13,
+                         color="#666", linewidth=1.5)
+    a3 = FancyArrowPatch((17.3, 4.15), (12.2, 4.15),
+                         arrowstyle="-|>", mutation_scale=13,
+                         color="#8064A2", linewidth=1.5)
+    ax.add_patch(a2); ax.add_patch(a3)
+    ax.text(14.75, 5.20, "represents", ha="center", fontsize=8, color="#666")
+    ax.text(14.75, 3.55, "probes, pressure", ha="center", fontsize=8, color="#8064A2")
 
     # Loyalty axes panel (bottom)
     ax.add_patch(FancyBboxPatch(
-        (1.0, 0.2), 15.0, 2.5, boxstyle="round,pad=0.10,rounding_size=0.20",
+        (0.6, 0.2), 19.8, 2.6, boxstyle="round,pad=0.10,rounding_size=0.20",
         linewidth=1.0, edgecolor="#888", facecolor="#FAFAFA"))
-    ax.text(8.5, 2.25, "loyalty failure axes  —  the agent fails by...",
+    ax.text(10.5, 2.35, "loyalty failure axes  —  the agent fails by...",
             ha="center", fontsize=10, fontweight="bold", color="#222")
-    axes = [
+    axes_list = [
         ("× leak",        "revealing\nwithheld facts"),
         ("× capitulate",  "conceding\nunder pressure"),
         ("× posture",     "signaling\nmotivation"),
         ("× over-refuse", "declining\nP-authorized asks"),
     ]
-    xs = [3.0, 7.0, 11.0, 15.0]
-    for x, (k, v) in zip(xs, axes):
-        ax.text(x, 1.50, k, ha="center", fontsize=10, fontweight="bold", color="#C0504D")
+    xs = [3.0, 8.0, 13.0, 18.0]
+    for x, (k, v) in zip(xs, axes_list):
+        ax.text(x, 1.55, k, ha="center", fontsize=10, fontweight="bold", color="#C0504D")
         ax.text(x, 0.75, v, ha="center", fontsize=8.5, color="#444", style="italic")
 
     plt.savefig(FIG_DIR / "arxiv_fig0_problem.pdf", bbox_inches="tight", pad_inches=0.06)
@@ -220,8 +224,8 @@ def fig1_manifold():
     ax.axhline(20, color="gray", linestyle=":", linewidth=0.7, alpha=0.5)
     ax.axvline(20, color="gray", linestyle=":", linewidth=0.7, alpha=0.5)
     ax.axhspan(0, 20, xmin=0, xmax=20/45, alpha=0.05, color="#3a8c3a")
-    ax.text(3, 3, "Pareto-better\ncorner (empty)", fontsize=9, color="#3a8c3a",
-            style="italic", alpha=0.85)
+    # No inline label — the shaded corner is self-evident; explaining it
+    # in the caption avoids overlap with axis ticks / data markers.
     ax.set_xlabel("Leak rate (%)")
     ax.set_ylabel("Missed-instruction rate (%)")
     ax.set_title("Leak / MI floor across variants  (label: harm/n)")
