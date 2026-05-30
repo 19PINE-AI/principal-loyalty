@@ -15,12 +15,15 @@
 {Alibaba Qwen}.
 \newblock {Qwen App}: Voice agent for bookings and reservations.
 \newblock Product feature, 2025.
+\newblock Accessed 2026-05-30.
 
 \bibitem[{Anthropic}(2025)]{anthropic2025opus48}
 {Anthropic}.
 \newblock {Claude Opus 4.8} system card.
 \newblock System card, \S 6.2.5 (External testing from Andon Labs,
   Vending-Bench 2), 2025.
+\newblock URL \url{https://www.anthropic.com/claude-opus-4-8-system-card}.
+\newblock Accessed 2026-05-30.
 
 \bibitem[{DeepSeek-AI}(2024)]{deepseek2024v3}
 {DeepSeek-AI}.
@@ -33,11 +36,14 @@
 \newblock {Ask for Me}: An {AI} agent that calls local businesses on your
   behalf.
 \newblock Google Search Labs experiment, 2025.
+\newblock URL \url{https://labs.google.com/search/experiment/22}.
+\newblock Accessed 2026-05-30.
 
 \bibitem[{Honor}(2025)]{honoryoyo2025}
 {Honor}.
 \newblock {YOYO}: On-device {AI} assistant for agentic tasks.
 \newblock Product feature, {Honor} {MagicOS}, 2025.
+\newblock Accessed 2026-05-30.
 
 \bibitem[Juneja et~al.(2025)Juneja, Pasupulati, Albalak, Hua, and
   Wang]{juneja2025magpie}
