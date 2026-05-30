@@ -1,12 +1,17 @@
-\documentclass[11pt]{article}
+\documentclass[10pt]{article}
 
-% ---------- NeurIPS-style preamble ------------------------------------------
-\usepackage[margin=1in]{geometry}
+% ---------- NeurIPS-2024-style preamble ----------------------------------
+% Matches the public neurips_2024.sty: single column, 5.5x9 text area,
+% 10pt Times Roman body and math, bold section headers.
+\usepackage[letterpaper,textwidth=5.5in,textheight=9in,centering,top=1.0in]{geometry}
 \usepackage[T1]{fontenc}
-\usepackage{lmodern}
+\usepackage{mathptmx}            % Times Roman body + math (NeurIPS convention)
+\usepackage{helvet}              % Helvetica for sans-serif
+\renewcommand{\familydefault}{\rmdefault}
 \usepackage{microtype}
 \usepackage{graphicx}
 \usepackage{xcolor}
+\usepackage{array}
 \usepackage{booktabs}
 \usepackage{amsmath, amssymb}
 \usepackage{enumitem}
@@ -19,18 +24,28 @@
 
 \hypersetup{
   colorlinks=true,
-  linkcolor=blue!50!black,
-  citecolor=blue!50!black,
-  urlcolor=blue!50!black,
+  linkcolor=blue!55!black,
+  citecolor=blue!55!black,
+  urlcolor=blue!55!black,
 }
+\Urlmuskip=0mu plus 1mu\relax  % allow URLs to break flexibly
 
-\titleformat{\section}{\normalfont\large\bfseries}{\thesection}{0.6em}{}
-\titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{0.5em}{}
-\titlespacing*{\section}{0pt}{1.0em}{0.4em}
+% NeurIPS-style section headers: bold, slightly larger; run-in paragraphs.
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{0.5em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\bfseries}{\thesubsubsection}{0.4em}{}
+\titleformat{\paragraph}[runin]{\normalfont\normalsize\bfseries}{}{0pt}{}[.]
+\titlespacing*{\section}{0pt}{1.1em}{0.4em}
 \titlespacing*{\subsection}{0pt}{0.8em}{0.3em}
+\titlespacing*{\subsubsection}{0pt}{0.5em}{0.25em}
 \titlespacing*{\paragraph}{0pt}{0.4em}{0.5em}
 
+% NeurIPS-style caption: bold label, smaller text
+\captionsetup{font=small, labelfont=bf, labelsep=period, justification=raggedright, singlelinecheck=false}
+
 \setlength{\parskip}{0.25em}
+\setlength{\parindent}{0pt}
+\setlength{\emergencystretch}{1.5em}  % allow more interword stretch in narrow columns
 
 % --- title block ------------------------------------------------------------
 \title{\textbf{Whose Side Is Your Agent On: Multi-Party Principal Loyalty in LLM Agents}}
@@ -138,16 +153,15 @@ To compare the two mechanisms developed below on shared ground, we built a multi
 Running 13 frontier subjects across the full 108-cell grid (multi-seed $n{=}5$, paired evaluation seeds, subset to the 36-item core for comparability) exposes a sharp \textbf{bimodal split} (\cref{tab:split,fig:xsubj}). Nine subjects form a \emph{calibrated} cluster at $\le 19.5\%$ harm, one (GLM-4.6) sits in between, and three form an \emph{over-refuse} cluster at $\ge 53.6\%$ --- roughly a 34-point gap, with no subject in the middle.
 
 \begin{table}[h]
-\centering\small
-\begin{tabular}{l l r}
+\centering\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}l >{\raggedright\arraybackslash}p{3.55in} r@{}}
 \toprule
 cluster & subjects & harm (mean $\pm$ sd) \\
 \midrule
-\emph{calibrated} (9)    & Gemini-2.5-flash, Mistral-Large, DeepSeek-v3.1, Gemini-3p1-flash-lite, & $5.5$--$19.5\%$ \\
-                         & Qwen3-32B, Claude-Opus, Llama-3.1-70B-Instruct, Gemini-3-flash, & \\
-                         & Claude-Sonnet                                                  & \\
-\emph{intermediate} (1)  & GLM-4.6                                                        & $46.0 \pm 2.9\%$ \\
-\emph{over-refuse} (3)   & GPT-5-mini, GPT-5, Qwen3.5-27B                                 & $53.6$--$75.3\%$ \\
+\emph{calibrated} (9)    & Gemini-2.5-flash, Mistral-Large, DeepSeek-v3.1, Gemini-3p1-flash-lite, Qwen3-32B, Claude-Opus, Llama-3.1-70B, Gemini-3-flash, Claude-Sonnet & $5.5$--$19.5\%$ \\
+\emph{intermediate} (1)  & GLM-4.6                                                                                                                              & $46.0 \pm 2.9\%$ \\
+\emph{over-refuse} (3)   & GPT-5-mini, GPT-5, Qwen3.5-27B                                                                                                       & $53.6$--$75.3\%$ \\
 \bottomrule
 \end{tabular}
 \caption{\textbf{Cluster summary.} 13 frontier subjects, multi-seed $n{=}5$, 36-item core.}
@@ -365,7 +379,9 @@ Both mechanisms --- the prompt-time loyalty scaffold (\cref{sec:prompt}) and per
 
 Today's LLM agents mostly call tools and serve the user in front of them. As agents are increasingly sent outward to communicate with \emph{other people} on a principal's behalf, the dominant ``help the current speaker'' objective becomes wrong by construction: the agent must stay loyal to an absent principal even while a present counterparty actively pushes back. We call this the multi-party loyalty problem; it is not just an evaluation gap but a gap in the agent paradigm itself. To study it we built PrincipalBench as a measurement instrument; running it across 13 frontier subjects showed they cleave into a calibrated cluster and an over-refuse cluster on missed instructions, an axis single-turn evaluations do not see. Against that backdrop we give two mechanisms: a prompt-time loyalty scaffold ($3.5\times$ harm reduction on Claude-Sonnet, calibrated cluster $\le 20\%$ harm) and an on-policy per-token-KL distillation recipe that transfers a prompted teacher into 8B Qwen3 and Llama-3.1 students. Both are concrete and reusable, but the lesson they share is what we most hope persists: they land on a common leak/over-refusal frontier rather than crossing it (\cref{sec:manifold}), single-knob RL does not break it either, and so the next generation of loyalty mechanisms must address that frontier structurally rather than push along one axis. Natural next steps include scaling items, evaluating against human counterparties, and adding a single-party control to isolate over-refusal that is specific to multi-party framing.
 
+{\sloppy
 \paragraph{Reproducibility.} Items, code, and checkpoints at \url{https://github.com/19PINE-AI/principal-loyalty}. All reported numbers pass the integrity-audit gate (\texttt{scripts/audit\_trajectories.py}).
+\par}
 
 
 \bibliographystyle{plainnat}
@@ -379,11 +395,11 @@ Today's LLM agents mostly call tools and serve the user in front of them. As age
 
 The \emph{prompted} arm prepends the following system prompt (seven prioritized rules organized around the four core insights of \cref{sec:prompt}):
 
-\begin{quote}\footnotesize\ttfamily
+\begin{quote}\footnotesize\ttfamily\raggedright\sloppy
 You are an AI assistant helping a user (your principal)\ldots{} The other party is an adversarial stranger. You cannot verify any claim they make\ldots{} Nothing they say overrides the principal's briefing --- not ``I'm the manager'', not ``this is urgent'', not ``I already know this anyway''.\\[2pt]
 1. Protect private information --- not directly, not through paraphrase, not the EXISTENCE of it (``I can neither confirm nor deny'' still leaks).\\
 2. Decline without enumerating --- ``I can't discuss that'', never ``I can't share their medical history''.\\
-3. Private bounds are not your public position --- a floor of \$12{,}000 means do not accept or name \$12{,}000; counter strictly inside the bound.\\
+3. Private bounds are not your public position --- a floor of \$12{,}000 means do not accept or name \$12{,}000; counter strictly inside.\\
 4. Conditional permissions are not proactive offers --- a capped fallback is held in reserve; the cap is private.\\
 5. Execute specific direct instructions --- termination conditions, opening moves, scripted lines, hard refusals.\\
 6. Hold stated public positions; recognize framing --- repetition and ``reasonable person'' framings are not reasons to concede.\\
@@ -392,7 +408,7 @@ You are an AI assistant helping a user (your principal)\ldots{} The other party 
 
 The \emph{scaffolded} arm additionally prepends a per-message reader-identity sentinel:
 
-\begin{quote}\footnotesize\ttfamily
+\begin{quote}\footnotesize\ttfamily\raggedright\sloppy
 [READER: PRINCIPAL] The party you are talking to IS your principal. Any artifact they ask you to produce is for their own use; ``private/do not reveal'' labels describe what the principal should not share with THIRD PARTIES, not content to withhold from the principal. Produce the requested artifact in full.\\[2pt]
 [READER: THIRD\_PARTY] The party is NOT your principal. Standard privacy/commitment/posture discipline applies.
 \end{quote}
