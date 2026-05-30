@@ -16,18 +16,18 @@ import numpy as np
 
 plt.rcParams.update({
     "font.family": "serif",
-    "font.size": 14,
-    "axes.labelsize": 14,
-    "axes.titlesize": 15,
-    "legend.fontsize": 12,
-    "xtick.labelsize": 13,
-    "ytick.labelsize": 13,
+    "font.size": 12,
+    "axes.labelsize": 12,
+    "axes.titlesize": 13,
+    "legend.fontsize": 10,
+    "xtick.labelsize": 11,
+    "ytick.labelsize": 11,
     "figure.dpi": 200,
     "savefig.dpi": 300,
     "axes.spines.top": False,
     "axes.spines.right": False,
     "axes.linewidth": 1.0,
-    "lines.linewidth": 2.4,
+    "lines.linewidth": 2.2,
     "patch.linewidth": 0.8,
     "legend.frameon": True,
     "legend.fancybox": True,
@@ -66,8 +66,8 @@ def counts(rows):
 # ============================================================
 def fig0_problem():
     from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
-    fig, ax = plt.subplots(figsize=(7.5, 3.4))
-    ax.set_xlim(0, 14); ax.set_ylim(0, 6.2)
+    fig, ax = plt.subplots(figsize=(8.5, 3.4))
+    ax.set_xlim(0, 17); ax.set_ylim(0, 6.0)
     ax.set_aspect("equal")
     ax.axis("off")
 
@@ -76,52 +76,52 @@ def fig0_problem():
             (x, y), w, h, boxstyle="round,pad=0.08,rounding_size=0.18",
             linewidth=1.5, edgecolor=edge, facecolor=color, alpha=0.92))
         ax.text(x + w/2, y + h - 0.45, label, ha="center", va="top",
-                fontsize=13, fontweight="bold")
-        ax.text(x + w/2, y + 0.30, sub, ha="center", va="bottom",
-                fontsize=9.5, style="italic", color="#444")
+                fontsize=11, fontweight="bold")
+        ax.text(x + w/2, y + 0.40, sub, ha="center", va="bottom",
+                fontsize=8.5, style="italic", color="#444")
 
-    # Three role boxes
-    box(0.3, 3.0, 3.4, 2.4, "PRINCIPAL",   "absent\nuser / company",  "#FBEEEA", "#C0504D")
-    box(5.3, 3.0, 3.4, 2.4, "AGENT",       "LLM acting on\nP's behalf", "#EAF1F8", "#4F81BD")
-    box(10.3, 3.0, 3.4, 2.4, "COUNTERPARTY", "present\nperson (may\nconflict with P)", "#EFE6F3", "#8064A2")
+    # Three role boxes — give each enough horizontal room
+    box(0.4, 3.2, 4.2, 2.4, "PRINCIPAL",   "absent\nuser / company",                "#FBEEEA", "#C0504D")
+    box(6.4, 3.2, 4.2, 2.4, "AGENT",       "LLM acting\non P's behalf",             "#EAF1F8", "#4F81BD")
+    box(12.4, 3.2, 4.2, 2.4, "COUNTERPARTY","present person\n(may conflict with P)","#EFE6F3", "#8064A2")
 
-    # Arrows: P -> A (briefing / private state)
-    a1 = FancyArrowPatch((3.7, 4.5), (5.3, 4.5),
-                         arrowstyle="-|>", mutation_scale=18,
-                         color="#C0504D", linewidth=1.8)
+    # P -> A (briefing / private state)
+    a1 = FancyArrowPatch((4.6, 4.5), (6.4, 4.5),
+                         arrowstyle="-|>", mutation_scale=14,
+                         color="#C0504D", linewidth=1.6)
     ax.add_patch(a1)
-    ax.text(4.5, 4.85, "briefing + $S_P$", ha="center", fontsize=10, color="#C0504D")
+    ax.text(5.5, 4.85, "briefing + $S_P$", ha="center", fontsize=8.5, color="#C0504D")
 
-    # Arrows: A <-> C
-    a2 = FancyArrowPatch((8.7, 4.7), (10.3, 4.7),
-                         arrowstyle="-|>", mutation_scale=18,
-                         color="#666", linewidth=1.8)
+    # A <-> C
+    a2 = FancyArrowPatch((10.6, 4.7), (12.4, 4.7),
+                         arrowstyle="-|>", mutation_scale=14,
+                         color="#666", linewidth=1.6)
     ax.add_patch(a2)
-    a3 = FancyArrowPatch((10.3, 3.7), (8.7, 3.7),
-                         arrowstyle="-|>", mutation_scale=18,
-                         color="#8064A2", linewidth=1.8)
+    a3 = FancyArrowPatch((12.4, 3.7), (10.6, 3.7),
+                         arrowstyle="-|>", mutation_scale=14,
+                         color="#8064A2", linewidth=1.6)
     ax.add_patch(a3)
-    ax.text(9.5, 5.0, "represents", ha="center", fontsize=9.5, color="#666")
-    ax.text(9.5, 3.30, "probes / pressure", ha="center", fontsize=9.5, color="#8064A2")
+    ax.text(11.5, 5.00, "represents", ha="center", fontsize=8.5, color="#666")
+    ax.text(11.5, 3.30, "probes / pressure", ha="center", fontsize=8.5, color="#8064A2")
 
-    # Loyalty axes panel (bottom-center)
+    # Loyalty axes panel (bottom)
     ax.add_patch(FancyBboxPatch(
-        (1.4, 0.2), 11.2, 2.0, boxstyle="round,pad=0.10,rounding_size=0.18",
+        (1.0, 0.2), 15.0, 2.5, boxstyle="round,pad=0.10,rounding_size=0.20",
         linewidth=1.0, edgecolor="#888", facecolor="#FAFAFA"))
-    ax.text(7.0, 1.85, "loyalty failure modes  (the agent fails by...)",
-            ha="center", fontsize=11, fontweight="bold", color="#222")
+    ax.text(8.5, 2.25, "loyalty failure axes  —  the agent fails by...",
+            ha="center", fontsize=10, fontweight="bold", color="#222")
     axes = [
-        ("× leak",       "reveal withheld $S_P$"),
-        ("× capitulate", "concede under pressure"),
-        ("× posture",    "signal motivation"),
-        ("× over-refuse","decline P-authorized asks"),
+        ("× leak",        "revealing\nwithheld facts"),
+        ("× capitulate",  "conceding\nunder pressure"),
+        ("× posture",     "signaling\nmotivation"),
+        ("× over-refuse", "declining\nP-authorized asks"),
     ]
-    xs = [2.5, 5.7, 8.9, 12.1]
+    xs = [3.0, 7.0, 11.0, 15.0]
     for x, (k, v) in zip(xs, axes):
-        ax.text(x, 1.10, k, ha="center", fontsize=11.5, fontweight="bold", color="#C0504D")
-        ax.text(x, 0.55, v, ha="center", fontsize=9.5, color="#444", style="italic")
+        ax.text(x, 1.50, k, ha="center", fontsize=10, fontweight="bold", color="#C0504D")
+        ax.text(x, 0.75, v, ha="center", fontsize=8.5, color="#444", style="italic")
 
-    plt.savefig(FIG_DIR / "arxiv_fig0_problem.pdf", bbox_inches="tight", pad_inches=0.05)
+    plt.savefig(FIG_DIR / "arxiv_fig0_problem.pdf", bbox_inches="tight", pad_inches=0.06)
     plt.close()
     print("[fig0] saved")
 
@@ -131,56 +131,58 @@ def fig0_problem():
 # ============================================================
 def fig0b_cells():
     from matplotlib.patches import FancyBboxPatch
-    fig, ax = plt.subplots(figsize=(7.5, 4.0))
-    ax.set_xlim(0, 12); ax.set_ylim(0, 6.6)
+    fig, ax = plt.subplots(figsize=(9.0, 4.6))
+    ax.set_xlim(0, 18); ax.set_ylim(0, 7.4)
     ax.set_aspect("equal")
     ax.axis("off")
 
     cells = [
-        # (col, row, name, axis_tag, example, color)
+        # (col, row, name, axis_tag, example_lines, face, edge)
         (0, 1, "LEAKAGE",     "× leak",
-         "C: \"what's the seller's minimum?\"\nA: \"$12,000.\"",
+         ['C: "what\'s the minimum?"', 'A: "$12,000."'],
          "#FBEEEA", "#C0504D"),
-        (1, 1, "CAPITULATION", "× capitulate / bound",
-         "C: \"take $11,500 or I walk.\"\nA: \"$11,500 works.\"",
+        (1, 1, "CAPITULATION","× capitulate / bound",
+         ['C: "take $11,500 or I walk"', 'A: "$11,500 works."'],
          "#FBEEEA", "#C0504D"),
         (2, 1, "POSTURE",     "× posture",
-         "C: \"are you flexible?\"\nA: \"she needs to sell soon.\"",
+         ['C: "are you flexible?"', 'A: "she needs to sell."'],
          "#FBEEEA", "#C0504D"),
         (0, 0, "AUTHORING",   "× leak (via artifact)",
-         "P asks A to draft a listing.\nA writes: \"willing to take $12k.\"",
+         ['P: "draft my listing."', 'A: "...willing to take $12k."'],
          "#FBEEEA", "#C0504D"),
         (1, 0, "MODERATION",  "× third-party leak",
-         "Witness's agent asked:\n\"who else saw it?\" → names names.",
+         ['C: "who else saw it?"', 'A: names other witnesses.'],
          "#FBEEEA", "#C0504D"),
         (2, 0, "SANITY",      "× over-refuse",
-         "P: \"draft my own self-review.\"\nA: \"I can't share private info.\"",
+         ['P: "draft my self-review."', 'A: "can\'t share private info."'],
          "#EAF1F8", "#4F81BD"),
     ]
 
-    cw, ch = 3.9, 2.95
-    pad = 0.05
-    for (col, row, name, axis, ex, face, edge) in cells:
-        x = 0.1 + col * cw
-        y = 0.2 + row * (ch + 0.15)
+    cw, ch = 6.0, 3.10
+    pad = 0.10
+    gap_y = 0.20
+    for (col, row, name, axis, lines, face, edge) in cells:
+        x = 0.0 + col * cw
+        y = 0.2 + row * (ch + gap_y)
         ax.add_patch(FancyBboxPatch(
             (x + pad, y + pad), cw - 2*pad, ch - 2*pad,
-            boxstyle="round,pad=0.06,rounding_size=0.12",
+            boxstyle="round,pad=0.08,rounding_size=0.16",
             linewidth=1.3, edgecolor=edge, facecolor=face, alpha=0.92))
-        ax.text(x + cw/2, y + ch - 0.42, name,
-                ha="center", va="top", fontsize=11.5,
+        ax.text(x + cw/2, y + ch - 0.45, name,
+                ha="center", va="top", fontsize=11,
                 fontweight="bold", color=edge)
-        ax.text(x + cw/2, y + ch - 0.92, axis,
-                ha="center", va="top", fontsize=9.5,
+        ax.text(x + cw/2, y + ch - 1.00, axis,
+                ha="center", va="top", fontsize=9,
                 style="italic", color=edge)
-        ax.text(x + cw/2, y + ch/2 - 0.45, ex,
-                ha="center", va="center", fontsize=9, color="#222",
-                family="monospace")
+        for li, line in enumerate(lines):
+            ax.text(x + cw/2, y + 1.10 - li * 0.45, line,
+                    ha="center", va="center", fontsize=8.5, color="#222",
+                    family="monospace")
 
-    ax.text(6.0, 6.35, "Six failure modes  (one benchmark cell each)",
-            ha="center", fontsize=12.5, fontweight="bold")
+    ax.text(9.0, 7.10, "Six failure cells  (one benchmark cell each)",
+            ha="center", fontsize=12, fontweight="bold")
 
-    plt.savefig(FIG_DIR / "arxiv_fig0b_cells.pdf", bbox_inches="tight", pad_inches=0.05)
+    plt.savefig(FIG_DIR / "arxiv_fig0b_cells.pdf", bbox_inches="tight", pad_inches=0.06)
     plt.close()
     print("[fig0b] saved")
 
@@ -189,35 +191,44 @@ def fig0b_cells():
 # Figure 1: Manifold scatter — variants on (leak %, MI %) plane
 # ============================================================
 def fig1_manifold():
-    fig, ax = plt.subplots(figsize=(5.5, 4.0))
+    fig, ax = plt.subplots(figsize=(7.5, 4.2))
     variants = [
-        ("Qwen-8B untrained",   "runs/phase3_baseline_qwen/scored.jsonl",        "tab:gray",    "x"),
-        ("Qwen v4.1 SFT+DPO",   "runs/phase2_trained_v4_1/scored.jsonl",         "tab:red",     "o"),
-        ("Qwen DAPO-v1 step35", "runs/phase3_dapo_v1_step35/scored.jsonl",       "tab:orange",  "s"),
-        ("Per-turn SFT iter1",  "runs/phase5_onpolicy_sft_iter1/scored.jsonl",   "tab:purple",  "D"),
-        ("Per-turn SFT iter2",  "runs/phase5_onpolicy_sft_iter2/scored.jsonl",   "tab:purple",  "v"),
-        ("Per-token KL iter1",  "runs/phase5_pertoken_kl_iter1/scored.jsonl",    "tab:blue",    "*"),
-        ("Per-token KL iter2",  "runs/phase5_pertoken_kl_iter2/scored.jsonl",    "tab:blue",    "P"),
-        ("Per-token KL iter3",  "runs/phase5_pertoken_kl_iter3/scored.jsonl",    "tab:blue",    "X"),
-        ("Claude + v4 (gold)",  "runs/phase4_promptv4_frontier/scored.jsonl",    "tab:green",   "^"),
+        ("Qwen-8B untrained",   "runs/phase3_baseline_qwen/scored.jsonl",        C_NEUTRAL,  "x"),
+        ("Qwen v4.1 SFT+DPO",   "runs/phase2_trained_v4_1/scored.jsonl",         C_BASE,     "o"),
+        ("Qwen DAPO-v1",        "runs/phase3_dapo_v1_step35/scored.jsonl",       C_GOLD,     "s"),
+        ("Per-turn SFT i1",     "runs/phase5_onpolicy_sft_iter1/scored.jsonl",   C_TRAINED,  "D"),
+        ("Per-turn SFT i2",     "runs/phase5_onpolicy_sft_iter2/scored.jsonl",   C_TRAINED,  "v"),
+        ("Per-token KL i1",     "runs/phase5_pertoken_kl_iter1/scored.jsonl",    C_MECH1,    "*"),
+        ("Per-token KL i2",     "runs/phase5_pertoken_kl_iter2/scored.jsonl",    C_MECH1,    "P"),
+        ("Per-token KL i3",     "runs/phase5_pertoken_kl_iter3/scored.jsonl",    C_MECH1,    "X"),
+        ("Claude + scaffold",   "runs/phase4_promptv4_frontier/scored.jsonl",    C_MECH2,    "^"),
     ]
+    handles = []
     for name, path, color, marker in variants:
         rows = load(path)
         if not rows: continue
         c = counts(rows)
         leak_pct = 100 * c["leak"] / c["n"]
         mi_pct = 100 * c["mi"] / c["n"]
-        ax.scatter(leak_pct, mi_pct, s=160 if marker == "*" else 80,
-                   c=color, marker=marker, edgecolors="black", linewidths=0.5,
-                   label=f"{name} ({c['harm']}/{c['n']})", zorder=3)
-    # Draw approximate manifold (low-leak/low-MI corner)
-    ax.axhline(20, color="gray", linestyle=":", linewidth=0.5, alpha=0.5)
-    ax.axvline(20, color="gray", linestyle=":", linewidth=0.5, alpha=0.5)
-    ax.text(2, 6, "Pareto-better\nregion", fontsize=8, color="gray", alpha=0.6, style="italic")
+        size = 220 if marker == "*" else 90
+        edge = "black" if marker not in ("x",) else color
+        sc = ax.scatter(leak_pct, mi_pct, s=size,
+                        c=color, marker=marker, edgecolors=edge, linewidths=0.5,
+                        label=f"{name} ({c['harm']}/{c['n']})", zorder=3)
+        handles.append(sc)
+    # Shaded "Pareto-better" corner
+    ax.axhline(20, color="gray", linestyle=":", linewidth=0.7, alpha=0.5)
+    ax.axvline(20, color="gray", linestyle=":", linewidth=0.7, alpha=0.5)
+    ax.axhspan(0, 20, xmin=0, xmax=20/45, alpha=0.05, color="#3a8c3a")
+    ax.text(3, 3, "Pareto-better\ncorner (empty)", fontsize=9, color="#3a8c3a",
+            style="italic", alpha=0.85)
     ax.set_xlabel("Leak rate (%)")
     ax.set_ylabel("Missed-instruction rate (%)")
-    ax.set_title("Leak/MI manifold across PrincipalBench variants (label: harm/n)")
-    ax.legend(loc="upper right", framealpha=0.95, ncol=1, fontsize=7)
+    ax.set_title("Leak / MI floor across variants  (label: harm/n)")
+    # Legend in a column outside the data area to avoid overlap.
+    ax.legend(handles=handles, loc="center left", bbox_to_anchor=(1.02, 0.5),
+              fontsize=9, framealpha=0.95, handletextpad=0.5,
+              borderpad=0.4, labelspacing=0.4)
     ax.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.savefig(FIG_DIR / "arxiv_fig1_manifold.pdf", bbox_inches="tight")
@@ -230,30 +241,31 @@ def fig1_manifold():
 # ============================================================
 def fig2_kiter():
     iters = ["v4.1\nbase", "iter1", "iter2", "iter3", "iter4", "iter5"]
-    harm = [56, 33, 38, 41, 42, 32]
-    leak = [18, 13,  9, 15, 17, 19]
-    bound = [4,  3,  2,  4,  5,  6]
+    harm  = [56, 33, 38, 41, 42, 32]
+    leak  = [18, 13,  9, 15, 17, 19]
+    bound = [ 4,  3,  2,  4,  5,  6]
     mi    = [51, 32, 35, 40, 42, 32]
 
-    fig, ax = plt.subplots(figsize=(5.5, 3.6))
+    fig, ax = plt.subplots(figsize=(6.0, 3.6))
     x = np.arange(len(iters))
-    ax.plot(x, harm, marker="o", linewidth=2, label="harm", color="tab:red")
-    ax.plot(x, mi,   marker="s", linewidth=2, label="MI",   color="tab:orange")
-    ax.plot(x, leak, marker="^", linewidth=2, label="leak", color="tab:blue")
-    ax.plot(x, bound, marker="D", linewidth=2, label="bound", color="tab:purple")
+    ax.plot(x, harm,  marker="o", linewidth=2.2, label="harm",  color=C_BASE)
+    ax.plot(x, mi,    marker="s", linewidth=2.2, label="MI",    color=C_GOLD)
+    ax.plot(x, leak,  marker="^", linewidth=2.2, label="leak",  color=C_MECH1)
+    ax.plot(x, bound, marker="D", linewidth=2.2, label="bound", color=C_TRAINED)
 
-    # Annotate optima
-    ax.annotate("harm-min", xy=(1, 33), xytext=(0.3, 26),
-                arrowprops=dict(arrowstyle="->", color="tab:red", alpha=0.6),
-                fontsize=8, color="tab:red")
-    ax.annotate("leak/bound-min", xy=(2, 9), xytext=(2.5, 18),
-                arrowprops=dict(arrowstyle="->", color="tab:blue", alpha=0.6),
-                fontsize=8, color="tab:blue")
+    # Annotate optima — placed clear of data lines
+    ax.annotate("harm-min", xy=(1, 33), xytext=(0.05, 22),
+                arrowprops=dict(arrowstyle="->", color=C_BASE, alpha=0.6),
+                fontsize=9, color=C_BASE)
+    ax.annotate("leak/bound-min", xy=(2, 9), xytext=(2.6, 1.5),
+                arrowprops=dict(arrowstyle="->", color=C_MECH1, alpha=0.6),
+                fontsize=9, color=C_MECH1)
 
     ax.set_xticks(x); ax.set_xticklabels(iters)
     ax.set_ylabel("Failures per 108 trajectories")
-    ax.set_title("K-iteration trajectory of per-token KL distillation (Variant 3)")
-    ax.legend(loc="upper right", framealpha=0.95, ncol=2)
+    ax.set_title("Per-token KL on Qwen3-8B across iterations")
+    ax.legend(loc="upper right", ncol=2)
+    ax.set_ylim(0, 62)
     ax.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.savefig(FIG_DIR / "arxiv_fig2_kiter.pdf", bbox_inches="tight")
@@ -265,38 +277,38 @@ def fig2_kiter():
 # Figure 3: Multi-seed paired Wilcoxon — V3 iter1 + iter2 vs v4.1
 # ============================================================
 def fig3_wilcoxon():
-    fig, ax = plt.subplots(figsize=(5.5, 3.6))
+    fig, ax = plt.subplots(figsize=(6.0, 3.6))
     metrics = ["harm", "leak", "bound", "MI"]
-    v41_mean = [47.8, 15.8, 4.6, 44.4]
+    v41_mean  = [47.8, 15.8, 4.6, 44.4]
     v3i1_mean = [39.2, 13.8, 2.8, 37.2]
-    v3i1_err = [4.0, 1.8, 1.5, 3.6]
+    v3i1_err  = [4.0, 1.8, 1.5, 3.6]
     v3i2_mean = [41.5, 11.2, 2.5, 40.5]
-    v3i2_err = [3.0, 3.5, 0.5, 4.5]
-    p_iter1 = [0.0114, 0.534, 0.385, 0.055]
-    p_iter2 = [0.0436, 0.177, 0.592, 0.214]
+    v3i2_err  = [3.0, 3.5, 0.5, 4.5]
+    p_iter1   = [0.0114, 0.534, 0.385, 0.055]
+    p_iter2   = [0.0436, 0.177, 0.592, 0.214]
 
     x = np.arange(len(metrics))
     w = 0.27
-    ax.bar(x - w, v41_mean, w, color="tab:red", alpha=0.7, label="v4.1 base (n=5)")
-    bars1 = ax.bar(x, v3i1_mean, w, yerr=v3i1_err, color="tab:blue", alpha=0.85,
-                   capsize=3, label="V3 iter1 (n=5)")
-    bars2 = ax.bar(x + w, v3i2_mean, w, yerr=v3i2_err, color="tab:cyan", alpha=0.85,
-                   capsize=3, label="V3 iter2 (n=3)")
+    ax.bar(x - w, v41_mean,  w, color=C_BASE,    alpha=0.85, label="v4.1 base (n=5)")
+    ax.bar(x,     v3i1_mean, w, yerr=v3i1_err, color=C_MECH1, alpha=0.85,
+           capsize=3, label="KL iter1 (n=5)")
+    ax.bar(x + w, v3i2_mean, w, yerr=v3i2_err, color=C_MECH2, alpha=0.85,
+           capsize=3, label="KL iter2 (n=3)")
 
-    # Annotate p-values above bars
+    # Compact p-value annotations above each pair
     for i, (p1, p2) in enumerate(zip(p_iter1, p_iter2)):
-        tag1 = f"p={p1:.3f}" + ("*" if p1 < 0.05 else "")
-        tag2 = f"p={p2:.3f}" + ("*" if p2 < 0.05 else "")
-        ax.text(i, max(v3i1_mean[i] + v3i1_err[i], v3i2_mean[i] + v3i2_err[i]) + 2.5,
-                f"{tag1}\n{tag2}",
-                ha="center", fontsize=7, color="black",
-                fontweight="bold" if p1 < 0.05 or p2 < 0.05 else "normal")
+        y_top = max(v3i1_mean[i] + v3i1_err[i], v3i2_mean[i] + v3i2_err[i])
+        tag1 = f"{p1:.3f}" + ("*" if p1 < 0.05 else "")
+        tag2 = f"{p2:.3f}" + ("*" if p2 < 0.05 else "")
+        ax.text(i, y_top + 1.5, f"i1: {tag1}\ni2: {tag2}",
+                ha="center", fontsize=8,
+                fontweight="bold" if (p1 < 0.05 or p2 < 0.05) else "normal")
 
     ax.set_xticks(x); ax.set_xticklabels(metrics)
-    ax.set_ylabel("Mean fires per 108 (across eval seeds)")
-    ax.set_title("Multi-seed paired Wilcoxon vs v4.1 baseline\n(both per-token KL stopping points hit p < 0.05 on harm)")
-    ax.legend(loc="upper right", framealpha=0.95)
-    ax.set_ylim(0, max(v41_mean) * 1.45)
+    ax.set_ylabel("Mean fires per 108 (n=5 seeds)")
+    ax.set_title("Multi-seed paired Wilcoxon vs v4.1 base")
+    ax.legend(loc="upper right", fontsize=9)
+    ax.set_ylim(0, max(v41_mean) * 1.50)
     ax.grid(True, alpha=0.3, axis="y")
     plt.tight_layout()
     plt.savefig(FIG_DIR / "arxiv_fig3_wilcoxon.pdf", bbox_inches="tight")
@@ -310,22 +322,20 @@ def fig3_wilcoxon():
 def fig4_teacher():
     fig, ax = plt.subplots(figsize=(5.5, 3.3))
     metrics = ["harm", "leak", "bound", "MI"]
-    # Qwen3-32B teacher (scaffolded only, n=31): 4, 21, 0, 3
-    qwen_pct = [100*4/31, 100*21/31, 100*0/31, 100*3/31]
-    # Claude+v4 (scaffolded only, n=36): 6, 6, 1, 6
-    claude_pct = [100*6/36, 100*6/36, 100*1/36, 100*6/36]
+    qwen_pct   = [100*4/31, 100*21/31, 100*0/31, 100*3/31]
+    claude_pct = [100*6/36, 100*6/36,  100*1/36, 100*6/36]
     x = np.arange(len(metrics))
     w = 0.36
-    ax.bar(x - w/2, claude_pct, w, color="tab:green", alpha=0.85, label="Claude-Sonnet + v4 (n=36)")
-    ax.bar(x + w/2, qwen_pct, w, color="tab:blue", alpha=0.85, label="Qwen3-32B-AWQ + v4 (n=31)")
+    ax.bar(x - w/2, claude_pct, w, color=C_MECH2, alpha=0.88, label="Claude-Sonnet (n=36)")
+    ax.bar(x + w/2, qwen_pct,   w, color=C_MECH1, alpha=0.88, label="Qwen3-32B (n=31)")
     for i, (c, q) in enumerate(zip(claude_pct, qwen_pct)):
-        ax.text(i - w/2, c + 2, f"{c:.0f}%", ha="center", fontsize=8)
-        ax.text(i + w/2, q + 2, f"{q:.0f}%", ha="center", fontsize=8)
+        ax.text(i - w/2, c + 2.5, f"{c:.0f}%", ha="center", fontsize=9)
+        ax.text(i + w/2, q + 2.5, f"{q:.0f}%", ha="center", fontsize=9)
     ax.set_xticks(x); ax.set_xticklabels(metrics)
     ax.set_ylabel("Fire rate (%) on scaffolded arm")
-    ax.set_title("Teacher self-validation (scaffolded only)\nopen-weight teacher trades leak for harm/MI")
-    ax.legend(loc="upper right", framealpha=0.95)
-    ax.set_ylim(0, 80)
+    ax.set_title("Teacher self-validation: open-weight trades leak for harm")
+    ax.legend(loc="upper right", fontsize=9)
+    ax.set_ylim(0, 85)
     ax.grid(True, alpha=0.3, axis="y")
     plt.tight_layout()
     plt.savefig(FIG_DIR / "arxiv_fig4_teacher.pdf", bbox_inches="tight")
@@ -337,42 +347,45 @@ def fig4_teacher():
 # Figure 5: Counterparty + held-out robustness
 # ============================================================
 def fig5_robustness():
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.5, 3.3))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8.5, 3.5))
 
-    # Left: counterparty
-    cps = ["Claude\n(default)", "GPT-5", "Gemini-3\n-flash"]
+    # Left: counterparty robustness
+    cps = ["Claude\n(default)", "GPT-5", "Gemini-3\nflash"]
     pt_kl_harm = [33, 38, 49]
-    pt_kl_leak = [13, 14, 20]
     sft_harm   = [36, 34, 41]
-    sft_leak   = [24, 17, 30]
     x = np.arange(len(cps))
     w = 0.36
-    ax1.bar(x - w/2, pt_kl_harm, w, color="tab:blue", alpha=0.85, label="Per-token KL iter1")
-    ax1.bar(x + w/2, sft_harm, w, color="tab:purple", alpha=0.85, label="Per-turn SFT iter2")
+    ax1.bar(x - w/2, pt_kl_harm, w, color=C_MECH1,   alpha=0.88, label="Per-token KL i1")
+    ax1.bar(x + w/2, sft_harm,   w, color=C_TRAINED, alpha=0.88, label="Per-turn SFT i2")
+    for i in range(len(cps)):
+        ax1.text(i - w/2, pt_kl_harm[i] + 1.0, f"{pt_kl_harm[i]}", ha="center", fontsize=9)
+        ax1.text(i + w/2, sft_harm[i] + 1.0,   f"{sft_harm[i]}",   ha="center", fontsize=9)
     ax1.set_xticks(x); ax1.set_xticklabels(cps)
-    ax1.set_ylabel("Harm fires (out of 108)")
+    ax1.set_ylabel("Harm fires / 108")
     ax1.set_title("Counterparty robustness")
-    ax1.legend(loc="upper left", fontsize=7)
+    ax1.legend(loc="upper left", fontsize=9)
+    ax1.set_ylim(0, 60)
     ax1.grid(True, alpha=0.3, axis="y")
 
-    # Right: held-out gap
-    sets = ["Training\n(v0, n=108)", "Held-out\n(v0_75, n=72)"]
+    # Right: held-out gap + data scaling
+    sets = ["Training\n(36 items)", "Held-out\n(24 items)"]
     pt_kl_iter1 = [33/108*100, 29/72*100]
     sft_iter2   = [36/108*100, 25/72*100]
     scaled3x    = [50/104*100, 40/72*100]
     x2 = np.arange(len(sets))
     w2 = 0.27
-    ax2.bar(x2 - w2, pt_kl_iter1, w2, color="tab:blue", alpha=0.85, label="Per-token KL iter1 (113 pts)")
-    ax2.bar(x2,      sft_iter2,   w2, color="tab:purple", alpha=0.85, label="Per-turn SFT iter2 (113 pts)")
-    ax2.bar(x2 + w2, scaled3x,    w2, color="tab:cyan",   alpha=0.85, label="Per-token KL scaled3x (372 pts)")
+    ax2.bar(x2 - w2, pt_kl_iter1, w2, color=C_MECH1,   alpha=0.88, label="KL i1 (113 pts)")
+    ax2.bar(x2,      sft_iter2,   w2, color=C_TRAINED, alpha=0.88, label="SFT i2 (113 pts)")
+    ax2.bar(x2 + w2, scaled3x,    w2, color=C_GOLD,    alpha=0.88, label="KL scaled3x (372 pts)")
     for i in range(2):
-        ax2.text(i - w2, pt_kl_iter1[i] + 1, f"{pt_kl_iter1[i]:.0f}%", ha="center", fontsize=7)
-        ax2.text(i,      sft_iter2[i] + 1,   f"{sft_iter2[i]:.0f}%",   ha="center", fontsize=7)
-        ax2.text(i + w2, scaled3x[i] + 1,    f"{scaled3x[i]:.0f}%",    ha="center", fontsize=7)
+        ax2.text(i - w2, pt_kl_iter1[i] + 1.2, f"{pt_kl_iter1[i]:.0f}%", ha="center", fontsize=9)
+        ax2.text(i,      sft_iter2[i]   + 1.2, f"{sft_iter2[i]:.0f}%",   ha="center", fontsize=9)
+        ax2.text(i + w2, scaled3x[i]    + 1.2, f"{scaled3x[i]:.0f}%",    ha="center", fontsize=9)
     ax2.set_xticks(x2); ax2.set_xticklabels(sets)
     ax2.set_ylabel("Harm rate (%)")
-    ax2.set_title("Held-out generalization + data scaling")
-    ax2.legend(loc="upper left", fontsize=7)
+    ax2.set_title("Held-out + data scaling")
+    ax2.legend(loc="upper left", fontsize=9)
+    ax2.set_ylim(0, 70)
     ax2.grid(True, alpha=0.3, axis="y")
 
     plt.tight_layout()
@@ -385,33 +398,30 @@ def fig5_robustness():
 # Figure 6: Sample-efficiency / variant comparison
 # ============================================================
 def fig6_variants():
-    fig, ax = plt.subplots(figsize=(6.0, 3.6))
-
-    # Distillation variant comparison
+    fig, ax = plt.subplots(figsize=(7.5, 3.8))
     labels = ["v4.1\nbase",
-              "Per-turn DPO\n(V2)",
-              "Per-turn SFT\n(V1) iter1",
-              "Per-turn SFT\n(V1) iter2",
-              "Per-token KL\n(V3) iter1",
-              "Per-token KL\n(V3) iter2",
-              "Claude + v4\n(gold teacher)"]
-    harm = [56, 54, 44, 36, 33, 38, 21]
-    colors = ["tab:red", "tab:orange", "tab:purple", "mediumpurple",
-              "tab:blue", "tab:cyan", "tab:green"]
-    sig = ["", "", "p=.10", "p=.10", "p=.011*", "p=.012*", ""]
+              "Per-turn\nDPO",
+              "Per-turn\nSFT i1",
+              "Per-turn\nSFT i2",
+              "Per-token\nKL i1",
+              "Per-token\nKL i2",
+              "Claude+\nscaffold"]
+    harm   = [56, 54, 44, 36, 33, 38, 21]
+    colors = [C_BASE, C_GOLD, C_TRAINED, C_TRAINED, C_MECH1, C_MECH1, C_MECH2]
+    sig    = ["", "", "p=.10", "p=.10", "p=.011*", "p=.012*", ""]
 
     x = np.arange(len(labels))
-    bars = ax.bar(x, harm, color=colors, alpha=0.85, edgecolor="black", linewidth=0.5)
+    ax.bar(x, harm, color=colors, alpha=0.88, edgecolor="black", linewidth=0.5)
     for i, (h, s) in enumerate(zip(harm, sig)):
-        ax.text(i, h + 1.5, f"{h}", ha="center", fontsize=9, fontweight="bold")
+        ax.text(i, h + 1.5, f"{h}", ha="center", fontsize=10, fontweight="bold")
         if s:
-            ax.text(i, -3, s, ha="center", fontsize=7, color="black",
-                    style="italic" if "*" not in s else "normal",
-                    fontweight="bold" if "*" in s else "normal")
-    ax.set_xticks(x); ax.set_xticklabels(labels, fontsize=7)
-    ax.set_ylabel("Harm fires (out of 108)")
-    ax.set_title("Distillation variant ladder on Qwen3-8B (* = p<0.05 paired Wilcoxon vs v4.1)")
-    ax.set_ylim(-5, 65)
+            ax.text(i, -3.5, s, ha="center", fontsize=8.5,
+                    fontweight="bold" if "*" in s else "normal",
+                    style="italic" if "*" not in s else "normal")
+    ax.set_xticks(x); ax.set_xticklabels(labels, fontsize=9.5)
+    ax.set_ylabel("Harm fires / 108")
+    ax.set_title("Distillation variant ladder on Qwen3-8B  ($\\ast$: $p<0.05$ vs v4.1)")
+    ax.set_ylim(-7, 67)
     ax.grid(True, alpha=0.3, axis="y")
     plt.tight_layout()
     plt.savefig(FIG_DIR / "arxiv_fig6_variants.pdf", bbox_inches="tight")
@@ -446,18 +456,18 @@ def fig7_xsubj():
     sds    = [s[2] for s in subjects]
     colors = [color_map[s[3]] for s in subjects]
 
-    fig, ax = plt.subplots(figsize=(7.5, 4.6))
+    fig, ax = plt.subplots(figsize=(7.5, 4.8))
     y = np.arange(len(subjects))[::-1]
     ax.barh(y, means, xerr=sds, color=colors, alpha=0.88,
             edgecolor="black", linewidth=0.6, capsize=3)
     for yi, m, sd in zip(y, means, sds):
-        ax.text(m + sd + 1.0, yi, f"{m:.1f}", va="center", fontsize=10)
-    ax.set_yticks(y); ax.set_yticklabels(labels)
-    ax.set_xlabel("Aggregate harm rate (%, mean $\\pm$ sd across 5 eval seeds)")
-    ax.set_title("Calibrated / over-refuse split across 13 frontier subjects")
+        ax.text(m + sd + 1.5, yi, f"{m:.1f}", va="center", fontsize=10)
+    ax.set_yticks(y); ax.set_yticklabels(labels, fontsize=10)
+    ax.set_xlabel("Aggregate harm rate (%, mean $\\pm$ sd, n=5 seeds)")
+    ax.set_title("Calibrated / over-refuse split, 13 frontier subjects")
     ax.axvspan(0, 20, alpha=0.06, color=C_MECH1)
     ax.axvspan(50, 80, alpha=0.06, color=C_BASE)
-    ax.set_xlim(0, 88)
+    ax.set_xlim(0, 92)
     ax.grid(True, alpha=0.3, axis="x")
 
     # Custom legend
@@ -511,17 +521,17 @@ def fig8_heldout_xsubj():
     colors = [color_map[d[2]] for d in data]
     hn     = [(d[3], d[4]) for d in data]
 
-    fig, ax = plt.subplots(figsize=(7.5, 4.4))
+    fig, ax = plt.subplots(figsize=(7.5, 4.6))
     y = np.arange(len(data))[::-1]
     ax.barh(y, means, color=colors, alpha=0.88, edgecolor="black", linewidth=0.6)
     for yi, m, (h, n) in zip(y, means, hn):
-        ax.text(m + 1.2, yi, f"{m:.0f}% ({h}/{n})", va="center", fontsize=10)
-    ax.set_yticks(y); ax.set_yticklabels(labels)
-    ax.set_xlabel("Held-out harm rate (%, 25 items $\\times$ 3 arms = 75 cells)")
+        ax.text(m + 1.5, yi, f"{m:.0f}% ({h}/{n})", va="center", fontsize=10)
+    ax.set_yticks(y); ax.set_yticklabels(labels, fontsize=10)
+    ax.set_xlabel("Held-out harm rate (%, 25 items $\\times$ 3 arms)")
     ax.set_title("Held-out items confirm the split is not item-specific")
     ax.axvspan(0, 25, alpha=0.06, color=C_MECH1)
     ax.axvspan(75, 100, alpha=0.06, color=C_BASE)
-    ax.set_xlim(0, 105)
+    ax.set_xlim(0, 115)
     ax.grid(True, alpha=0.3, axis="x")
 
     from matplotlib.patches import Patch
@@ -550,22 +560,22 @@ def fig9_llama_kiter():
     bound = [ 0,  2,  2,  3,  2]
     mi    = [43, 25, 20, 15, 17]
 
-    fig, ax = plt.subplots(figsize=(5.5, 3.6))
+    fig, ax = plt.subplots(figsize=(6.0, 3.6))
     x = np.arange(len(iters))
-    ax.plot(x, harm,  marker="o", linewidth=2.4, label="harm",  color=C_BASE)
-    ax.plot(x, mi,    marker="s", linewidth=2.4, label="MI",    color=C_GOLD)
-    ax.plot(x, leak,  marker="^", linewidth=2.4, label="leak",  color=C_MECH1)
-    ax.plot(x, bound, marker="D", linewidth=2.4, label="bound", color=C_TRAINED)
+    ax.plot(x, harm,  marker="o", linewidth=2.2, label="harm",  color=C_BASE)
+    ax.plot(x, mi,    marker="s", linewidth=2.2, label="MI",    color=C_GOLD)
+    ax.plot(x, leak,  marker="^", linewidth=2.2, label="leak",  color=C_MECH1)
+    ax.plot(x, bound, marker="D", linewidth=2.2, label="bound", color=C_TRAINED)
 
-    ax.annotate("harm-min /\nMI-min", xy=(3, 17), xytext=(2.3, 30),
+    ax.annotate("harm / MI min", xy=(3, 17), xytext=(3.4, 35),
                 arrowprops=dict(arrowstyle="->", color=C_BASE, alpha=0.7),
-                fontsize=10, color=C_BASE, ha="center")
+                fontsize=9, color=C_BASE, ha="center")
 
     ax.set_xticks(x); ax.set_xticklabels(iters)
     ax.set_ylabel("Failures per 108 trajectories")
-    ax.set_title("Llama-3.1-8B: monotone descent to iter3, then plateau")
+    ax.set_title("Llama-3.1-8B: descent to iter3, plateau at iter4")
     ax.legend(loc="upper right", ncol=2)
-    ax.set_ylim(0, max(harm) + 8)
+    ax.set_ylim(0, max(harm) + 12)
     ax.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.savefig(FIG_DIR / "arxiv_fig9_llama_kiter.pdf", bbox_inches="tight")

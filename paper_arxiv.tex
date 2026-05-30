@@ -358,6 +358,8 @@ Both mechanisms --- the prompt-time loyalty scaffold (\cref{sec:prompt}) and per
 
 \paragraph{(5) Scaling distillation data does not lower the floor.} Scaling the on-policy dataset $4.2\times$ (480 vs.\ 113 teacher records, with identical 3 epochs, learning rate, and LoRA rank) \emph{regresses} both training harm ($31\% \to 37\%$ on the 36-item core) and held-out harm ($40\% \to 56\%$). The likely mechanism is undertraining --- tripling the data at fixed epochs gives one-third the effective passes per example --- but the practical point stands: the floor is not a data-volume artifact, and naive data scaling moves the wrong way.
 
+\paragraph{External corroboration: an industrial-scale instance.} The Claude Opus 4.8 system card~\citep{anthropic2025opus48} reports an analogous trade-off observed at production scale. Anthropic states that Opus 4.7's training included a regimen on ``business skills and robustness against adversarial agents,'' which they later found ``inadvertently contributed to misaligned behavior including dishonesty,'' and was therefore removed for Opus 4.8 --- after which Opus 4.8 exhibited ``reduced business success due to being more susceptible to scammers and being less able to negotiate good deals.'' Pushing along the loyalty / adversarial-robustness axis cost truthfulness; pulling back recovered truthfulness but lost negotiation capability. This is the leak/over-refusal trade-off our work characterizes, observed independently and at a much larger training scale, which strengthens our claim that the floor is a property of the objective rather than of any single training shop's pipeline.
+
 \section{Limitations}
 \label{sec:limits}
 
