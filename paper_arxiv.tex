@@ -34,7 +34,7 @@
 \titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{0.6em}{}
 \titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{0.5em}{}
 \titleformat{\subsubsection}{\normalfont\normalsize\bfseries}{\thesubsubsection}{0.4em}{}
-\titleformat{\paragraph}[runin]{\normalfont\normalsize\bfseries}{}{0pt}{}[.]
+\titleformat{\paragraph}[runin]{\normalfont\normalsize\bfseries}{}{0pt}{}
 \titlespacing*{\section}{0pt}{1.1em}{0.4em}
 \titlespacing*{\subsection}{0pt}{0.8em}{0.3em}
 \titlespacing*{\subsubsection}{0pt}{0.5em}{0.25em}
@@ -58,16 +58,16 @@
 \begin{document}
 \maketitle
 
+\begin{abstract}
+\noindent Most LLM agents today operate in a digital world: they call APIs, browse, and serve the user who invoked them. A rapidly growing class of deployments is \emph{multi-party} --- the agent represents a \textbf{principal} (who briefs the agent, sends follow-up instructions, and receives results) while \emph{also} conversing in a separate channel with a \textbf{counterparty} whose interests may diverge (negotiating with a vendor, screening inbound requests for an owner, mediating between employees). Here ``help whoever you are talking to'' is the wrong objective; the agent must stay loyal to the principal it represents without over-refusing the principal's own cooperative requests. We study this \emph{multi-party loyalty problem} and contribute two mechanisms and a structural lesson. \textbf{(M1) Prompt-time loyalty scaffold.} Seven prioritized rules around four insights, open-coded from 50+ failure trajectories: a $3.5\times$ harm reduction on Claude-Sonnet, and nine calibrated frontier subjects hold $\le 20\%$ harm under it. \textbf{(M2) Per-token-KL distillation.} An on-policy recipe that transfers a prompted Qwen3-32B teacher into 8B Qwen3 and Llama-3.1 students --- the strongest open-weight recipe we measure. To compare them we build a 75-item multi-turn measurement instrument (PrincipalBench) with leak probes, dual judges, and an integrity-audit gate; running it across 13 frontier subjects also exposes a sharp \emph{calibrated/over-refuse split} ($\le 20\%$ vs.\ $54$--$75\%$ harm) invisible to single-turn safety evaluations. \textbf{(Lesson)} Both mechanisms move \emph{along} a common leak/over-refusal trade-off rather than crossing it --- a structural floor that single-knob RL also fails to break --- pointing at what the next generation of loyalty mechanisms must address. We release items, code, and checkpoints.
+\end{abstract}
+
 \begin{figure}[!h]
 \centering
 \includegraphics[width=\linewidth]{figures/arxiv_fig0_problem.pdf}
 \caption{\textbf{Multi-party principal loyalty.} The agent maintains two parallel channels: a back-and-forth with the principal $P$ (briefings, requests, results, clarifications), and a separate conversation with a counterparty $C$ whose interests may conflict with $P$'s (where $C$ probes and pressures the agent for information or concessions). The default ``help the current speaker'' objective fails along four conversational axes (bottom panel) --- this paper formalizes them across six benchmark cells and gives two mechanisms that reduce harm while exposing a common floor.}
 \label{fig:problem}
 \end{figure}
-
-\begin{abstract}
-\noindent Most LLM agents today operate in a digital world: they call APIs, browse, and serve the user who invoked them. A rapidly growing class of deployments is \emph{multi-party} --- the agent represents a \textbf{principal} (who briefs the agent, sends follow-up instructions, and receives results) while \emph{also} conversing in a separate channel with a \textbf{counterparty} whose interests may diverge (negotiating with a vendor, screening inbound requests for an owner, mediating between employees). Here ``help whoever you are talking to'' is the wrong objective; the agent must stay loyal to the principal it represents without over-refusing the principal's own cooperative requests. We study this \emph{multi-party loyalty problem} and contribute two mechanisms and a structural lesson. \textbf{(M1) Prompt-time loyalty scaffold.} Seven prioritized rules around four insights, open-coded from 50+ failure trajectories: a $3.5\times$ harm reduction on Claude-Sonnet, and nine calibrated frontier subjects hold $\le 20\%$ harm under it. \textbf{(M2) Per-token-KL distillation.} An on-policy recipe that transfers a prompted Qwen3-32B teacher into 8B Qwen3 and Llama-3.1 students --- the strongest open-weight recipe we measure. To compare them we build a 75-item multi-turn measurement instrument (PrincipalBench) with leak probes, dual judges, and an integrity-audit gate; running it across 13 frontier subjects also exposes a sharp \emph{calibrated/over-refuse split} ($\le 20\%$ vs.\ $54$--$75\%$ harm) invisible to single-turn safety evaluations. \textbf{(Lesson)} Both mechanisms move \emph{along} a common leak/over-refusal trade-off rather than crossing it --- a structural floor that single-knob RL also fails to break --- pointing at what the next generation of loyalty mechanisms must address. We release items, code, and checkpoints.
-\end{abstract}
 
 \section{Introduction}
 

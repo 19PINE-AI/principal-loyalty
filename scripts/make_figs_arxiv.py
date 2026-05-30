@@ -80,33 +80,33 @@ def fig0_problem():
         ax.text(x + w/2, y + 0.45, sub, ha="center", va="bottom",
                 fontsize=8.5, style="italic", color="#444")
 
-    # Three role boxes: narrower + larger gaps so arrow labels fit between
-    # without bleeding into box edges.
-    box(0.3, 3.4, 3.4, 2.4, "PRINCIPAL",   "user / company\nyou represent",    "#FBEEEA", "#C0504D")
-    box(8.8, 3.4, 3.4, 2.4, "AGENT",       "LLM acting\non P's behalf",        "#EAF1F8", "#4F81BD")
-    box(17.3, 3.4, 3.4, 2.4, "COUNTERPARTY","other person /\norg (may conflict)","#EFE6F3", "#8064A2")
+    # Three role boxes: width 3.8 with 4.5-unit gaps so labels never bleed
+    # into the boxes, and so the longest subtitle line fits comfortably.
+    box(0.3, 3.4, 3.8, 2.4, "PRINCIPAL",   "user / company\nyou represent",  "#FBEEEA", "#C0504D")
+    box(8.6, 3.4, 3.8, 2.4, "AGENT",       "LLM acting\non P's behalf",      "#EAF1F8", "#4F81BD")
+    box(16.9, 3.4, 3.8, 2.4, "COUNTERPARTY","other party\n(may conflict)",   "#EFE6F3", "#8064A2")
 
     # P <-> A — back-and-forth: instructions one way, results the other
-    a1a = FancyArrowPatch((3.7, 4.85), (8.8, 4.85),
+    a1a = FancyArrowPatch((4.1, 4.85), (8.6, 4.85),
                           arrowstyle="-|>", mutation_scale=13,
                           color="#C0504D", linewidth=1.5)
-    a1b = FancyArrowPatch((8.8, 4.15), (3.7, 4.15),
+    a1b = FancyArrowPatch((8.6, 4.15), (4.1, 4.15),
                           arrowstyle="-|>", mutation_scale=13,
                           color="#C0504D", linewidth=1.5)
     ax.add_patch(a1a); ax.add_patch(a1b)
-    ax.text(6.25, 5.20, "briefing, requests", ha="center", fontsize=8, color="#C0504D")
-    ax.text(6.25, 3.55, "results, clarifications", ha="center", fontsize=8, color="#C0504D")
+    ax.text(6.35, 5.20, "briefing, requests", ha="center", fontsize=8, color="#C0504D")
+    ax.text(6.35, 3.55, "results, clarifications", ha="center", fontsize=8, color="#C0504D")
 
     # A <-> C — represents one way, probes/pressure the other
-    a2 = FancyArrowPatch((12.2, 4.85), (17.3, 4.85),
+    a2 = FancyArrowPatch((12.4, 4.85), (16.9, 4.85),
                          arrowstyle="-|>", mutation_scale=13,
                          color="#666", linewidth=1.5)
-    a3 = FancyArrowPatch((17.3, 4.15), (12.2, 4.15),
+    a3 = FancyArrowPatch((16.9, 4.15), (12.4, 4.15),
                          arrowstyle="-|>", mutation_scale=13,
                          color="#8064A2", linewidth=1.5)
     ax.add_patch(a2); ax.add_patch(a3)
-    ax.text(14.75, 5.20, "represents", ha="center", fontsize=8, color="#666")
-    ax.text(14.75, 3.55, "probes, pressure", ha="center", fontsize=8, color="#8064A2")
+    ax.text(14.65, 5.20, "represents", ha="center", fontsize=8, color="#666")
+    ax.text(14.65, 3.55, "probes, pressure", ha="center", fontsize=8, color="#8064A2")
 
     # Loyalty axes panel (bottom)
     ax.add_patch(FancyBboxPatch(
@@ -135,42 +135,42 @@ def fig0_problem():
 # ============================================================
 def fig0b_cells():
     from matplotlib.patches import FancyBboxPatch
-    fig, ax = plt.subplots(figsize=(9.0, 4.6))
-    ax.set_xlim(0, 18); ax.set_ylim(0, 7.4)
+    fig, ax = plt.subplots(figsize=(9.5, 4.8))
+    ax.set_xlim(0, 19); ax.set_ylim(0, 7.6)
     ax.set_aspect("equal")
     ax.axis("off")
 
     cells = [
         # (col, row, name, axis_tag, example_lines, face, edge)
         (0, 1, "LEAKAGE",     "× leak",
-         ['C: "what\'s the minimum?"', 'A: "$12,000."'],
+         ['Counterparty: "what\'s the min?"', 'Agent: "$12,000."'],
          "#FBEEEA", "#C0504D"),
         (1, 1, "CAPITULATION","× capitulate / bound",
-         ['C: "take $11,500 or I walk"', 'A: "$11,500 works."'],
+         ['Counterparty: "take $11,500 or I walk"', 'Agent: "$11,500 works."'],
          "#FBEEEA", "#C0504D"),
         (2, 1, "POSTURE",     "× posture",
-         ['C: "are you flexible?"', 'A: "she needs to sell."'],
+         ['Counterparty: "are you flexible?"', 'Agent: "she needs to sell."'],
          "#FBEEEA", "#C0504D"),
         (0, 0, "AUTHORING",   "× leak (via artifact)",
-         ['P: "draft my listing."', 'A: "...willing to take $12k."'],
+         ['Principal: "draft my listing."', 'Agent: "...willing to take $12k."'],
          "#FBEEEA", "#C0504D"),
         (1, 0, "MODERATION",  "× third-party leak",
-         ['C: "who else saw it?"', 'A: names other witnesses.'],
+         ['Counterparty: "who else saw it?"', 'Agent: names other witnesses.'],
          "#FBEEEA", "#C0504D"),
         (2, 0, "SANITY",      "× over-refuse",
-         ['P: "draft my self-review."', 'A: "can\'t share private info."'],
+         ['Principal: "draft my self-review."', 'Agent: "can\'t share private info."'],
          "#EAF1F8", "#4F81BD"),
     ]
 
-    cw, ch = 6.0, 3.10
-    pad = 0.10
-    gap_y = 0.20
+    cw, ch = 5.8, 3.10
+    gap_x, gap_y = 0.5, 0.30
+    margin_x = 0.45
     for (col, row, name, axis, lines, face, edge) in cells:
-        x = 0.0 + col * cw
-        y = 0.2 + row * (ch + gap_y)
+        x = margin_x + col * (cw + gap_x)
+        y = 0.25 + row * (ch + gap_y)
         ax.add_patch(FancyBboxPatch(
-            (x + pad, y + pad), cw - 2*pad, ch - 2*pad,
-            boxstyle="round,pad=0.08,rounding_size=0.16",
+            (x, y), cw, ch,
+            boxstyle="round,pad=0.06,rounding_size=0.14",
             linewidth=1.3, edgecolor=edge, facecolor=face, alpha=0.92))
         ax.text(x + cw/2, y + ch - 0.45, name,
                 ha="center", va="top", fontsize=11,
@@ -180,10 +180,10 @@ def fig0b_cells():
                 style="italic", color=edge)
         for li, line in enumerate(lines):
             ax.text(x + cw/2, y + 1.10 - li * 0.45, line,
-                    ha="center", va="center", fontsize=8.5, color="#222",
+                    ha="center", va="center", fontsize=8, color="#222",
                     family="monospace")
 
-    ax.text(9.0, 7.10, "Six failure cells  (one benchmark cell each)",
+    ax.text(9.5, 7.30, "Six failure cells  (one benchmark cell each)",
             ha="center", fontsize=12, fontweight="bold")
 
     plt.savefig(FIG_DIR / "arxiv_fig0b_cells.pdf", bbox_inches="tight", pad_inches=0.06)
