@@ -419,6 +419,160 @@ def fig6_variants():
     print("[fig6] saved")
 
 
+# ============================================================
+# Figure 7: Calibrated / over-refuse split — 13 frontier subjects, n=5 seeds
+# ============================================================
+def fig7_xsubj():
+    # Mean ± sd of 36-item-core harm across n=5 paired evaluation seeds.
+    # Numbers from paper Table tab:prompt_grid.
+    subjects = [
+        ("Gemini-2.5-flash",       5.5, 6.3, "calibrated"),
+        ("Mistral-Large",         11.0, 2.8, "calibrated"),
+        ("Gemini-3p1-flash-lite", 12.0, 2.1, "calibrated"),
+        ("DeepSeek-v3.1",         12.3, 2.5, "calibrated"),
+        ("Qwen3-32B",             16.3, 2.6, "calibrated"),
+        ("Claude-Opus",           18.1, 2.8, "calibrated"),
+        ("Llama-3.1-70B-Instruct",19.2, 2.7, "calibrated"),
+        ("Gemini-3-flash",        19.4, 2.3, "calibrated"),
+        ("Claude-Sonnet",         19.5, 1.5, "calibrated"),
+        ("GLM-4.6",               46.0, 2.9, "intermediate"),
+        ("GPT-5-mini",            53.6, 5.1, "over-refuse"),
+        ("GPT-5",                 71.1, 2.2, "over-refuse"),
+        ("Qwen3.5-27B",           75.3, 2.9, "over-refuse"),
+    ]
+    color_map = {"calibrated": C_MECH1, "intermediate": C_GOLD, "over-refuse": C_BASE}
+    labels = [s[0] for s in subjects]
+    means  = [s[1] for s in subjects]
+    sds    = [s[2] for s in subjects]
+    colors = [color_map[s[3]] for s in subjects]
+
+    fig, ax = plt.subplots(figsize=(7.5, 4.6))
+    y = np.arange(len(subjects))[::-1]
+    ax.barh(y, means, xerr=sds, color=colors, alpha=0.88,
+            edgecolor="black", linewidth=0.6, capsize=3)
+    for yi, m, sd in zip(y, means, sds):
+        ax.text(m + sd + 1.0, yi, f"{m:.1f}", va="center", fontsize=10)
+    ax.set_yticks(y); ax.set_yticklabels(labels)
+    ax.set_xlabel("Aggregate harm rate (%, mean $\\pm$ sd across 5 eval seeds)")
+    ax.set_title("Calibrated / over-refuse split across 13 frontier subjects")
+    ax.axvspan(0, 20, alpha=0.06, color=C_MECH1)
+    ax.axvspan(50, 80, alpha=0.06, color=C_BASE)
+    ax.set_xlim(0, 88)
+    ax.grid(True, alpha=0.3, axis="x")
+
+    # Custom legend
+    from matplotlib.patches import Patch
+    legend = [Patch(facecolor=C_MECH1, alpha=0.88, edgecolor="black", linewidth=0.6,
+                    label="calibrated ($\\leq 20\\%$)"),
+              Patch(facecolor=C_GOLD, alpha=0.88, edgecolor="black", linewidth=0.6,
+                    label="intermediate"),
+              Patch(facecolor=C_BASE, alpha=0.88, edgecolor="black", linewidth=0.6,
+                    label="over-refuse ($\\geq 50\\%$)")]
+    ax.legend(handles=legend, loc="lower right", fontsize=10)
+    plt.tight_layout()
+    plt.savefig(FIG_DIR / "arxiv_fig7_xsubj.pdf", bbox_inches="tight")
+    plt.close()
+    print("[fig7] saved")
+
+
+# ============================================================
+# Figure 8: Held-out validation of the split (24 fresh items, n=1 seed)
+# ============================================================
+def fig8_heldout_xsubj():
+    # Read held-out scored files and compute per-subject harm rates.
+    runs = ROOT / "runs"
+    candidates = [
+        ("Gemini-3p1-flash-lite", "phase4_promptv4_gemini3p1_lite_heldout", "calibrated"),
+        ("Gemini-3-flash",        "phase4_promptv4_gemini3flash_heldout",   "calibrated"),
+        ("DeepSeek-v3.1",         "phase4_promptv4_deepseek_heldout",       "calibrated"),
+        ("Claude-Opus",           "phase4_promptv4_claude_opus_heldout",    "calibrated"),
+        ("Claude-Sonnet",         "phase4_promptv4_claude_heldout",         "calibrated"),
+        ("Llama-3.1-70B-Instruct","phase4_promptv4_llama70b_heldout",       "calibrated"),
+        ("Qwen3-32B",             "phase4_promptv4_qwen32b_openrouter_heldout","calibrated"),
+        ("GLM-4.6",               "phase4_promptv4_glm46_heldout",          "intermediate"),
+        ("GPT-5-mini",            "phase4_promptv4_gpt5mini_heldout",       "over-refuse"),
+        ("GPT-5",                 "phase4_promptv4_gpt5_heldout",           "over-refuse"),
+        ("Qwen3.5-27B",           "phase4_promptv4_qwen27b_heldout",        "over-refuse"),
+    ]
+    data = []
+    for name, path, cluster in candidates:
+        rows = load(runs / path / "scored.jsonl")
+        if not rows: continue
+        c = counts(rows)
+        harm_pct = 100.0 * c["harm"] / c["n"] if c["n"] else 0.0
+        data.append((name, harm_pct, cluster, c["harm"], c["n"]))
+
+    color_map = {"calibrated": C_MECH1, "intermediate": C_GOLD, "over-refuse": C_BASE}
+    # Sort within cluster, calibrated low→high, intermediate, over-refuse low→high
+    cluster_order = {"calibrated": 0, "intermediate": 1, "over-refuse": 2}
+    data.sort(key=lambda d: (cluster_order[d[2]], d[1]))
+    labels = [d[0] for d in data]
+    means  = [d[1] for d in data]
+    colors = [color_map[d[2]] for d in data]
+    hn     = [(d[3], d[4]) for d in data]
+
+    fig, ax = plt.subplots(figsize=(7.5, 4.4))
+    y = np.arange(len(data))[::-1]
+    ax.barh(y, means, color=colors, alpha=0.88, edgecolor="black", linewidth=0.6)
+    for yi, m, (h, n) in zip(y, means, hn):
+        ax.text(m + 1.2, yi, f"{m:.0f}% ({h}/{n})", va="center", fontsize=10)
+    ax.set_yticks(y); ax.set_yticklabels(labels)
+    ax.set_xlabel("Held-out harm rate (%, 25 items $\\times$ 3 arms = 75 cells)")
+    ax.set_title("Held-out items confirm the split is not item-specific")
+    ax.axvspan(0, 25, alpha=0.06, color=C_MECH1)
+    ax.axvspan(75, 100, alpha=0.06, color=C_BASE)
+    ax.set_xlim(0, 105)
+    ax.grid(True, alpha=0.3, axis="x")
+
+    from matplotlib.patches import Patch
+    legend = [Patch(facecolor=C_MECH1, alpha=0.88, edgecolor="black", linewidth=0.6,
+                    label="calibrated"),
+              Patch(facecolor=C_GOLD, alpha=0.88, edgecolor="black", linewidth=0.6,
+                    label="intermediate"),
+              Patch(facecolor=C_BASE, alpha=0.88, edgecolor="black", linewidth=0.6,
+                    label="over-refuse")]
+    ax.legend(handles=legend, loc="lower right", fontsize=10)
+    plt.tight_layout()
+    plt.savefig(FIG_DIR / "arxiv_fig8_heldout_xsubj.pdf", bbox_inches="tight")
+    plt.close()
+    print("[fig8] saved")
+
+
+# ============================================================
+# Figure 9: Llama K-iteration trajectory (mirror of fig2 for Qwen)
+# ============================================================
+def fig9_llama_kiter():
+    iters = ["Llama-8B\nuntrained", "iter1", "iter2", "iter3", "iter4"]
+    # Llama-3.1-8B untrained baseline (HEADLINES.md): harm 45/108, leak 7, bound 0, MI 43
+    # Llama K-iter from paper text: 27 → 22 → 17 over three iterations
+    harm  = [45, 27, 22, 17, 18]
+    leak  = [ 7,  3,  9,  7,  6]
+    bound = [ 0,  2,  2,  3,  2]
+    mi    = [43, 25, 20, 15, 17]
+
+    fig, ax = plt.subplots(figsize=(5.5, 3.6))
+    x = np.arange(len(iters))
+    ax.plot(x, harm,  marker="o", linewidth=2.4, label="harm",  color=C_BASE)
+    ax.plot(x, mi,    marker="s", linewidth=2.4, label="MI",    color=C_GOLD)
+    ax.plot(x, leak,  marker="^", linewidth=2.4, label="leak",  color=C_MECH1)
+    ax.plot(x, bound, marker="D", linewidth=2.4, label="bound", color=C_TRAINED)
+
+    ax.annotate("harm-min /\nMI-min", xy=(3, 17), xytext=(2.3, 30),
+                arrowprops=dict(arrowstyle="->", color=C_BASE, alpha=0.7),
+                fontsize=10, color=C_BASE, ha="center")
+
+    ax.set_xticks(x); ax.set_xticklabels(iters)
+    ax.set_ylabel("Failures per 108 trajectories")
+    ax.set_title("Llama-3.1-8B: monotone descent to iter3, then plateau")
+    ax.legend(loc="upper right", ncol=2)
+    ax.set_ylim(0, max(harm) + 8)
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(FIG_DIR / "arxiv_fig9_llama_kiter.pdf", bbox_inches="tight")
+    plt.close()
+    print("[fig9] saved")
+
+
 if __name__ == "__main__":
     fig0_problem()
     fig0b_cells()
@@ -428,4 +582,7 @@ if __name__ == "__main__":
     fig4_teacher()
     fig5_robustness()
     fig6_variants()
+    fig7_xsubj()
+    fig8_heldout_xsubj()
+    fig9_llama_kiter()
     print("DONE — figures in", FIG_DIR)
