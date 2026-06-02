@@ -1,4 +1,5 @@
 import { useData } from '../lib/useData.js'
+import PaperFigure, { PaperFigureHeader } from '../lib/PaperFigure.jsx'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line, Legend,
 } from 'recharts'
@@ -94,6 +95,16 @@ export default function Training() {
             a DAPO-style RL checkpoint regresses from the per-token-KL optimum.
           </div>
         </div>
+
+        <div className="mt-6">
+          <PaperFigureHeader label="Figure 6" />
+          <PaperFigure
+            src="arxiv_fig6_variants.png"
+            label=""
+            caption="Variant ladder as rendered in the paper. p-values are the multi-seed (n=5) paired Wilcoxon harm test vs the SFT+DPO base."
+            maxWidth="780px"
+          />
+        </div>
       </section>
 
       <section>
@@ -112,6 +123,65 @@ export default function Training() {
             <div className="text-sm font-semibold mb-2">Llama-3.1-8B</div>
             <KiterChart rows={kiter?.llama} family="Llama-3.1-8B" />
           </div>
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-4 mt-6">
+          <div>
+            <PaperFigureHeader label="Figure 2" />
+            <PaperFigure
+              src="arxiv_fig2_kiter.png"
+              label=""
+              caption="Qwen3-8B K-iteration trajectory as rendered in the paper."
+              maxWidth="100%"
+            />
+          </div>
+          <div>
+            <PaperFigureHeader label="Figure 9" />
+            <PaperFigure
+              src="arxiv_fig9_llama_kiter.png"
+              label=""
+              caption="Llama-3.1-8B K-iteration trajectory as rendered in the paper."
+              maxWidth="100%"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-semibold mb-3">Multi-seed Wilcoxon</h2>
+        <p className="text-ink/70 text-sm max-w-3xl mb-4">
+          Both per-token-KL stopping points (iteration 1, the harm-minimum; iteration 2, the
+          leak/bound-minimum) clear <code className="mono">p &lt; 0.05</code> on harm at n=5 paired seeds.
+        </p>
+        <PaperFigure
+          src="arxiv_fig3_wilcoxon.png"
+          label="Figure 3"
+          caption="Multi-seed paired Wilcoxon vs the SFT+DPO base. Error bars are ± 1σ across seeds."
+          maxWidth="760px"
+        />
+      </section>
+
+      <section>
+        <h2 className="text-xl font-semibold mb-3">Teacher self-validation & student robustness</h2>
+        <p className="text-ink/70 text-sm max-w-3xl mb-4">
+          The open Qwen3-32B-AWQ teacher (used because Claude does not expose logits) matches Claude on
+          harm and missed-instruction but leaks much more — and the student inherits a harm-low,
+          leak-tolerant profile. Held-out generalization carries an ~10-point train-to-held-out gap on
+          per-token KL, the recipe's main caveat.
+        </p>
+        <div className="grid lg:grid-cols-2 gap-4">
+          <PaperFigure
+            src="arxiv_fig4_teacher.png"
+            label="Figure 4"
+            caption="Teacher self-validation. The open teacher leaks much more (21/31 vs 6/36) but matches harm."
+            maxWidth="100%"
+          />
+          <PaperFigure
+            src="arxiv_fig5_robustness.png"
+            label="Figure 5"
+            caption="Counterparty swap and held-out generalization. Per-token KL has the lowest training harm but the largest train-to-held-out gap."
+            maxWidth="100%"
+          />
         </div>
       </section>
 

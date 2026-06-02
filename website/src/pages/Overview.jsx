@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useData, CELL_DOT } from '../lib/useData.js'
+import PaperFigure, { PaperFigureHeader } from '../lib/PaperFigure.jsx'
 import {
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ZAxis, Legend, ReferenceArea,
 } from 'recharts'
@@ -50,6 +51,15 @@ export default function Overview() {
           This site lets you browse the 75-item benchmark, compare 13 frontier subjects,
           inspect the per-token-KL distillation runs, and read sample conversations.
         </p>
+
+        <div className="mt-8">
+          <PaperFigure
+            src="arxiv_fig0_problem.png"
+            label="Figure 0"
+            caption="The agent maintains two parallel channels — a back-and-forth with the principal P (briefings, requests, results), and a separate conversation with a counterparty C whose interests may conflict with P's. The default 'help the current speaker' objective fails along four conversational axes (bottom panel)."
+            maxWidth="900px"
+          />
+        </div>
       </section>
 
       {/* headline numbers */}
@@ -76,6 +86,15 @@ export default function Overview() {
             {cells.map(c => <CellBadge key={c.id} {...c} />)}
           </div>
         )}
+
+        <div className="mt-6">
+          <PaperFigure
+            src="arxiv_fig0b_cells.png"
+            label="Figure 0b"
+            caption="The six failure cells, as visualized in the paper. The sanity cell (blue) exists to prevent 'refuse everything' from being a winning strategy."
+            maxWidth="780px"
+          />
+        </div>
       </section>
 
       {/* manifold scatter */}
@@ -119,6 +138,16 @@ export default function Overview() {
             </div>
           </div>
         )}
+
+        <div className="mt-6">
+          <PaperFigureHeader label="Figure 1 (paper version)" />
+          <PaperFigure
+            src="arxiv_fig1_manifold.png"
+            label=""
+            caption="The same floor as rendered in the paper: the prompted Claude teacher and the per-token-KL student land on a common frontier; the DAPO RL baseline regresses from the distillation optimum."
+            maxWidth="820px"
+          />
+        </div>
       </section>
 
       {/* CTA grid */}
