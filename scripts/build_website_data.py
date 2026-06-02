@@ -295,6 +295,64 @@ for cell, its in items_by_cell.items():
 print(f"trajectories: {len(traj_index)} sample conversations")
 
 
+# ---------- Wilcoxon (paper Figure 3) ----------
+# Multi-seed paired Wilcoxon vs SFT+DPO base.
+# Iter-1 from logs/pertoken_kl_paired_seed_test.log (n=5).
+# Iter-2 from paper §5.3 (n=4 matched seeds; one seed dropped under GPU contention).
+wilcoxon = {
+    "iter1": {
+        "n_seeds": 5,
+        "metrics": [
+            {"key": "harm",  "label": "Harm",  "base": 47.8, "kl": 39.2, "kl_sd": 4.0, "p": 0.0114, "robust_base": 15, "robust_kl": 6},
+            {"key": "leak",  "label": "Leak",  "base": 15.8, "kl": 13.8, "kl_sd": 1.8, "p": 0.534,  "robust_base":  0, "robust_kl": 0},
+            {"key": "bound", "label": "Bound", "base":  4.6, "kl":  2.8, "kl_sd": 1.5, "p": 0.385,  "robust_base":  0, "robust_kl": 0},
+            {"key": "mi",    "label": "MI",    "base": 44.4, "kl": 37.2, "kl_sd": 3.6, "p": 0.055,  "robust_base": 15, "robust_kl": 5},
+        ],
+    },
+    "iter2": {
+        "n_seeds": 4,
+        "metrics": [
+            {"key": "harm",  "label": "Harm",  "base": 48.5, "kl": 41.5, "kl_sd": 3.6, "p": 0.0436},
+        ],
+    },
+}
+(OUT / "wilcoxon.json").write_text(json.dumps(wilcoxon, indent=1))
+
+
+# ---------- Teacher self-validation (paper Figure 4) ----------
+# Scaffolded arm, audit-gated.
+teacher = {
+    "metrics": [
+        {"key": "harm", "label": "Harm",            "claude": 6,  "claude_n": 36, "qwen": 4,  "qwen_n": 31},
+        {"key": "leak", "label": "Leak",            "claude": 6,  "claude_n": 36, "qwen": 21, "qwen_n": 31},
+        {"key": "mi",   "label": "Missed-instruct", "claude": 6,  "claude_n": 36, "qwen": 3,  "qwen_n": 31},
+    ],
+    "subjects": {
+        "claude":  {"display": "Claude-Sonnet + scaffold",     "color": "#0891b2"},
+        "qwen":    {"display": "Qwen3-32B-AWQ + scaffold (open teacher)", "color": "#7c3aed"},
+    },
+}
+(OUT / "teacher.json").write_text(json.dumps(teacher, indent=1))
+
+
+# ---------- Counterparty robustness & held-out generalization (paper Figure 5) ----------
+robustness = {
+    "counterparty": [
+        # PerTokenKL iter1 swept over three counterparty models
+        {"counterparty": "Claude-Sonnet", "color": "#0891b2", "harm": 33, "leak": 13},
+        {"counterparty": "GPT-5",         "color": "#10b981", "harm": 38, "leak": 14},
+        {"counterparty": "Gemini-3-flash","color": "#f59e0b", "harm": 49, "leak": 20},
+    ],
+    "heldout": [
+        # Training-set vs held-out harm for each recipe (% on the 36/25 item sets)
+        {"recipe": "Per-token KL i1",  "color": "#7c3aed", "training": 30.6, "heldout": 40.3},
+        {"recipe": "Per-turn SFT i2",  "color": "#84cc16", "training": 33.3, "heldout": 36.0},
+        {"recipe": "Llama KL i3",      "color": "#0891b2", "training": 15.7, "heldout": 26.7},
+    ],
+}
+(OUT / "robustness.json").write_text(json.dumps(robustness, indent=1))
+
+
 # ---------- headline numbers (used in Overview hero) ----------
 headline = {
     "claude_sonnet_scaffolded_harm": 21,

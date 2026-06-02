@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { useData, CLUSTER_COLORS, ARM_LABELS, CELL_DOT } from '../lib/useData.js'
-import PaperFigure, { PaperFigureHeader } from '../lib/PaperFigure.jsx'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend, ReferenceLine,
 } from 'recharts'
@@ -175,16 +174,6 @@ export default function Subjects() {
             (plain p = 1.8e-6, prompted p = 2.2e-7, scaffolded p = 5.9e-7).
           </div>
         </div>
-
-        <div className="mt-6">
-          <PaperFigureHeader label="Figure 7" />
-          <PaperFigure
-            src="arxiv_fig7_xsubj.png"
-            label=""
-            caption="The same split as rendered in the paper, with ± 1σ error bars across 5 evaluation seeds."
-            maxWidth="820px"
-          />
-        </div>
       </section>
 
       <section>
@@ -211,16 +200,6 @@ export default function Subjects() {
             On 24 items authored after training was frozen, calibrated subjects stay ≤ 24% and over-refuse
             subjects ≥ 76%; GPT-5 amplifies from 71% to 93%. Per-arm test remains significant (p ≤ 1.8e-5).
           </div>
-        </div>
-
-        <div className="mt-6">
-          <PaperFigureHeader label="Figure 8" />
-          <PaperFigure
-            src="arxiv_fig8_heldout_xsubj.png"
-            label=""
-            caption="Held-out cross-subject grid, as rendered in the paper. Mistral-Large was unmeasurable on held-out (provider routing), Gemini-2.5-flash was not rerun."
-            maxWidth="820px"
-          />
         </div>
       </section>
 

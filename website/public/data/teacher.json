@@ -1,0 +1,38 @@
+{
+ "metrics": [
+  {
+   "key": "harm",
+   "label": "Harm",
+   "claude": 6,
+   "claude_n": 36,
+   "qwen": 4,
+   "qwen_n": 31
+  },
+  {
+   "key": "leak",
+   "label": "Leak",
+   "claude": 6,
+   "claude_n": 36,
+   "qwen": 21,
+   "qwen_n": 31
+  },
+  {
+   "key": "mi",
+   "label": "Missed-instruct",
+   "claude": 6,
+   "claude_n": 36,
+   "qwen": 3,
+   "qwen_n": 31
+  }
+ ],
+ "subjects": {
+  "claude": {
+   "display": "Claude-Sonnet + scaffold",
+   "color": "#0891b2"
+  },
+  "qwen": {
+   "display": "Qwen3-32B-AWQ + scaffold (open teacher)",
+   "color": "#7c3aed"
+  }
+ }
+}

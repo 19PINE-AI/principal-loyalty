@@ -4,7 +4,6 @@ import Items from './pages/Items.jsx'
 import Subjects from './pages/Subjects.jsx'
 import Training from './pages/Training.jsx'
 import Trajectories from './pages/Trajectories.jsx'
-import Figures from './pages/Figures.jsx'
 
 const NAV = [
   { to: '/',             label: 'Overview' },
@@ -12,7 +11,6 @@ const NAV = [
   { to: '/subjects',     label: 'Frontier subjects' },
   { to: '/training',     label: 'Training & variants' },
   { to: '/trajectories', label: 'Sample conversations' },
-  { to: '/figures',      label: 'Paper figures' },
 ]
 
 function Nav() {
@@ -64,7 +62,6 @@ function App() {
           <Route path="/subjects" element={<Subjects />} />
           <Route path="/training" element={<Training />} />
           <Route path="/trajectories" element={<Trajectories />} />
-          <Route path="/figures" element={<Figures />} />
         </Routes>
       </main>
       <Footer />

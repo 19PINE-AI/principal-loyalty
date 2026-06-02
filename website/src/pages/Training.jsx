@@ -1,16 +1,19 @@
 import { useData } from '../lib/useData.js'
-import PaperFigure, { PaperFigureHeader } from '../lib/PaperFigure.jsx'
+import WilcoxonChart from '../components/WilcoxonChart.jsx'
+import TeacherChart from '../components/TeacherChart.jsx'
+import RobustnessChart from '../components/RobustnessChart.jsx'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+  LineChart, Line, Legend, LabelList,
 } from 'recharts'
 
 function VariantsChart({ variants }) {
   if (!variants) return null
   return (
     <ResponsiveContainer width="100%" height={380}>
-      <BarChart data={variants} margin={{ top: 18, right: 16, bottom: 50, left: 10 }}>
+      <BarChart data={variants} margin={{ top: 24, right: 16, bottom: 50, left: 10 }}>
         <CartesianGrid stroke="#e5e7eb" strokeDasharray="2 2" vertical={false} />
-        <XAxis dataKey="name" interval={0} angle={-22} textAnchor="end" fontSize={11} />
+        <XAxis dataKey="name" interval={0} angle={-22} textAnchor="end" fontSize={11} height={70} />
         <YAxis label={{ value: 'Harm fires / 108', angle: -90, position: 'insideLeft', fontSize: 12 }} fontSize={11} domain={[0, 64]} />
         <Tooltip content={({ active, payload }) => {
           if (!active || !payload || !payload.length) return null
@@ -23,7 +26,9 @@ function VariantsChart({ variants }) {
             </div>
           )
         }} />
-        <Bar dataKey="harm" radius={[3, 3, 0, 0]} label={{ position: 'top', fontSize: 11, fontWeight: 'bold' }}>
+        <Bar dataKey="harm" radius={[3, 3, 0, 0]} isAnimationActive animationDuration={900}>
+          <LabelList dataKey="harm" position="top" fontSize={11} fontWeight="bold" />
+          <LabelList dataKey="sig" position="insideBottom" fontSize={10} fill="#fff" />
           {variants.map((d, i) => <Cell key={i} fill={d.color} />)}
         </Bar>
       </BarChart>
@@ -31,10 +36,12 @@ function VariantsChart({ variants }) {
   )
 }
 
-function KiterChart({ rows, family }) {
+function KiterChart({ rows, family, accent }) {
   if (!rows) return null
+  // Find harm-minimum iter to highlight
+  const harmMin = rows.reduce((a, b) => (b.harm < a.harm ? b : a))
   return (
-    <ResponsiveContainer width="100%" height={290}>
+    <ResponsiveContainer width="100%" height={300}>
       <LineChart data={rows} margin={{ top: 8, right: 16, bottom: 28, left: 0 }}>
         <CartesianGrid stroke="#e5e7eb" strokeDasharray="2 2" />
         <XAxis dataKey="iter" label={{ value: 'iteration', position: 'insideBottom', offset: -4, fontSize: 11 }} fontSize={11} />
@@ -52,11 +59,11 @@ function KiterChart({ rows, family }) {
             </div>
           )
         }} />
-        <Legend wrapperStyle={{ fontSize: 11 }} verticalAlign="top" />
-        <Line type="monotone" dataKey="harm"  stroke="#7c3aed" strokeWidth={2.5} dot={{ r: 4 }} />
-        <Line type="monotone" dataKey="leak"  stroke="#dc2626" strokeWidth={2} dot={{ r: 3 }} />
-        <Line type="monotone" dataKey="bound" stroke="#ea580c" strokeWidth={2} dot={{ r: 3 }} />
-        <Line type="monotone" dataKey="mi"    stroke="#0891b2" strokeWidth={2} dot={{ r: 3 }} />
+        <Legend wrapperStyle={{ fontSize: 11 }} verticalAlign="top" iconType="circle" />
+        <Line type="monotone" dataKey="harm"  stroke="#7c3aed" strokeWidth={2.8} dot={{ r: 4 }} activeDot={{ r: 6 }} isAnimationActive animationDuration={900} />
+        <Line type="monotone" dataKey="leak"  stroke="#dc2626" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} isAnimationActive animationDuration={900} animationBegin={120} />
+        <Line type="monotone" dataKey="bound" stroke="#ea580c" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} isAnimationActive animationDuration={900} animationBegin={240} />
+        <Line type="monotone" dataKey="mi"    stroke="#0891b2" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} isAnimationActive animationDuration={900} animationBegin={360} />
       </LineChart>
     </ResponsiveContainer>
   )
@@ -95,16 +102,15 @@ export default function Training() {
             a DAPO-style RL checkpoint regresses from the per-token-KL optimum.
           </div>
         </div>
+      </section>
 
-        <div className="mt-6">
-          <PaperFigureHeader label="Figure 6" />
-          <PaperFigure
-            src="arxiv_fig6_variants.png"
-            label=""
-            caption="Variant ladder as rendered in the paper. p-values are the multi-seed (n=5) paired Wilcoxon harm test vs the SFT+DPO base."
-            maxWidth="780px"
-          />
-        </div>
+      <section>
+        <h2 className="text-xl font-semibold mb-3">Multi-seed Wilcoxon (per-token KL vs base)</h2>
+        <p className="text-ink/70 text-sm max-w-3xl mb-4">
+          Paired Wilcoxon signed-rank on per-cell fire counts, comparing five evaluation seeds of the
+          per-token-KL checkpoint against five matched seeds of the SFT+DPO base.
+        </p>
+        <WilcoxonChart />
       </section>
 
       <section>
@@ -113,76 +119,43 @@ export default function Training() {
           Re-sample student trajectories from each iteration-K checkpoint and re-distill.
           The Qwen family <em>orbits</em> a trade-off (iter 1 = harm-min, iter 2 = leak/bound-min,
           iter 5 swings back). Llama descends monotonically to iter 3 and plateaus at iter 4.
+          Hover any point to see all four sub-flag fires.
         </p>
         <div className="grid lg:grid-cols-2 gap-4">
           <div className="bg-white border border-ink/10 rounded-xl p-4">
-            <div className="text-sm font-semibold mb-2">Qwen3-8B</div>
+            <div className="text-sm font-semibold mb-2 flex justify-between">
+              <span>Qwen3-8B — orbiting trade-off</span>
+              <span className="text-xs text-ink/50 font-normal">5 iterations · ∼28k token signals each</span>
+            </div>
             <KiterChart rows={kiter?.qwen} family="Qwen3-8B" />
           </div>
           <div className="bg-white border border-ink/10 rounded-xl p-4">
-            <div className="text-sm font-semibold mb-2">Llama-3.1-8B</div>
+            <div className="text-sm font-semibold mb-2 flex justify-between">
+              <span>Llama-3.1-8B — monotone descent</span>
+              <span className="text-xs text-ink/50 font-normal">same-family teacher</span>
+            </div>
             <KiterChart rows={kiter?.llama} family="Llama-3.1-8B" />
           </div>
         </div>
-
-        <div className="grid lg:grid-cols-2 gap-4 mt-6">
-          <div>
-            <PaperFigureHeader label="Figure 2" />
-            <PaperFigure
-              src="arxiv_fig2_kiter.png"
-              label=""
-              caption="Qwen3-8B K-iteration trajectory as rendered in the paper."
-              maxWidth="100%"
-            />
-          </div>
-          <div>
-            <PaperFigureHeader label="Figure 9" />
-            <PaperFigure
-              src="arxiv_fig9_llama_kiter.png"
-              label=""
-              caption="Llama-3.1-8B K-iteration trajectory as rendered in the paper."
-              maxWidth="100%"
-            />
-          </div>
-        </div>
       </section>
 
       <section>
-        <h2 className="text-xl font-semibold mb-3">Multi-seed Wilcoxon</h2>
-        <p className="text-ink/70 text-sm max-w-3xl mb-4">
-          Both per-token-KL stopping points (iteration 1, the harm-minimum; iteration 2, the
-          leak/bound-minimum) clear <code className="mono">p &lt; 0.05</code> on harm at n=5 paired seeds.
-        </p>
-        <PaperFigure
-          src="arxiv_fig3_wilcoxon.png"
-          label="Figure 3"
-          caption="Multi-seed paired Wilcoxon vs the SFT+DPO base. Error bars are ± 1σ across seeds."
-          maxWidth="760px"
-        />
-      </section>
-
-      <section>
-        <h2 className="text-xl font-semibold mb-3">Teacher self-validation & student robustness</h2>
+        <h2 className="text-xl font-semibold mb-3">Teacher self-validation</h2>
         <p className="text-ink/70 text-sm max-w-3xl mb-4">
           The open Qwen3-32B-AWQ teacher (used because Claude does not expose logits) matches Claude on
           harm and missed-instruction but leaks much more — and the student inherits a harm-low,
-          leak-tolerant profile. Held-out generalization carries an ~10-point train-to-held-out gap on
-          per-token KL, the recipe's main caveat.
+          leak-tolerant profile.
         </p>
-        <div className="grid lg:grid-cols-2 gap-4">
-          <PaperFigure
-            src="arxiv_fig4_teacher.png"
-            label="Figure 4"
-            caption="Teacher self-validation. The open teacher leaks much more (21/31 vs 6/36) but matches harm."
-            maxWidth="100%"
-          />
-          <PaperFigure
-            src="arxiv_fig5_robustness.png"
-            label="Figure 5"
-            caption="Counterparty swap and held-out generalization. Per-token KL has the lowest training harm but the largest train-to-held-out gap."
-            maxWidth="100%"
-          />
-        </div>
+        <TeacherChart />
+      </section>
+
+      <section>
+        <h2 className="text-xl font-semibold mb-3">Counterparty & held-out robustness</h2>
+        <p className="text-ink/70 text-sm max-w-3xl mb-4">
+          How well do the gains transfer? Swap the counterparty model on the same checkpoint, and
+          compare training vs held-out harm across recipes.
+        </p>
+        <RobustnessChart />
       </section>
 
       <section className="bg-white border border-ink/10 rounded-xl p-5">

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
-import { useData, CELL_DOT } from '../lib/useData.js'
-import PaperFigure, { PaperFigureHeader } from '../lib/PaperFigure.jsx'
+import { useData } from '../lib/useData.js'
+import ProblemSchematic from '../components/ProblemSchematic.jsx'
+import CellsTaxonomy from '../components/CellsTaxonomy.jsx'
 import {
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ZAxis, Legend, ReferenceArea,
 } from 'recharts'
@@ -14,21 +15,8 @@ function Stat({ value, label, accent }) {
   )
 }
 
-function CellBadge({ id, label, desc }) {
-  return (
-    <div className="bg-white border border-ink/10 rounded-lg p-4 flex gap-3 items-start">
-      <span className={`inline-block w-3 h-3 rounded-full mt-1.5 shrink-0 ${CELL_DOT[id]}`} />
-      <div>
-        <div className="font-semibold">{label}</div>
-        <div className="text-sm text-ink/60 mt-0.5">{desc}</div>
-      </div>
-    </div>
-  )
-}
-
 export default function Overview() {
   const { data: head } = useData('headline.json')
-  const { data: cells } = useData('cells.json')
   const { data: manifold } = useData('manifold.json')
 
   return (
@@ -53,12 +41,7 @@ export default function Overview() {
         </p>
 
         <div className="mt-8">
-          <PaperFigure
-            src="arxiv_fig0_problem.png"
-            label="Figure 0"
-            caption="The agent maintains two parallel channels — a back-and-forth with the principal P (briefings, requests, results), and a separate conversation with a counterparty C whose interests may conflict with P's. The default 'help the current speaker' objective fails along four conversational axes (bottom panel)."
-            maxWidth="900px"
-          />
+          <ProblemSchematic />
         </div>
       </section>
 
@@ -81,20 +64,7 @@ export default function Overview() {
           is a cooperative item where over-refusal is the only failure, included so that
           "refuse everything" is not a winning strategy.
         </p>
-        {cells && (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {cells.map(c => <CellBadge key={c.id} {...c} />)}
-          </div>
-        )}
-
-        <div className="mt-6">
-          <PaperFigure
-            src="arxiv_fig0b_cells.png"
-            label="Figure 0b"
-            caption="The six failure cells, as visualized in the paper. The sanity cell (blue) exists to prevent 'refuse everything' from being a winning strategy."
-            maxWidth="780px"
-          />
-        </div>
+        <CellsTaxonomy />
       </section>
 
       {/* manifold scatter */}
@@ -107,13 +77,18 @@ export default function Overview() {
         </p>
         {manifold && (
           <div className="bg-white border border-ink/10 rounded-xl p-4">
-            <ResponsiveContainer width="100%" height={420}>
+            <ResponsiveContainer width="100%" height={460}>
               <ScatterChart margin={{ top: 18, right: 24, bottom: 30, left: 10 }}>
                 <CartesianGrid stroke="#e5e7eb" strokeDasharray="2 2" />
-                <ReferenceArea x1={0} x2={10} y1={0} y2={15} fill="#16a34a" fillOpacity={0.06} label={{ value: 'jointly favorable', position: 'insideTopLeft', fill:'#16a34a', fontSize:11 }} />
-                <XAxis type="number" dataKey="leak" name="Leak (out of 108)" label={{ value: 'Leak fires / 108', position: 'insideBottom', offset: -12, fontSize: 13 }} domain={[0, 'dataMax + 4']} stroke="#1a1a2e" />
-                <YAxis type="number" dataKey="mi" name="MI (out of 108)" label={{ value: 'Missed-instruction / 108', angle: -90, position: 'insideLeft', offset: -2, fontSize: 13 }} domain={[0, 'dataMax + 4']} stroke="#1a1a2e" />
-                <ZAxis range={[110, 110]} />
+                <ReferenceArea x1={0} x2={10} y1={0} y2={15} fill="#16a34a" fillOpacity={0.06}
+                  label={{ value: 'jointly favorable', position: 'insideTopLeft', fill:'#16a34a', fontSize:11 }} />
+                <XAxis type="number" dataKey="leak" name="Leak (out of 108)"
+                  label={{ value: 'Leak fires / 108', position: 'insideBottom', offset: -12, fontSize: 13 }}
+                  domain={[0, 'dataMax + 4']} stroke="#1a1a2e" />
+                <YAxis type="number" dataKey="mi" name="MI (out of 108)"
+                  label={{ value: 'Missed-instruction / 108', angle: -90, position: 'insideLeft', offset: -2, fontSize: 13 }}
+                  domain={[0, 'dataMax + 4']} stroke="#1a1a2e" />
+                <ZAxis range={[140, 140]} />
                 <Tooltip content={({ active, payload }) => {
                   if (!active || !payload || !payload.length) return null
                   const d = payload[0].payload
@@ -125,11 +100,11 @@ export default function Overview() {
                   )
                 }} />
                 <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: 10 }} />
-                <Scatter name="Base" data={manifold.filter(d => d.kind==='base')} fill="#94a3b8" />
-                <Scatter name="Per-turn variants" data={manifold.filter(d => d.kind==='variant')} fill="#84cc16" />
-                <Scatter name="Per-token KL (Mech 2)" data={manifold.filter(d => d.kind==='mechanism')} fill="#7c3aed" />
-                <Scatter name="RL (DAPO)" data={manifold.filter(d => d.kind==='rl')} fill="#f97316" />
-                <Scatter name="Claude + scaffold (Mech 1)" data={manifold.filter(d => d.kind==='scaffold')} fill="#0891b2" />
+                <Scatter name="Base" data={manifold.filter(d => d.kind==='base')} fill="#94a3b8" isAnimationActive animationDuration={900} />
+                <Scatter name="Per-turn variants" data={manifold.filter(d => d.kind==='variant')} fill="#84cc16" isAnimationActive animationDuration={900} animationBegin={120} />
+                <Scatter name="Per-token KL (Mech 2)" data={manifold.filter(d => d.kind==='mechanism')} fill="#7c3aed" isAnimationActive animationDuration={900} animationBegin={240} />
+                <Scatter name="RL (DAPO)" data={manifold.filter(d => d.kind==='rl')} fill="#f97316" isAnimationActive animationDuration={900} animationBegin={360} />
+                <Scatter name="Claude + scaffold (Mech 1)" data={manifold.filter(d => d.kind==='scaffold')} fill="#0891b2" isAnimationActive animationDuration={900} animationBegin={480} />
               </ScatterChart>
             </ResponsiveContainer>
             <div className="text-xs text-ink/60 mt-2">
@@ -138,16 +113,6 @@ export default function Overview() {
             </div>
           </div>
         )}
-
-        <div className="mt-6">
-          <PaperFigureHeader label="Figure 1 (paper version)" />
-          <PaperFigure
-            src="arxiv_fig1_manifold.png"
-            label=""
-            caption="The same floor as rendered in the paper: the prompted Claude teacher and the per-token-KL student land on a common frontier; the DAPO RL baseline regresses from the distillation optimum."
-            maxWidth="820px"
-          />
-        </div>
       </section>
 
       {/* CTA grid */}

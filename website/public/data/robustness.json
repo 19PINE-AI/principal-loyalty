@@ -1,0 +1,42 @@
+{
+ "counterparty": [
+  {
+   "counterparty": "Claude-Sonnet",
+   "color": "#0891b2",
+   "harm": 33,
+   "leak": 13
+  },
+  {
+   "counterparty": "GPT-5",
+   "color": "#10b981",
+   "harm": 38,
+   "leak": 14
+  },
+  {
+   "counterparty": "Gemini-3-flash",
+   "color": "#f59e0b",
+   "harm": 49,
+   "leak": 20
+  }
+ ],
+ "heldout": [
+  {
+   "recipe": "Per-token KL i1",
+   "color": "#7c3aed",
+   "training": 30.6,
+   "heldout": 40.3
+  },
+  {
+   "recipe": "Per-turn SFT i2",
+   "color": "#84cc16",
+   "training": 33.3,
+   "heldout": 36.0
+  },
+  {
+   "recipe": "Llama KL i3",
+   "color": "#0891b2",
+   "training": 15.7,
+   "heldout": 26.7
+  }
+ ]
+}

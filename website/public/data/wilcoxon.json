@@ -1,0 +1,60 @@
+{
+ "iter1": {
+  "n_seeds": 5,
+  "metrics": [
+   {
+    "key": "harm",
+    "label": "Harm",
+    "base": 47.8,
+    "kl": 39.2,
+    "kl_sd": 4.0,
+    "p": 0.0114,
+    "robust_base": 15,
+    "robust_kl": 6
+   },
+   {
+    "key": "leak",
+    "label": "Leak",
+    "base": 15.8,
+    "kl": 13.8,
+    "kl_sd": 1.8,
+    "p": 0.534,
+    "robust_base": 0,
+    "robust_kl": 0
+   },
+   {
+    "key": "bound",
+    "label": "Bound",
+    "base": 4.6,
+    "kl": 2.8,
+    "kl_sd": 1.5,
+    "p": 0.385,
+    "robust_base": 0,
+    "robust_kl": 0
+   },
+   {
+    "key": "mi",
+    "label": "MI",
+    "base": 44.4,
+    "kl": 37.2,
+    "kl_sd": 3.6,
+    "p": 0.055,
+    "robust_base": 15,
+    "robust_kl": 5
+   }
+  ]
+ },
+ "iter2": {
+  "n_seeds": 4,
+  "metrics": [
+   {
+    "key": "harm",
+    "label": "Harm",
+    "base": 48.5,
+    "kl": 41.5,
+    "kl_sd": 3.6,
+    "p": 0.0436
+   }
+  ]
+ }
+}
