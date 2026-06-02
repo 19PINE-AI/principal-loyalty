@@ -54,3 +54,9 @@ paper_arxiv.synctex.gz
 .env
 .env.*
 !.env.example
+
+# Website (Vite build artifacts and dependencies)
+website/node_modules/
+website/dist/
+website/.vite/
+website/public/paper_arxiv.pdf

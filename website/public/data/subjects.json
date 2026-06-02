@@ -1,0 +1,132 @@
+[
+ {
+  "key": "gemini25flash",
+  "display": "Gemini-2.5-flash",
+  "cluster": "calibrated",
+  "plain": 17,
+  "prompted": 20,
+  "scaffolded": 14,
+  "mean": 5.5,
+  "sd": 6.3
+ },
+ {
+  "key": "mistral_large",
+  "display": "Mistral-Large",
+  "cluster": "calibrated",
+  "plain": 11,
+  "prompted": 14,
+  "scaffolded": 11,
+  "mean": 11.0,
+  "sd": 2.8
+ },
+ {
+  "key": "gemini3p1_lite",
+  "display": "Gemini-3p1-flash-lite",
+  "cluster": "calibrated",
+  "plain": 17,
+  "prompted": 17,
+  "scaffolded": 0,
+  "mean": 12.0,
+  "sd": 2.1
+ },
+ {
+  "key": "deepseek",
+  "display": "DeepSeek-v3.1",
+  "cluster": "calibrated",
+  "plain": 11,
+  "prompted": 9,
+  "scaffolded": 11,
+  "mean": 12.3,
+  "sd": 2.5
+ },
+ {
+  "key": "qwen32b",
+  "display": "Qwen3-32B",
+  "cluster": "calibrated",
+  "plain": 24,
+  "prompted": 12,
+  "scaffolded": 14,
+  "mean": 16.3,
+  "sd": 2.6
+ },
+ {
+  "key": "claude_opus",
+  "display": "Claude-Opus",
+  "cluster": "calibrated",
+  "plain": 11,
+  "prompted": 19,
+  "scaffolded": 19,
+  "mean": 18.1,
+  "sd": 2.8
+ },
+ {
+  "key": "llama70b",
+  "display": "Llama-3.1-70B",
+  "cluster": "calibrated",
+  "plain": 9,
+  "prompted": 14,
+  "scaffolded": 22,
+  "mean": 19.2,
+  "sd": 2.7
+ },
+ {
+  "key": "gemini3flash",
+  "display": "Gemini-3-flash",
+  "cluster": "calibrated",
+  "plain": 17,
+  "prompted": 20,
+  "scaffolded": 15,
+  "mean": 19.4,
+  "sd": 2.3
+ },
+ {
+  "key": "claude_sonnet",
+  "display": "Claude-Sonnet",
+  "cluster": "calibrated",
+  "plain": 19,
+  "prompted": 22,
+  "scaffolded": 17,
+  "mean": 19.5,
+  "sd": 1.5
+ },
+ {
+  "key": "glm46",
+  "display": "GLM-4.6",
+  "cluster": "intermediate",
+  "plain": 51,
+  "prompted": 52,
+  "scaffolded": 43,
+  "mean": 46.0,
+  "sd": 2.9
+ },
+ {
+  "key": "gpt5mini",
+  "display": "GPT-5-mini",
+  "cluster": "over-refuse",
+  "plain": 55,
+  "prompted": 67,
+  "scaffolded": 64,
+  "mean": 53.6,
+  "sd": 5.1
+ },
+ {
+  "key": "gpt5",
+  "display": "GPT-5",
+  "cluster": "over-refuse",
+  "plain": 63,
+  "prompted": 71,
+  "scaffolded": 71,
+  "mean": 71.1,
+  "sd": 2.2
+ },
+ {
+  "key": "qwen35_27b",
+  "display": "Qwen3.5-27B",
+  "cluster": "over-refuse",
+  "plain": 72,
+  "prompted": 79,
+  "scaffolded": 59,
+  "mean": 75.3,
+  "sd": 2.9
+ }
+]

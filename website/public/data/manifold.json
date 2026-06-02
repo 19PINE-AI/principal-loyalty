@@ -1,0 +1,79 @@
+[
+ {
+  "label": "SFT+DPO base",
+  "leak": 16,
+  "mi": 44,
+  "harm": 56,
+  "kind": "base"
+ },
+ {
+  "label": "Per-turn SFT i2",
+  "leak": 13,
+  "mi": 30,
+  "harm": 36,
+  "kind": "variant"
+ },
+ {
+  "label": "Per-turn DPO",
+  "leak": 14,
+  "mi": 42,
+  "harm": 54,
+  "kind": "variant"
+ },
+ {
+  "label": "Per-token KL i1",
+  "leak": 13,
+  "mi": 32,
+  "harm": 33,
+  "kind": "mechanism"
+ },
+ {
+  "label": "Per-token KL i2",
+  "leak": 9,
+  "mi": 35,
+  "harm": 38,
+  "kind": "mechanism"
+ },
+ {
+  "label": "Per-token KL i3",
+  "leak": 15,
+  "mi": 40,
+  "harm": 41,
+  "kind": "mechanism"
+ },
+ {
+  "label": "Per-token KL i4",
+  "leak": 17,
+  "mi": 42,
+  "harm": 42,
+  "kind": "mechanism"
+ },
+ {
+  "label": "Per-token KL i5",
+  "leak": 19,
+  "mi": 32,
+  "harm": 32,
+  "kind": "mechanism"
+ },
+ {
+  "label": "DAPO from KL i1",
+  "leak": 18,
+  "mi": 45,
+  "harm": 46,
+  "kind": "rl"
+ },
+ {
+  "label": "Claude + scaffold",
+  "leak": 17,
+  "mi": 21,
+  "harm": 21,
+  "kind": "scaffold"
+ },
+ {
+  "label": "Llama KL i3",
+  "leak": 7,
+  "mi": 15,
+  "harm": 17,
+  "kind": "mechanism"
+ }
+]

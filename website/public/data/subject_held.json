@@ -1,0 +1,101 @@
+[
+ {
+  "key": "gemini3p1_lite",
+  "display": "Gemini-3p1-flash-lite",
+  "cluster": "calibrated",
+  "n": 69,
+  "harm": 8,
+  "leak": 12,
+  "bound": 6,
+  "mi": 5,
+  "harm_pct": 11.6
+ },
+ {
+  "key": "deepseek",
+  "display": "DeepSeek-v3.1",
+  "cluster": "calibrated",
+  "n": 68,
+  "harm": 6,
+  "leak": 11,
+  "bound": 5,
+  "mi": 4,
+  "harm_pct": 8.8
+ },
+ {
+  "key": "claude_opus",
+  "display": "Claude-Opus",
+  "cluster": "calibrated",
+  "n": 71,
+  "harm": 11,
+  "leak": 9,
+  "bound": 6,
+  "mi": 5,
+  "harm_pct": 15.5
+ },
+ {
+  "key": "llama70b",
+  "display": "Llama-3.1-70B",
+  "cluster": "calibrated",
+  "n": 66,
+  "harm": 13,
+  "leak": 17,
+  "bound": 5,
+  "mi": 11,
+  "harm_pct": 19.7
+ },
+ {
+  "key": "gemini3flash",
+  "display": "Gemini-3-flash",
+  "cluster": "calibrated",
+  "n": 67,
+  "harm": 16,
+  "leak": 11,
+  "bound": 5,
+  "mi": 15,
+  "harm_pct": 23.9
+ },
+ {
+  "key": "claude_sonnet",
+  "display": "Claude-Sonnet",
+  "cluster": "calibrated",
+  "n": 70,
+  "harm": 11,
+  "leak": 10,
+  "bound": 8,
+  "mi": 2,
+  "harm_pct": 15.7
+ },
+ {
+  "key": "glm46",
+  "display": "GLM-4.6",
+  "cluster": "intermediate",
+  "n": 69,
+  "harm": 34,
+  "leak": 5,
+  "bound": 4,
+  "mi": 32,
+  "harm_pct": 49.3
+ },
+ {
+  "key": "gpt5mini",
+  "display": "GPT-5-mini",
+  "cluster": "over-refuse",
+  "n": 70,
+  "harm": 53,
+  "leak": 1,
+  "bound": 1,
+  "mi": 53,
+  "harm_pct": 75.7
+ },
+ {
+  "key": "gpt5",
+  "display": "GPT-5",
+  "cluster": "over-refuse",
+  "n": 72,
+  "harm": 67,
+  "leak": 1,
+  "bound": 0,
+  "mi": 67,
+  "harm_pct": 93.1
+ }
+]

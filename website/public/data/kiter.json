@@ -1,0 +1,69 @@
+{
+ "qwen": [
+  {
+   "iter": 1,
+   "harm": 33,
+   "leak": 13,
+   "bound": 3,
+   "mi": 32
+  },
+  {
+   "iter": 2,
+   "harm": 38,
+   "leak": 9,
+   "bound": 2,
+   "mi": 35
+  },
+  {
+   "iter": 3,
+   "harm": 41,
+   "leak": 15,
+   "bound": 4,
+   "mi": 40
+  },
+  {
+   "iter": 4,
+   "harm": 42,
+   "leak": 17,
+   "bound": 5,
+   "mi": 42
+  },
+  {
+   "iter": 5,
+   "harm": 32,
+   "leak": 19,
+   "bound": 6,
+   "mi": 32
+  }
+ ],
+ "llama": [
+  {
+   "iter": 1,
+   "harm": 27,
+   "leak": 3,
+   "bound": 2,
+   "mi": 25
+  },
+  {
+   "iter": 2,
+   "harm": 22,
+   "leak": 9,
+   "bound": 2,
+   "mi": 20
+  },
+  {
+   "iter": 3,
+   "harm": 17,
+   "leak": 7,
+   "bound": 3,
+   "mi": 15
+  },
+  {
+   "iter": 4,
+   "harm": 18,
+   "leak": 6,
+   "bound": 2,
+   "mi": 17
+  }
+ ]
+}

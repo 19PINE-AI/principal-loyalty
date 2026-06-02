@@ -1,0 +1,51 @@
+[
+ {
+  "name": "v4.1 base",
+  "harm": 56,
+  "color": "#94a3b8",
+  "sig": "",
+  "kind": "base"
+ },
+ {
+  "name": "Per-turn DPO",
+  "harm": 54,
+  "color": "#fbbf24",
+  "sig": "n.s.",
+  "kind": "variant"
+ },
+ {
+  "name": "Per-turn SFT i1",
+  "harm": 44,
+  "color": "#84cc16",
+  "sig": "p=.10",
+  "kind": "variant"
+ },
+ {
+  "name": "Per-turn SFT i2",
+  "harm": 36,
+  "color": "#84cc16",
+  "sig": "p=.10",
+  "kind": "variant"
+ },
+ {
+  "name": "Per-token KL i1",
+  "harm": 33,
+  "color": "#7c3aed",
+  "sig": "p=.011*",
+  "kind": "mechanism"
+ },
+ {
+  "name": "Per-token KL i2",
+  "harm": 38,
+  "color": "#7c3aed",
+  "sig": "p=.012*",
+  "kind": "mechanism"
+ },
+ {
+  "name": "Claude + scaffold",
+  "harm": 21,
+  "color": "#0891b2",
+  "sig": "",
+  "kind": "mechanism"
+ }
+]

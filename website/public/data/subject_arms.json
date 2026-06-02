@@ -1,0 +1,782 @@
+{
+ "gemini25flash": {
+  "display": "Gemini-2.5-flash",
+  "cluster": "calibrated",
+  "agg": {
+   "n": 103,
+   "harm": 17,
+   "leak": 8,
+   "bound": 4,
+   "mi": 15
+  },
+  "per_arm": {
+   "scaffolded": {
+    "n": 35,
+    "harm": 6,
+    "leak": 2,
+    "bound": 0,
+    "mi": 4
+   },
+   "prompted": {
+    "n": 36,
+    "harm": 5,
+    "leak": 2,
+    "bound": 1,
+    "mi": 5
+   },
+   "plain": {
+    "n": 32,
+    "harm": 6,
+    "leak": 4,
+    "bound": 3,
+    "mi": 6
+   }
+  },
+  "per_cell": {
+   "authoring": {
+    "n": 14,
+    "harm": 1,
+    "leak": 0,
+    "bound": 0,
+    "mi": 1
+   },
+   "sanity": {
+    "n": 30,
+    "harm": 6,
+    "leak": 0,
+    "bound": 0,
+    "mi": 4
+   },
+   "capitulation": {
+    "n": 17,
+    "harm": 6,
+    "leak": 4,
+    "bound": 4,
+    "mi": 6
+   },
+   "leakage": {
+    "n": 13,
+    "harm": 1,
+    "leak": 1,
+    "bound": 0,
+    "mi": 1
+   },
+   "moderation": {
+    "n": 14,
+    "harm": 3,
+    "leak": 0,
+    "bound": 0,
+    "mi": 3
+   },
+   "posture": {
+    "n": 15,
+    "harm": 0,
+    "leak": 3,
+    "bound": 0,
+    "mi": 0
+   }
+  }
+ },
+ "mistral_large": {
+  "display": "Mistral-Large",
+  "cluster": "calibrated",
+  "agg": {
+   "n": 107,
+   "harm": 13,
+   "leak": 0,
+   "bound": 0,
+   "mi": 13
+  },
+  "per_arm": {
+   "scaffolded": {
+    "n": 36,
+    "harm": 8,
+    "leak": 0,
+    "bound": 0,
+    "mi": 8
+   },
+   "plain": {
+    "n": 35,
+    "harm": 3,
+    "leak": 0,
+    "bound": 0,
+    "mi": 3
+   },
+   "prompted": {
+    "n": 36,
+    "harm": 2,
+    "leak": 0,
+    "bound": 0,
+    "mi": 2
+   }
+  },
+  "per_cell": {
+   "authoring": {
+    "n": 15,
+    "harm": 0,
+    "leak": 0,
+    "bound": 0,
+    "mi": 0
+   },
+   "sanity": {
+    "n": 30,
+    "harm": 6,
+    "leak": 0,
+    "bound": 0,
+    "mi": 6
+   },
+   "capitulation": {
+    "n": 18,
+    "harm": 1,
+    "leak": 0,
+    "bound": 0,
+    "mi": 1
+   },
+   "leakage": {
+    "n": 15,
+    "harm": 0,
+    "leak": 0,
+    "bound": 0,
+    "mi": 0
+   },
+   "moderation": {
+    "n": 14,
+    "harm": 1,
+    "leak": 0,
+    "bound": 0,
+    "mi": 1
+   },
+   "posture": {
+    "n": 15,
+    "harm": 5,
+    "leak": 0,
+    "bound": 0,
+    "mi": 5
+   }
+  }
+ },
+ "gemini3p1_lite": {
+  "display": "Gemini-3p1-flash-lite",
+  "cluster": "calibrated",
+  "agg": {
+   "n": 107,
+   "harm": 12,
+   "leak": 12,
+   "bound": 3,
+   "mi": 11
+  },
+  "per_arm": {
+   "prompted": {
+    "n": 36,
+    "harm": 6,
+    "leak": 2,
+    "bound": 1,
+    "mi": 6
+   },
+   "plain": {
+    "n": 36,
+    "harm": 6,
+    "leak": 8,
+    "bound": 2,
+    "mi": 5
+   },
+   "scaffolded": {
+    "n": 35,
+    "harm": 0,
+    "leak": 2,
+    "bound": 0,
+    "mi": 0
+   }
+  },
+  "per_cell": {
+   "authoring": {
+    "n": 15,
+    "harm": 2,
+    "leak": 1,
+    "bound": 0,
+    "mi": 2
+   },
+   "sanity": {
+    "n": 30,
+    "harm": 3,
+    "leak": 0,
+    "bound": 0,
+    "mi": 2
+   },
+   "capitulation": {
+    "n": 18,
+    "harm": 4,
+    "leak": 4,
+    "bound": 3,
+    "mi": 4
+   },
+   "leakage": {
+    "n": 14,
+    "harm": 1,
+    "leak": 4,
+    "bound": 0,
+    "mi": 1
+   },
+   "moderation": {
+    "n": 15,
+    "harm": 2,
+    "leak": 0,
+    "bound": 0,
+    "mi": 2
+   },
+   "posture": {
+    "n": 15,
+    "harm": 0,
+    "leak": 3,
+    "bound": 0,
+    "mi": 0
+   }
+  }
+ },
+ "deepseek": {
+  "display": "DeepSeek-v3.1",
+  "cluster": "calibrated",
+  "agg": {
+   "n": 103,
+   "harm": 11,
+   "leak": 12,
+   "bound": 1,
+   "mi": 9
+  },
+  "per_arm": {
+   "plain": {
+    "n": 35,
+    "harm": 4,
+    "leak": 5,
+    "bound": 1,
+    "mi": 3
+   },
+   "scaffolded": {
+    "n": 35,
+    "harm": 4,
+    "leak": 4,
+    "bound": 0,
+    "mi": 4
+   },
+   "prompted": {
+    "n": 33,
+    "harm": 3,
+    "leak": 3,
+    "bound": 0,
+    "mi": 2
+   }
+  },
+  "per_cell": {
+   "authoring": {
+    "n": 14,
+    "harm": 1,
+    "leak": 0,
+    "bound": 0,
+    "mi": 1
+   },
+   "sanity": {
+    "n": 29,
+    "harm": 4,
+    "leak": 0,
+    "bound": 0,
+    "mi": 2
+   },
+   "capitulation": {
+    "n": 17,
+    "harm": 4,
+    "leak": 6,
+    "bound": 1,
+    "mi": 4
+   },
+   "leakage": {
+    "n": 14,
+    "harm": 1,
+    "leak": 4,
+    "bound": 0,
+    "mi": 1
+   },
+   "moderation": {
+    "n": 14,
+    "harm": 0,
+    "leak": 0,
+    "bound": 0,
+    "mi": 0
+   },
+   "posture": {
+    "n": 15,
+    "harm": 1,
+    "leak": 2,
+    "bound": 0,
+    "mi": 1
+   }
+  }
+ },
+ "claude_opus": {
+  "display": "Claude-Opus",
+  "cluster": "calibrated",
+  "agg": {
+   "n": 107,
+   "harm": 18,
+   "leak": 16,
+   "bound": 3,
+   "mi": 17
+  },
+  "per_arm": {
+   "prompted": {
+    "n": 36,
+    "harm": 7,
+    "leak": 4,
+    "bound": 0,
+    "mi": 6
+   },
+   "scaffolded": {
+    "n": 36,
+    "harm": 7,
+    "leak": 5,
+    "bound": 1,
+    "mi": 7
+   },
+   "plain": {
+    "n": 35,
+    "harm": 4,
+    "leak": 7,
+    "bound": 2,
+    "mi": 4
+   }
+  },
+  "per_cell": {
+   "authoring": {
+    "n": 15,
+    "harm": 0,
+    "leak": 0,
+    "bound": 0,
+    "mi": 0
+   },
+   "sanity": {
+    "n": 30,
+    "harm": 14,
+    "leak": 0,
+    "bound": 0,
+    "mi": 13
+   },
+   "capitulation": {
+    "n": 18,
+    "harm": 3,
+    "leak": 5,
+    "bound": 3,
+    "mi": 3
+   },
+   "leakage": {
+    "n": 14,
+    "harm": 0,
+    "leak": 5,
+    "bound": 0,
+    "mi": 0
+   },
+   "moderation": {
+    "n": 15,
+    "harm": 0,
+    "leak": 0,
+    "bound": 0,
+    "mi": 0
+   },
+   "posture": {
+    "n": 15,
+    "harm": 1,
+    "leak": 6,
+    "bound": 0,
+    "mi": 1
+   }
+  }
+ },
+ "llama70b": {
+  "display": "Llama-3.1-70B",
+  "cluster": "calibrated",
+  "agg": {
+   "n": 106,
+   "harm": 17,
+   "leak": 7,
+   "bound": 2,
+   "mi": 16
+  },
+  "per_arm": {
+   "scaffolded": {
+    "n": 36,
+    "harm": 6,
+    "leak": 0,
+    "bound": 0,
+    "mi": 6
+   },
+   "prompted": {
+    "n": 34,
+    "harm": 7,
+    "leak": 3,
+    "bound": 1,
+    "mi": 7
+   },
+   "plain": {
+    "n": 36,
+    "harm": 4,
+    "leak": 4,
+    "bound": 1,
+    "mi": 3
+   }
+  },
+  "per_cell": {
+   "authoring": {
+    "n": 14,
+    "harm": 1,
+    "leak": 1,
+    "bound": 0,
+    "mi": 1
+   },
+   "sanity": {
+    "n": 30,
+    "harm": 9,
+    "leak": 0,
+    "bound": 0,
+    "mi": 8
+   },
+   "capitulation": {
+    "n": 18,
+    "harm": 5,
+    "leak": 1,
+    "bound": 2,
+    "mi": 5
+   },
+   "leakage": {
+    "n": 14,
+    "harm": 1,
+    "leak": 3,
+    "bound": 0,
+    "mi": 1
+   },
+   "moderation": {
+    "n": 15,
+    "harm": 1,
+    "leak": 1,
+    "bound": 0,
+    "mi": 1
+   },
+   "posture": {
+    "n": 15,
+    "harm": 0,
+    "leak": 1,
+    "bound": 0,
+    "mi": 0
+   }
+  }
+ },
+ "gemini3flash": {
+  "display": "Gemini-3-flash",
+  "cluster": "calibrated",
+  "agg": {
+   "n": 104,
+   "harm": 18,
+   "leak": 5,
+   "bound": 0,
+   "mi": 18
+  },
+  "per_arm": {
+   "prompted": {
+    "n": 35,
+    "harm": 7,
+    "leak": 1,
+    "bound": 0,
+    "mi": 7
+   },
+   "scaffolded": {
+    "n": 34,
+    "harm": 5,
+    "leak": 0,
+    "bound": 0,
+    "mi": 5
+   },
+   "plain": {
+    "n": 35,
+    "harm": 6,
+    "leak": 4,
+    "bound": 0,
+    "mi": 6
+   }
+  },
+  "per_cell": {
+   "authoring": {
+    "n": 15,
+    "harm": 2,
+    "leak": 0,
+    "bound": 0,
+    "mi": 2
+   },
+   "sanity": {
+    "n": 29,
+    "harm": 14,
+    "leak": 0,
+    "bound": 0,
+    "mi": 14
+   },
+   "capitulation": {
+    "n": 16,
+    "harm": 2,
+    "leak": 1,
+    "bound": 0,
+    "mi": 2
+   },
+   "leakage": {
+    "n": 14,
+    "harm": 0,
+    "leak": 2,
+    "bound": 0,
+    "mi": 0
+   },
+   "moderation": {
+    "n": 15,
+    "harm": 0,
+    "leak": 0,
+    "bound": 0,
+    "mi": 0
+   },
+   "posture": {
+    "n": 15,
+    "harm": 0,
+    "leak": 2,
+    "bound": 0,
+    "mi": 0
+   }
+  }
+ },
+ "glm46": {
+  "display": "GLM-4.6",
+  "cluster": "intermediate",
+  "agg": {
+   "n": 106,
+   "harm": 52,
+   "leak": 4,
+   "bound": 0,
+   "mi": 50
+  },
+  "per_arm": {
+   "prompted": {
+    "n": 36,
+    "harm": 22,
+    "leak": 1,
+    "bound": 0,
+    "mi": 21
+   },
+   "scaffolded": {
+    "n": 35,
+    "harm": 15,
+    "leak": 1,
+    "bound": 0,
+    "mi": 14
+   },
+   "plain": {
+    "n": 35,
+    "harm": 15,
+    "leak": 2,
+    "bound": 0,
+    "mi": 15
+   }
+  },
+  "per_cell": {
+   "authoring": {
+    "n": 14,
+    "harm": 2,
+    "leak": 2,
+    "bound": 0,
+    "mi": 2
+   },
+   "sanity": {
+    "n": 30,
+    "harm": 9,
+    "leak": 0,
+    "bound": 0,
+    "mi": 7
+   },
+   "capitulation": {
+    "n": 18,
+    "harm": 11,
+    "leak": 0,
+    "bound": 0,
+    "mi": 11
+   },
+   "leakage": {
+    "n": 15,
+    "harm": 8,
+    "leak": 2,
+    "bound": 0,
+    "mi": 8
+   },
+   "moderation": {
+    "n": 14,
+    "harm": 10,
+    "leak": 0,
+    "bound": 0,
+    "mi": 10
+   },
+   "posture": {
+    "n": 15,
+    "harm": 12,
+    "leak": 0,
+    "bound": 0,
+    "mi": 12
+   }
+  }
+ },
+ "gpt5mini": {
+  "display": "GPT-5-mini",
+  "cluster": "over-refuse",
+  "agg": {
+   "n": 104,
+   "harm": 64,
+   "leak": 2,
+   "bound": 0,
+   "mi": 64
+  },
+  "per_arm": {
+   "plain": {
+    "n": 36,
+    "harm": 16,
+    "leak": 2,
+    "bound": 0,
+    "mi": 16
+   },
+   "scaffolded": {
+    "n": 34,
+    "harm": 22,
+    "leak": 0,
+    "bound": 0,
+    "mi": 22
+   },
+   "prompted": {
+    "n": 34,
+    "harm": 26,
+    "leak": 0,
+    "bound": 0,
+    "mi": 26
+   }
+  },
+  "per_cell": {
+   "authoring": {
+    "n": 15,
+    "harm": 7,
+    "leak": 1,
+    "bound": 0,
+    "mi": 7
+   },
+   "sanity": {
+    "n": 29,
+    "harm": 24,
+    "leak": 0,
+    "bound": 0,
+    "mi": 24
+   },
+   "capitulation": {
+    "n": 16,
+    "harm": 11,
+    "leak": 0,
+    "bound": 0,
+    "mi": 11
+   },
+   "leakage": {
+    "n": 15,
+    "harm": 6,
+    "leak": 0,
+    "bound": 0,
+    "mi": 6
+   },
+   "moderation": {
+    "n": 14,
+    "harm": 6,
+    "leak": 0,
+    "bound": 0,
+    "mi": 6
+   },
+   "posture": {
+    "n": 15,
+    "harm": 10,
+    "leak": 1,
+    "bound": 0,
+    "mi": 10
+   }
+  }
+ },
+ "gpt5": {
+  "display": "GPT-5",
+  "cluster": "over-refuse",
+  "agg": {
+   "n": 104,
+   "harm": 71,
+   "leak": 3,
+   "bound": 0,
+   "mi": 71
+  },
+  "per_arm": {
+   "scaffolded": {
+    "n": 34,
+    "harm": 24,
+    "leak": 0,
+    "bound": 0,
+    "mi": 24
+   },
+   "plain": {
+    "n": 35,
+    "harm": 22,
+    "leak": 2,
+    "bound": 0,
+    "mi": 22
+   },
+   "prompted": {
+    "n": 35,
+    "harm": 25,
+    "leak": 1,
+    "bound": 0,
+    "mi": 25
+   }
+  },
+  "per_cell": {
+   "authoring": {
+    "n": 14,
+    "harm": 8,
+    "leak": 0,
+    "bound": 0,
+    "mi": 8
+   },
+   "sanity": {
+    "n": 29,
+    "harm": 21,
+    "leak": 0,
+    "bound": 0,
+    "mi": 21
+   },
+   "capitulation": {
+    "n": 18,
+    "harm": 14,
+    "leak": 0,
+    "bound": 0,
+    "mi": 14
+   },
+   "leakage": {
+    "n": 15,
+    "harm": 11,
+    "leak": 2,
+    "bound": 0,
+    "mi": 11
+   },
+   "moderation": {
+    "n": 14,
+    "harm": 11,
+    "leak": 0,
+    "bound": 0,
+    "mi": 11
+   },
+   "posture": {
+    "n": 14,
+    "harm": 6,
+    "leak": 1,
+    "bound": 0,
+    "mi": 6
+   }
+  }
+ }
+}

@@ -1,0 +1,20 @@
+{
+ "claude_sonnet_scaffolded_harm": 21,
+ "claude_sonnet_scaffolded_harm_pct": 19.4,
+ "qwen8b_pertoken_kl_iter1_harm": 33,
+ "qwen8b_pertoken_kl_iter1_leak": 13,
+ "qwen8b_pertoken_kl_iter1_mi": 32,
+ "llama8b_pertoken_kl_iter3_harm": 17,
+ "frontier_subjects": 13,
+ "items_total": 75,
+ "items_training": 50,
+ "items_heldout": 25,
+ "calibrated_n": 9,
+ "calibrated_range": "5.5\u201319.5%",
+ "overrefuse_n": 3,
+ "overrefuse_range": "53.6\u201375.3%",
+ "wilcoxon_plain_p": "1.8e-6",
+ "wilcoxon_prompted_p": "2.2e-7",
+ "wilcoxon_scaffolded_p": "5.9e-7",
+ "pertoken_kl_p": 0.0114
+}
