@@ -32,6 +32,14 @@ paper.blg
 paper.fdb_latexmk
 paper.fls
 paper.synctex.gz
+paper_arxiv.aux
+paper_arxiv.out
+paper_arxiv.toc
+paper_arxiv.bbl
+paper_arxiv.blg
+paper_arxiv.fdb_latexmk
+paper_arxiv.fls
+paper_arxiv.synctex.gz
 
 # Editor / OS
 .DS_Store

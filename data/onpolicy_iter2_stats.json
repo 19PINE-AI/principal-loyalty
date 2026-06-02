@@ -1,0 +1,9 @@
+{
+  "n_trajs": 31,
+  "n_failing_trajs": null,
+  "n_sft_points": 111,
+  "n_dpo_pairs": 111,
+  "teacher_calls": 111,
+  "student_arm": "plain",
+  "teacher_arm": "scaffolded"
+}
