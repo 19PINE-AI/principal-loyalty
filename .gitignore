@@ -60,3 +60,6 @@ website/node_modules/
 website/dist/
 website/.vite/
 website/public/paper_arxiv.pdf
+
+# Clean public release tree, built by scripts/build_release.py
+release/

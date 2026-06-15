@@ -66,8 +66,10 @@ export default function WilcoxonChart() {
       </div>
       <div className="text-xs text-ink/60 mt-1">
         Paired Wilcoxon on per-cell fire counts across <b>n = 5</b> independent evaluation seeds.
-        Both stopping points clear p &lt; 0.05 on harm (iter 1: p = 0.0114; iter 2 separately: p = 0.0436).
-        Hover any bar for exact deltas.
+        Both stopping points clear p &lt; 0.05 on harm under the primary judge (iter 1: p = 0.0114; iter 2 separately: p = 0.0436).
+        A full secondary-judge re-judge (claude-haiku, all 1,080 trajectories) preserves the direction but not the significance
+        (base 47.8 &rarr; student 41.4, p = 0.75): the per-token-KL harm gain is direction-robust but significant only under the
+        primary judge. Hover any bar for exact deltas.
       </div>
     </div>
   )

@@ -61,6 +61,25 @@ def counts(rows):
     return dict(n=n, harm=harm, leak=leak, bound=bound, mi=mi)
 
 
+# --- Canonical data-derived numbers ----------------------------------------
+# Figures that carry quantitative results pull their values from
+# recompute_all.py (36-core scoping + audit conventions) rather than
+# hardcoding, so a figure can never silently drift from the released data.
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+import recompute_all as _ra
+_ra.CORE = _ra.core_ids()
+
+
+def core_counts(dirname):
+    """harm/leak/bound/mi for a run, scoped to the 36-item core."""
+    return _ra.run_counts(dirname)
+
+
+def core_series(dirnames, key):
+    return [_ra.run_counts(d)[key] for d in dirnames]
+
+
 # ============================================================
 # Figure 0: Teaser — 3-role architecture of multi-party loyalty
 # ============================================================
@@ -245,10 +264,13 @@ def fig1_manifold():
 # ============================================================
 def fig2_kiter():
     iters = ["v4.1\nbase", "iter1", "iter2", "iter3", "iter4", "iter5"]
-    harm  = [56, 33, 38, 41, 42, 32]
-    leak  = [18, 13,  9, 15, 17, 19]
-    bound = [ 4,  3,  2,  4,  5,  6]
-    mi    = [51, 32, 35, 40, 42, 32]
+    _dirs = ["phase2_trained_v4_1", "phase5_pertoken_kl_iter1",
+             "phase5_pertoken_kl_iter2", "phase5_pertoken_kl_iter3",
+             "phase5_pertoken_kl_iter4", "phase5_pertoken_kl_iter5"]
+    harm  = core_series(_dirs, "harm")
+    leak  = core_series(_dirs, "leak")
+    bound = core_series(_dirs, "bound")
+    mi    = core_series(_dirs, "mi")
 
     fig, ax = plt.subplots(figsize=(6.0, 3.6))
     x = np.arange(len(iters))
@@ -297,7 +319,7 @@ def fig3_wilcoxon():
     ax.bar(x,     v3i1_mean, w, yerr=v3i1_err, color=C_MECH1, alpha=0.85,
            capsize=3, label="KL iter1 (n=5)")
     ax.bar(x + w, v3i2_mean, w, yerr=v3i2_err, color=C_MECH2, alpha=0.85,
-           capsize=3, label="KL iter2 (n=3)")
+           capsize=3, label="KL iter2 (n=4)")
 
     # Compact p-value annotations above each pair
     for i, (p1, p2) in enumerate(zip(p_iter1, p_iter2)):
@@ -355,8 +377,10 @@ def fig5_robustness():
 
     # Left: counterparty robustness
     cps = ["Claude\n(default)", "GPT-5", "Gemini-3\nflash"]
-    pt_kl_harm = [33, 38, 49]
-    sft_harm   = [36, 34, 41]
+    pt_kl_harm = core_series(["phase5_pertoken_kl_iter1",
+                              "phase5_pertoken_kl_iter1_cp_gpt5",
+                              "phase5_pertoken_kl_iter1_cp_gemini"], "harm")
+    sft_harm   = [36, 34, 41]  # per-turn SFT i2 counterparty swap (no released cp runs)
     x = np.arange(len(cps))
     w = 0.36
     ax1.bar(x - w/2, pt_kl_harm, w, color=C_MECH1,   alpha=0.88, label="Per-token KL i1")
@@ -371,16 +395,24 @@ def fig5_robustness():
     ax1.set_ylim(0, 60)
     ax1.grid(True, alpha=0.3, axis="y")
 
-    # Right: held-out gap + data scaling
+    # Right: held-out gap + data scaling (computed live from released runs)
     sets = ["Training\n(36 items)", "Held-out\n(24 items)"]
-    pt_kl_iter1 = [33/108*100, 29/72*100]
-    sft_iter2   = [36/108*100, 25/72*100]
-    scaled3x    = [50/104*100, 40/72*100]
+    def _train(d):
+        c = core_counts(d); return 100.0 * c["harm"] / c["n"]
+    def _heldout(d):
+        c = counts(_ra.scope(_ra.load(ROOT / "runs" / d / "scored.jsonl"), to_core=False))
+        return 100.0 * c["harm"] / c["n"]
+    pt_kl_iter1 = [_train("phase5_pertoken_kl_iter1"),
+                   _heldout("phase5_pertoken_kl_iter1_heldout_v0_75")]
+    sft_iter2   = [_train("phase5_onpolicy_sft_iter2"),
+                   _heldout("phase5_onpolicy_iter2_heldout")]
+    scaled3x    = [_train("phase5_pertoken_kl_scaled3x_iter1"),
+                   _heldout("phase5_pertoken_kl_scaled3x_iter1_heldout_v0_75")]
     x2 = np.arange(len(sets))
     w2 = 0.27
     ax2.bar(x2 - w2, pt_kl_iter1, w2, color=C_MECH1,   alpha=0.88, label="KL i1 (113 pts)")
     ax2.bar(x2,      sft_iter2,   w2, color=C_TRAINED, alpha=0.88, label="SFT i2 (113 pts)")
-    ax2.bar(x2 + w2, scaled3x,    w2, color=C_GOLD,    alpha=0.88, label="KL scaled3x (372 pts)")
+    ax2.bar(x2 + w2, scaled3x,    w2, color=C_GOLD,    alpha=0.88, label="KL scaled3x (480 pts)")
     for i in range(2):
         ax2.text(i - w2, pt_kl_iter1[i] + 1.2, f"{pt_kl_iter1[i]:.0f}%", ha="center", fontsize=9)
         ax2.text(i,      sft_iter2[i]   + 1.2, f"{sft_iter2[i]:.0f}%",   ha="center", fontsize=9)
@@ -410,7 +442,11 @@ def fig6_variants():
               "Per-token\nKL i1",
               "Per-token\nKL i2",
               "Claude+\nscaffold"]
-    harm   = [56, 54, 44, 36, 33, 38, 21]
+    _dirs  = ["phase2_trained_v4_1", "phase5_onpolicy_dpo_iter1",
+              "phase5_onpolicy_sft_iter1", "phase5_onpolicy_sft_iter2",
+              "phase5_pertoken_kl_iter1", "phase5_pertoken_kl_iter2",
+              "phase4_promptv4_frontier"]
+    harm   = core_series(_dirs, "harm")  # last entry = Claude+scaffold (all-arm total)
     colors = [C_BASE, C_GOLD, C_TRAINED, C_TRAINED, C_MECH1, C_MECH1, C_MECH2]
     sig    = ["", "", "p=.10", "p=.10", "p=.011*", "p=.012*", ""]
 
@@ -437,23 +473,27 @@ def fig6_variants():
 # Figure 7: Calibrated / over-refuse split — 13 frontier subjects, n=5 seeds
 # ============================================================
 def fig7_xsubj():
-    # Mean ± sd of 36-item-core harm across n=5 paired evaluation seeds.
-    # Numbers from paper Table tab:prompt_grid.
-    subjects = [
-        ("Gemini-2.5-flash",       5.5, 6.3, "calibrated"),
-        ("Mistral-Large",         11.0, 2.8, "calibrated"),
-        ("Gemini-3p1-flash-lite", 12.0, 2.1, "calibrated"),
-        ("DeepSeek-v3.1",         12.3, 2.5, "calibrated"),
-        ("Qwen3-32B",             16.3, 2.6, "calibrated"),
-        ("Claude-Opus",           18.1, 2.8, "calibrated"),
-        ("Llama-3.1-70B-Instruct",19.2, 2.7, "calibrated"),
-        ("Gemini-3-flash",        19.4, 2.3, "calibrated"),
-        ("Claude-Sonnet",         19.5, 1.5, "calibrated"),
-        ("GLM-4.6",               46.0, 2.9, "intermediate"),
-        ("GPT-5-mini",            53.6, 5.1, "over-refuse"),
-        ("GPT-5",                 71.1, 2.2, "over-refuse"),
-        ("Qwen3.5-27B",           75.3, 2.9, "over-refuse"),
-    ]
+    # Mean +/- sample-sd of 36-item-core harm across n=5 paired evaluation
+    # seeds, computed live from the released runs via recompute_all.
+    _display = {  # display label -> (recompute_all run stem, cluster)
+        "Gemini-2.5-flash":        ("phase4_promptv4_gemini25flash",        "calibrated"),
+        "Mistral-Large":           ("phase4_promptv4_mistral_large",        "calibrated"),
+        "Gemini-3p1-flash-lite":   ("phase4_promptv4_gemini3p1_lite",       "calibrated"),
+        "DeepSeek-v3.1":           ("phase4_promptv4_deepseek",             "calibrated"),
+        "Qwen3-32B":               ("phase4_promptv4_qwen32b_openrouter",   "calibrated"),
+        "Claude-Opus":             ("phase4_promptv4_claude_opus",          "calibrated"),
+        "Llama-3.1-70B-Instruct":  ("phase4_promptv4_llama70b",             "calibrated"),
+        "Gemini-3-flash":          ("phase4_promptv4_gemini3flash",         "calibrated"),
+        "Claude-Sonnet":           ("phase4_promptv4_frontier",             "calibrated"),
+        "GLM-4.6":                 ("phase4_promptv4_glm46",                "intermediate"),
+        "GPT-5-mini":              ("phase4_promptv4_gpt5mini",             "over-refuse"),
+        "GPT-5":                   ("phase4_promptv4_gpt5",                 "over-refuse"),
+        "Qwen3.5-27B":             ("phase4_promptv4_qwen27b",              "over-refuse"),
+    }
+    subjects = []
+    for name, (stem, cluster) in _display.items():
+        agg = _ra.aggregate_pct(stem, 5, "harm")
+        subjects.append((name, agg["mean"], agg["sd"], cluster))
     color_map = {"calibrated": C_MECH1, "intermediate": C_GOLD, "over-refuse": C_BASE}
     labels = [s[0] for s in subjects]
     means  = [s[1] for s in subjects]
@@ -557,12 +597,13 @@ def fig8_heldout_xsubj():
 # ============================================================
 def fig9_llama_kiter():
     iters = ["Llama-8B\nuntrained", "iter1", "iter2", "iter3", "iter4"]
-    # Llama-3.1-8B untrained baseline (HEADLINES.md): harm 45/108, leak 7, bound 0, MI 43
-    # Llama K-iter from paper text: 27 → 22 → 17 over three iterations
-    harm  = [45, 27, 22, 17, 18]
-    leak  = [ 7,  3,  9,  7,  6]
-    bound = [ 0,  2,  2,  3,  2]
-    mi    = [43, 25, 20, 15, 17]
+    _dirs = ["phase3_baseline_llama", "phase5_pertoken_kl_llama_iter1",
+             "phase5_pertoken_kl_llama_iter2", "phase5_pertoken_kl_llama_iter3",
+             "phase5_pertoken_kl_llama_iter4"]
+    harm  = core_series(_dirs, "harm")
+    leak  = core_series(_dirs, "leak")
+    bound = core_series(_dirs, "bound")
+    mi    = core_series(_dirs, "mi")
 
     fig, ax = plt.subplots(figsize=(6.0, 3.6))
     x = np.arange(len(iters))

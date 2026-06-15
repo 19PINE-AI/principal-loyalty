@@ -1,4 +1,4 @@
-\begin{thebibliography}{14}
+\begin{thebibliography}{19}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -15,6 +15,7 @@
 {Alibaba Qwen}.
 \newblock {Qwen App}: Voice agent for bookings and reservations.
 \newblock Product feature, 2025.
+\newblock URL \url{https://chat.qwen.ai}.
 \newblock Accessed 2026-05-30.
 
 \bibitem[{Anthropic}(2025)]{anthropic2025opus48}
@@ -24,6 +25,15 @@
   Vending-Bench 2), 2025.
 \newblock URL \url{https://www.anthropic.com/claude-opus-4-8-system-card}.
 \newblock Accessed 2026-05-30.
+
+\bibitem[Debenedetti et~al.(2024)Debenedetti, Zhang, Balunovi{\'c},
+  Beurer-Kellner, Fischer, and Tram{\`e}r]{debenedetti2024agentdojo}
+Edoardo Debenedetti, Jie Zhang, Mislav Balunovi{\'c}, Luca Beurer-Kellner, Marc
+  Fischer, and Florian Tram{\`e}r.
+\newblock {AgentDojo}: A dynamic environment to evaluate prompt injection
+  attacks and defenses for {LLM} agents.
+\newblock 2024.
+\newblock URL \url{https://arxiv.org/abs/2406.13352}.
 
 \bibitem[{DeepSeek-AI}(2024)]{deepseek2024v3}
 {DeepSeek-AI}.
@@ -39,10 +49,21 @@
 \newblock URL \url{https://labs.google.com/search/experiment/22}.
 \newblock Accessed 2026-05-30.
 
+\bibitem[Greshake et~al.(2023)Greshake, Abdelnabi, Mishra, Endres, Holz, and
+  Fritz]{greshake2023injection}
+Kai Greshake, Sahar Abdelnabi, Shailesh Mishra, Christoph Endres, Thorsten
+  Holz, and Mario Fritz.
+\newblock Not what you've signed up for: Compromising real-world
+  {LLM}-integrated applications with indirect prompt injection.
+\newblock In \emph{Proceedings of the 16th ACM Workshop on Artificial
+  Intelligence and Security (AISec)}, 2023.
+\newblock URL \url{https://arxiv.org/abs/2302.12173}.
+
 \bibitem[{Honor}(2025)]{honoryoyo2025}
 {Honor}.
 \newblock {YOYO}: On-device {AI} assistant for agentic tasks.
 \newblock Product feature, {Honor} {MagicOS}, 2025.
+\newblock URL \url{https://www.honor.com/global/}.
 \newblock Accessed 2026-05-30.
 
 \bibitem[Juneja et~al.(2025)Juneja, Pasupulati, Albalak, Hua, and
@@ -63,6 +84,13 @@ Niloofar Mireshghallah, Hyunwoo Kim, Xuhui Zhou, Yulia Tsvetkov, Maarten Sap,
 \newblock In \emph{International Conference on Learning Representations
   (ICLR)}, 2024.
 \newblock URL \url{https://arxiv.org/abs/2310.17884}.
+
+\bibitem[Perez and Ribeiro(2022)]{perez2022ignore}
+F{\'a}bio Perez and Ian Ribeiro.
+\newblock Ignore previous prompt: Attack techniques for language models.
+\newblock 2022.
+\newblock URL \url{https://arxiv.org/abs/2211.09527}.
+\newblock NeurIPS 2022 ML Safety Workshop.
 
 \bibitem[{Pine AI}(2025)]{pineai2025}
 {Pine AI}.
@@ -96,6 +124,15 @@ Mirac Suzgun, Nathan Scales, Nathanael Sch{\"a}rli, Sebastian Gehrmann, Yi~Tay,
 \newblock URL \url{https://thinkingmachines.ai/blog/on-policy-distillation/}.
 \newblock Accessed 2026-05-20.
 
+\bibitem[Wallace et~al.(2024)Wallace, Xiao, Leike, Weng, Heidecke, and
+  Beutel]{wallace2024instructionhierarchy}
+Eric Wallace, Kai Xiao, Reimar Leike, Lilian Weng, Johannes Heidecke, and Alex
+  Beutel.
+\newblock The instruction hierarchy: Training {LLM}s to prioritize privileged
+  instructions.
+\newblock 2024.
+\newblock URL \url{https://arxiv.org/abs/2404.13208}.
+
 \bibitem[Yao et~al.(2024)Yao, Shinn, Razavi, and Narasimhan]{yao2024taubench}
 Shunyu Yao, Noah Shinn, Pedram Razavi, and Karthik Narasimhan.
 \newblock {$\tau$-bench}: A benchmark for {T}ool-{A}gent-{U}ser interaction in
@@ -108,5 +145,13 @@ Qiying Yu et~al.
 \newblock {DAPO}: An open-source {LLM} reinforcement learning system at scale.
 \newblock 2025.
 \newblock URL \url{https://arxiv.org/abs/2503.14476}.
+
+\bibitem[Zhan et~al.(2024)Zhan, Liang, Ying, and Kang]{zhan2024injecagent}
+Qiusi Zhan, Zhixiang Liang, Zifan Ying, and Daniel Kang.
+\newblock {InjecAgent}: Benchmarking indirect prompt injections in
+  tool-integrated large language model agents.
+\newblock In \emph{Findings of the Association for Computational Linguistics
+  (ACL)}, 2024.
+\newblock URL \url{https://arxiv.org/abs/2403.02691}.
 
 \end{thebibliography}
