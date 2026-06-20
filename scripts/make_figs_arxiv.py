@@ -227,27 +227,60 @@ def fig1_manifold():
         ("Claude + scaffold",   "runs/phase4_promptv4_frontier/scored.jsonl",    C_MECH2,    "^"),
     ]
     handles = []
+    pts = []  # (leak%, mi%) of the trainable mechanisms, for the frontier
     for name, path, color, marker in variants:
         rows = load(path)
         if not rows: continue
         c = counts(rows)
         leak_pct = 100 * c["leak"] / c["n"]
         mi_pct = 100 * c["mi"] / c["n"]
-        size = 220 if marker == "*" else 90
+        size = 230 if marker == "*" else 90
         edge = "black" if marker not in ("x",) else color
         sc = ax.scatter(leak_pct, mi_pct, s=size,
                         c=color, marker=marker, edgecolors=edge, linewidths=0.5,
-                        label=f"{name} ({c['harm']}/{c['n']})", zorder=3)
+                        label=f"{name} ({c['harm']}/{c['n']})", zorder=4)
         handles.append(sc)
-    # Shaded "Pareto-better" corner
+        # The untrained baseline sits far off-scale on leak; it is not a
+        # candidate operating point, so it does not define the frontier.
+        if name != "Qwen-8B untrained":
+            pts.append((leak_pct, mi_pct))
+
+    # --- Explicit leak/MI frontier --------------------------------------
+    # The paper's thesis is that every mechanism lands on a *common* frontier
+    # whose jointly-favorable lower-left is empty. Draw that frontier as the
+    # Pareto-non-dominated envelope of the operating points (no point lies
+    # below-and-left of it), so the "floor" is literal rather than asserted.
+    def pareto_front(points):
+        front = [p for p in points
+                 if not any((q[0] <= p[0] and q[1] <= p[1] and q != p)
+                            for q in points)]
+        return sorted(front)
+    front = pareto_front(pts)
+    xmax = 80.0
+    if front:
+        fx = [p[0] for p in front]
+        fy = [p[1] for p in front]
+        ax.plot(fx, fy, color="#3a8c3a", linestyle="--", linewidth=1.8,
+                alpha=0.85, zorder=2)
+        # Shade the unreachable region under the frontier: the boundary is the
+        # dashed line itself, held flat to each axis edge beyond the end points.
+        fill_x = [0.0] + fx + [xmax]
+        fill_y = [fy[0]] + fy + [fy[-1]]
+        ax.fill_between(fill_x, 0, fill_y, color="#3a8c3a", alpha=0.05, zorder=1)
+        # Label the frontier and the empty corner it walls off.
+        ax.text(fx[-1] + 1.5, fy[-1] + 5.5, "leak / MI\nfrontier", ha="left",
+                va="center", fontsize=8.5, color="#2f6f2f", fontweight="bold",
+                linespacing=1.2, zorder=5)
     ax.axhline(20, color="gray", linestyle=":", linewidth=0.7, alpha=0.5)
     ax.axvline(20, color="gray", linestyle=":", linewidth=0.7, alpha=0.5)
-    ax.axhspan(0, 20, xmin=0, xmax=20/45, alpha=0.05, color="#3a8c3a")
-    # No inline label — the shaded corner is self-evident; explaining it
-    # in the caption avoids overlap with axis ticks / data markers.
+    ax.text(10.5, 7.0, "jointly favorable\n(empty)", ha="center", va="center",
+            fontsize=8.5, style="italic", color="#3a8c3a", alpha=0.9,
+            linespacing=1.25, zorder=5)
     ax.set_xlabel("Leak rate (%)")
     ax.set_ylabel("Missed-instruction rate (%)")
-    ax.set_title("Leak / MI floor across variants  (label: harm/n)")
+    ax.set_xlim(0, xmax)
+    ax.set_ylim(0, 53)
+    ax.set_title("A common leak / MI floor: the favorable corner stays empty  (label: harm/n)")
     # Legend in a column outside the data area to avoid overlap.
     ax.legend(handles=handles, loc="center left", bbox_to_anchor=(1.02, 0.5),
               fontsize=9, framealpha=0.95, handletextpad=0.5,
@@ -359,7 +392,7 @@ def fig4_teacher():
         ax.text(i + w/2, q + 2.5, f"{q:.0f}%", ha="center", fontsize=9)
     ax.set_xticks(x); ax.set_xticklabels(metrics)
     ax.set_ylabel("Fire rate (%) on scaffolded arm")
-    ax.set_title("Teacher self-validation: open-weight trades leak for harm")
+    ax.set_title("Teacher self-validation")
     ax.legend(loc="upper right", fontsize=9)
     ax.set_ylim(0, 85)
     ax.grid(True, alpha=0.3, axis="y")
@@ -522,7 +555,10 @@ def fig7_xsubj():
                     label="intermediate"),
               Patch(facecolor=C_BASE, alpha=0.88, edgecolor="black", linewidth=0.6,
                     label="over-refuse ($\\geq 50\\%$)")]
-    ax.legend(handles=legend, loc="lower right", fontsize=10)
+    # Legend in the upper-right whitespace left by the short calibrated bars,
+    # so it never overlaps the long over-refuse bars / value labels at bottom.
+    ax.legend(handles=legend, loc="upper right", fontsize=10,
+              framealpha=0.95, borderpad=0.5)
     plt.tight_layout()
     plt.savefig(FIG_DIR / "arxiv_fig7_xsubj.pdf", bbox_inches="tight")
     plt.close()
@@ -585,7 +621,10 @@ def fig8_heldout_xsubj():
                     label="intermediate"),
               Patch(facecolor=C_BASE, alpha=0.88, edgecolor="black", linewidth=0.6,
                     label="over-refuse")]
-    ax.legend(handles=legend, loc="lower right", fontsize=10)
+    # Upper-right whitespace (short calibrated bars) — avoids the long
+    # over-refuse bars and their value labels along the bottom rows.
+    ax.legend(handles=legend, loc="upper right", fontsize=10,
+              framealpha=0.95, borderpad=0.5)
     plt.tight_layout()
     plt.savefig(FIG_DIR / "arxiv_fig8_heldout_xsubj.pdf", bbox_inches="tight")
     plt.close()
