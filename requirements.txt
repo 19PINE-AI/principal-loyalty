@@ -1,0 +1,9 @@
+# Core harness — the only hard dependencies for running the benchmark.
+anthropic>=0.40
+openai>=1.40          # also used for OpenRouter- and Google-compatible endpoints
+
+# Analysis / reproduction scripts.
+scipy>=1.11           # paired Wilcoxon, Cohen's kappa, cluster split tests
+numpy>=1.24
+pandas>=2.0           # reading data/verl_*.parquet
+pyarrow>=14.0         # parquet engine

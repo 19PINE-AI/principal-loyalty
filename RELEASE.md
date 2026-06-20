@@ -1,9 +1,10 @@
 # PrincipalBench — release & reproducibility
 
-The paper (`paper_arxiv.tex`) references the public repository
-`github.com/19PINE-AI/principal-loyalty`. As of this writing that repository
-does **not** resolve publicly — it must be created and populated before the
-paper is submitted, or the reproducibility statement is false. Steps below.
+The paper (`paper_arxiv.tex`) references the repository
+`github.com/19PINE-AI/principal-loyalty`. That repository now exists under the
+**19PINE-AI** organization and is currently **private**; make it public (or run
+`scripts/build_release.py` and push the clean tree to a public mirror) before
+the paper is submitted, or the reproducibility statement is false. Steps below.
 
 ## What the release contains
 
@@ -45,7 +46,8 @@ table columns are seed-1, aggregates are n=5 mean ± sample-sd.
 
 ```
 python3 scripts/build_release.py
-gh repo create 19PINE-AI/principal-loyalty --public -d "PrincipalBench: multi-party principal loyalty in LLM agents"
+# the repo already exists as 19PINE-AI/principal-loyalty (private); make it public with:
+gh repo edit 19PINE-AI/principal-loyalty --visibility public --accept-visibility-change-consequences
 # copy release/ (+ figures/, paper PDF, and any checkpoints/trajectories you choose to host) into the repo, then:
 git -C <repo> add . && git -C <repo> commit -m "Initial PrincipalBench release" && git -C <repo> push
 ```
