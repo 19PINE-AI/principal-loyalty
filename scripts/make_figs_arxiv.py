@@ -214,7 +214,7 @@ def fig0b_cells():
 # Figure 1: Manifold scatter — variants on (leak %, MI %) plane
 # ============================================================
 def fig1_manifold():
-    fig, ax = plt.subplots(figsize=(7.5, 4.2))
+    fig, ax = plt.subplots(figsize=(7.4, 4.6))
     variants = [
         ("Qwen-8B untrained",   "runs/phase3_baseline_qwen/scored.jsonl",        C_NEUTRAL,  "x"),
         ("Qwen v4.1 SFT+DPO",   "runs/phase2_trained_v4_1/scored.jsonl",         C_BASE,     "o"),
@@ -226,24 +226,43 @@ def fig1_manifold():
         ("Per-token KL i3",     "runs/phase5_pertoken_kl_iter3/scored.jsonl",    C_MECH1,    "X"),
         ("Claude + scaffold",   "runs/phase4_promptv4_frontier/scored.jsonl",    C_MECH2,    "^"),
     ]
+    # Zoom the axis to where every candidate operating point actually lives.
+    # The untrained baseline leaks ~76%; rather than stretch the axis to 80
+    # and crush the whole story into the left fifth, we clamp it to the right
+    # edge and annotate its true value (an explicit off-scale marker).
+    xmax = 28.0
     handles = []
-    pts = []  # (leak%, mi%) of the trainable mechanisms, for the frontier
+    pts = []          # (leak%, mi%) of the trainable mechanisms, for the frontier
+    thesis = {}       # name -> (leak%, mi%) for the two points we label directly
     for name, path, color, marker in variants:
         rows = load(path)
         if not rows: continue
         c = counts(rows)
         leak_pct = 100 * c["leak"] / c["n"]
         mi_pct = 100 * c["mi"] / c["n"]
-        size = 230 if marker == "*" else 90
+        size = 320 if marker == "*" else 95
         edge = "black" if marker not in ("x",) else color
-        sc = ax.scatter(leak_pct, mi_pct, s=size,
-                        c=color, marker=marker, edgecolors=edge, linewidths=0.5,
-                        label=f"{name} ({c['harm']}/{c['n']})", zorder=4)
+        off_scale = leak_pct > xmax
+        x_plot = xmax - 1.3 if off_scale else leak_pct
+        sc = ax.scatter(x_plot, mi_pct, s=size,
+                        c=color, marker=marker, edgecolors=edge, linewidths=0.6,
+                        label=f"{name} ({c['harm']}/{c['n']})",
+                        zorder=4, clip_on=False)
         handles.append(sc)
-        # The untrained baseline sits far off-scale on leak; it is not a
-        # candidate operating point, so it does not define the frontier.
-        if name != "Qwen-8B untrained":
+        if off_scale:
+            # Tuck the off-scale value into the empty lower-right corner.
+            ax.annotate(f"untrained\nleak {leak_pct:.0f}%",
+                        xy=(x_plot + 0.6, mi_pct - 0.5), xytext=(27.7, 11.0),
+                        ha="right", va="top", fontsize=8, color=C_NEUTRAL,
+                        linespacing=1.1,
+                        arrowprops=dict(arrowstyle="-|>", color=C_NEUTRAL,
+                                        lw=1.1, shrinkA=4, shrinkB=4), zorder=5)
+        else:
+            # The untrained baseline is not a candidate operating point, so it
+            # does not define the frontier; everything else does.
             pts.append((leak_pct, mi_pct))
+        if name in ("Per-token KL i1", "Claude + scaffold"):
+            thesis[name] = (leak_pct, mi_pct)
 
     # --- Explicit leak/MI frontier --------------------------------------
     # The paper's thesis is that every mechanism lands on a *common* frontier
@@ -256,35 +275,55 @@ def fig1_manifold():
                             for q in points)]
         return sorted(front)
     front = pareto_front(pts)
-    xmax = 80.0
     if front:
         fx = [p[0] for p in front]
         fy = [p[1] for p in front]
-        ax.plot(fx, fy, color="#3a8c3a", linestyle="--", linewidth=1.8,
-                alpha=0.85, zorder=2)
+        ax.plot(fx, fy, color="#3a8c3a", linestyle="--", linewidth=2.0,
+                alpha=0.9, zorder=2)
         # Shade the unreachable region under the frontier: the boundary is the
         # dashed line itself, held flat to each axis edge beyond the end points.
         fill_x = [0.0] + fx + [xmax]
         fill_y = [fy[0]] + fy + [fy[-1]]
-        ax.fill_between(fill_x, 0, fill_y, color="#3a8c3a", alpha=0.05, zorder=1)
-        # Label the frontier and the empty corner it walls off.
-        ax.text(fx[-1] + 1.5, fy[-1] + 5.5, "leak / MI\nfrontier", ha="left",
-                va="center", fontsize=8.5, color="#2f6f2f", fontweight="bold",
-                linespacing=1.2, zorder=5)
+        ax.fill_between(fill_x, 0, fill_y, color="#3a8c3a", alpha=0.07, zorder=1)
+        # Label the frontier in the open band just right of its lower end.
+        ax.text(17.3, 23.5, "leak / MI\nfrontier", ha="left", va="center",
+                fontsize=9, color="#2f6f2f", fontweight="bold",
+                linespacing=1.1, zorder=5)
     ax.axhline(20, color="gray", linestyle=":", linewidth=0.7, alpha=0.5)
     ax.axvline(20, color="gray", linestyle=":", linewidth=0.7, alpha=0.5)
-    ax.text(10.5, 7.0, "jointly favorable\n(empty)", ha="center", va="center",
-            fontsize=8.5, style="italic", color="#3a8c3a", alpha=0.9,
-            linespacing=1.25, zorder=5)
+    ax.text(6.0, 6.5, "jointly favorable\ncorner is empty", ha="center",
+            va="center", fontsize=9, style="italic", color="#2f6f2f",
+            alpha=0.95, linespacing=1.25, zorder=5)
+
+    # Directly label the two points that carry the thesis: a prompted Claude
+    # teacher and an 8B per-token-KL student on the *same* frontier.
+    if "Per-token KL i1" in thesis:
+        lx, ly = thesis["Per-token KL i1"]
+        ax.annotate("per-token-KL 8B\nstudent", xy=(lx, ly),
+                    xytext=(8.6, 44.0), fontsize=8.5, color=C_MECH1,
+                    fontweight="bold", ha="center", va="bottom", linespacing=1.1,
+                    arrowprops=dict(arrowstyle="-|>", color=C_MECH1, lw=1.2,
+                                    shrinkA=2, shrinkB=6), zorder=6)
+    if "Claude + scaffold" in thesis:
+        cx, cy = thesis["Claude + scaffold"]
+        ax.annotate("prompted Claude\nteacher", xy=(cx, cy),
+                    xytext=(cx + 2.6, cy - 7.0), fontsize=8.5, color="#5a8a2a",
+                    fontweight="bold", ha="left", va="top", linespacing=1.1,
+                    arrowprops=dict(arrowstyle="-|>", color="#5a8a2a", lw=1.2,
+                                    shrinkA=2, shrinkB=4), zorder=6)
+
     ax.set_xlabel("Leak rate (%)")
     ax.set_ylabel("Missed-instruction rate (%)")
     ax.set_xlim(0, xmax)
     ax.set_ylim(0, 53)
-    ax.set_title("A common leak / MI floor: the favorable corner stays empty  (label: harm/n)")
+    ax.set_title("A common leak / missed-instruction floor: the favorable corner stays empty",
+                 fontsize=12)
     # Legend in a column outside the data area to avoid overlap.
-    ax.legend(handles=handles, loc="center left", bbox_to_anchor=(1.02, 0.5),
-              fontsize=9, framealpha=0.95, handletextpad=0.5,
-              borderpad=0.4, labelspacing=0.4)
+    leg = ax.legend(handles=handles, loc="center left", bbox_to_anchor=(1.02, 0.5),
+                    fontsize=8.5, framealpha=0.95, handletextpad=0.4,
+                    borderpad=0.4, labelspacing=0.45, title="variant (harm/n)",
+                    title_fontsize=8.5)
+    leg._legend_box.align = "left"
     ax.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.savefig(FIG_DIR / "arxiv_fig1_manifold.pdf", bbox_inches="tight")
