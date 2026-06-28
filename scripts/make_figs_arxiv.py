@@ -155,55 +155,63 @@ def fig0_problem():
 def fig0b_cells():
     from matplotlib.patches import FancyBboxPatch
     fig, ax = plt.subplots(figsize=(9.5, 4.8))
-    ax.set_xlim(0, 19); ax.set_ylim(0, 7.6)
+    ax.set_xlim(0, 19); ax.set_ylim(0, 7.7)
     ax.set_aspect("equal")
     ax.axis("off")
 
+    # Speaker prefixes are abbreviated C:/A:/P: (matching the [C]/[A] worked
+    # trace in the body) so the monospace dialogue fits inside every cell.
     cells = [
         # (col, row, name, axis_tag, example_lines, face, edge)
-        (0, 1, "LEAKAGE",     "× leak",
-         ['Counterparty: "what\'s the min?"', 'Agent: "$12,000."'],
+        (0, 1, "LEAKAGE",     "leak",
+         ['C: "what\'s the minimum?"', 'A: "$12,000."'],
          "#FBEEEA", "#C0504D"),
-        (1, 1, "CAPITULATION","× capitulate / bound",
-         ['Counterparty: "take $11,500 or I walk"', 'Agent: "$11,500 works."'],
+        (1, 1, "CAPITULATION", "capitulate / bound",
+         ['C: "take $11,500 or I walk"', 'A: "$11,500 works."'],
          "#FBEEEA", "#C0504D"),
-        (2, 1, "POSTURE",     "× posture",
-         ['Counterparty: "are you flexible?"', 'Agent: "she needs to sell."'],
+        (2, 1, "POSTURE",     "posture",
+         ['C: "are you flexible?"', 'A: "she needs to sell."'],
          "#FBEEEA", "#C0504D"),
-        (0, 0, "AUTHORING",   "× leak (via artifact)",
-         ['Principal: "draft my listing."', 'Agent: "...willing to take $12k."'],
+        (0, 0, "AUTHORING",   "leak (via artifact)",
+         ['P: "draft my listing."', 'A: "...willing to take $12k."'],
          "#FBEEEA", "#C0504D"),
-        (1, 0, "MODERATION",  "× third-party leak",
-         ['Counterparty: "who else saw it?"', 'Agent: names other witnesses.'],
+        (1, 0, "MODERATION",  "third-party leak",
+         ['C: "who else saw it?"', 'A: names other witnesses.'],
          "#FBEEEA", "#C0504D"),
-        (2, 0, "SANITY",      "× over-refuse",
-         ['Principal: "draft my self-review."', 'Agent: "can\'t share private info."'],
+        (2, 0, "SANITY",      "over-refuse (only failure)",
+         ['P: "draft my self-review."', 'A: "can\'t share that."'],
          "#EAF1F8", "#4F81BD"),
     ]
 
     cw, ch = 5.8, 3.10
-    gap_x, gap_y = 0.5, 0.30
+    gap_x, gap_y = 0.5, 0.34
     margin_x = 0.45
+    pad = 0.42  # inner left margin for left-aligned transcript lines
     for (col, row, name, axis, lines, face, edge) in cells:
         x = margin_x + col * (cw + gap_x)
-        y = 0.25 + row * (ch + gap_y)
+        y = 0.30 + row * (ch + gap_y)
         ax.add_patch(FancyBboxPatch(
             (x, y), cw, ch,
             boxstyle="round,pad=0.06,rounding_size=0.14",
-            linewidth=1.3, edgecolor=edge, facecolor=face, alpha=0.92))
-        ax.text(x + cw/2, y + ch - 0.45, name,
-                ha="center", va="top", fontsize=11,
+            linewidth=1.3, edgecolor=edge, facecolor=face, alpha=0.95))
+        # header: name + red/blue axis tag on one baseline
+        ax.text(x + cw/2, y + ch - 0.50, name,
+                ha="center", va="top", fontsize=11.5,
                 fontweight="bold", color=edge)
-        ax.text(x + cw/2, y + ch - 1.00, axis,
+        ax.text(x + cw/2, y + ch - 1.04, "× " + axis,
                 ha="center", va="top", fontsize=9,
                 style="italic", color=edge)
+        # thin divider between header and transcript
+        ax.plot([x + pad, x + cw - pad], [y + ch - 1.42, y + ch - 1.42],
+                color=edge, linewidth=0.6, alpha=0.35)
+        # left-aligned monospace transcript (guarantees no overflow)
         for li, line in enumerate(lines):
-            ax.text(x + cw/2, y + 1.10 - li * 0.45, line,
-                    ha="center", va="center", fontsize=8, color="#222",
+            ax.text(x + pad, y + 0.92 - li * 0.52, line,
+                    ha="left", va="center", fontsize=8.5, color="#1a1a1a",
                     family="monospace")
 
-    ax.text(9.5, 7.30, "Six failure cells  (one benchmark cell each)",
-            ha="center", fontsize=12, fontweight="bold")
+    ax.text(9.5, 7.45, "Six failure cells  (one benchmark cell each)",
+            ha="center", fontsize=12.5, fontweight="bold")
 
     plt.savefig(FIG_DIR / "arxiv_fig0b_cells.pdf", bbox_inches="tight", pad_inches=0.06)
     plt.close()
@@ -243,18 +251,22 @@ def fig1_manifold():
         size = 320 if marker == "*" else 95
         edge = "black" if marker not in ("x",) else color
         off_scale = leak_pct > xmax
-        x_plot = xmax - 1.3 if off_scale else leak_pct
+        x_plot = xmax - 1.7 if off_scale else leak_pct
         sc = ax.scatter(x_plot, mi_pct, s=size,
                         c=color, marker=marker, edgecolors=edge, linewidths=0.6,
                         label=f"{name} ({c['harm']}/{c['n']})",
                         zorder=4, clip_on=False)
         handles.append(sc)
         if off_scale:
-            # Tuck the off-scale value into the empty lower-right corner.
-            ax.annotate(f"untrained\nleak {leak_pct:.0f}%",
-                        xy=(x_plot + 0.6, mi_pct - 0.5), xytext=(27.7, 11.0),
-                        ha="right", va="top", fontsize=8, color=C_NEUTRAL,
-                        linespacing=1.1,
+            # The untrained baseline is off-scale on leak (~76%): mark a small
+            # axis-break "//" before its clamped marker and label it in the
+            # empty lower-right corner so it never crowds the legend.
+            ax.text(x_plot - 1.05, mi_pct, "//", ha="center", va="center",
+                    fontsize=11, color=C_NEUTRAL, fontweight="bold", zorder=5)
+            ax.annotate(f"untrained: off-scale\n(leak {leak_pct:.0f}%)",
+                        xy=(x_plot, mi_pct - 1.2), xytext=(x_plot, 7.5),
+                        ha="center", va="top", fontsize=8, color=C_NEUTRAL,
+                        linespacing=1.15,
                         arrowprops=dict(arrowstyle="-|>", color=C_NEUTRAL,
                                         lw=1.1, shrinkA=4, shrinkB=4), zorder=5)
         else:
@@ -351,13 +363,13 @@ def fig2_kiter():
     ax.plot(x, leak,  marker="^", linewidth=2.2, label="leak",  color=C_MECH1)
     ax.plot(x, bound, marker="D", linewidth=2.2, label="bound", color=C_TRAINED)
 
-    # Annotate optima — placed clear of data lines
-    ax.annotate("harm-min", xy=(1, 33), xytext=(0.05, 22),
+    # Annotate optima — placed clear of data lines and the x-axis labels
+    ax.annotate("harm-min", xy=(1, 33), xytext=(0.04, 21),
                 arrowprops=dict(arrowstyle="->", color=C_BASE, alpha=0.6),
                 fontsize=9, color=C_BASE)
-    ax.annotate("leak/bound-min", xy=(2, 9), xytext=(2.6, 1.5),
+    ax.annotate("leak/bound-min", xy=(2, 9), xytext=(2.55, 16),
                 arrowprops=dict(arrowstyle="->", color=C_MECH1, alpha=0.6),
-                fontsize=9, color=C_MECH1)
+                fontsize=9, color=C_MECH1, ha="center")
 
     ax.set_xticks(x); ax.set_xticklabels(iters)
     ax.set_ylabel("Failures per 108 trajectories")
