@@ -1,4 +1,4 @@
-\begin{thebibliography}{19}
+\begin{thebibliography}{20}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -92,12 +92,20 @@ F{\'a}bio Perez and Ian Ribeiro.
 \newblock URL \url{https://arxiv.org/abs/2211.09527}.
 \newblock NeurIPS 2022 ML Safety Workshop.
 
-\bibitem[{Pine AI}(2025)]{pineai2025}
+\bibitem[{Pine AI}(2025{\natexlab{a}})]{pineai2025}
 {Pine AI}.
 \newblock {Pine AI}: Personal {AI} agent for phone calls and disputes.
-\newblock Product website, 2025.
+\newblock Product website, 2025{\natexlab{a}}.
 \newblock URL \url{https://19pine.ai}.
 \newblock Accessed 2026-05-30.
+
+\bibitem[{Pine AI}(2025{\natexlab{b}})]{pineai2025whispercoding}
+{Pine AI}.
+\newblock {Pine AI}: The most natural human-computer interface is your voice.
+\newblock Blog post, 2025{\natexlab{b}}.
+\newblock URL
+  \url{https://www.19pine.ai/blog/pine-ai-the-most-natural-human-computer-interface-is-your-voice}.
+\newblock Accessed 2026-06-28.
 
 \bibitem[Sharma et~al.(2023)Sharma, Tong, Korbak, Duvenaud, Askell, Bowman,
   Cheng, Durmus, Hatfield-Dodds, et~al.]{sharma2023sycophancy}
