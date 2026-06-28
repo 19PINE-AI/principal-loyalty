@@ -49,6 +49,12 @@
 \begin{abstract}
 \noindent Most LLM agents operate in a digital world. They call APIs, browse, and serve the user who invoked them. A rapidly growing class of deployments is \emph{multi-party}. The agent represents a \textbf{principal} (who briefs it, sends follow-ups, and receives results) while \emph{also} conversing in a separate channel with a \textbf{counterparty} whose interests may diverge (negotiating with a vendor, screening inbound requests, mediating between employees). Here ``help whoever you are talking to'' is the wrong objective. The agent must stay loyal to the principal it represents without over-refusing the principal's own cooperative asks. We study this \emph{multi-party loyalty problem} and contribute a measurement instrument, two mechanisms, and a structural lesson. \textbf{PrincipalBench} is a 75-item multi-turn benchmark with leak probes, dual judges, and an integrity-audit gate. Across 13 frontier subjects it exposes a sharp \emph{calibrated/over-refuse split} ($\le 20\%$ vs.\ $53.6$--$75.3\%$ harm) invisible to single-turn safety evaluations. \textbf{(M1)~A prompt-time loyalty scaffold} of seven prioritized rules, open-coded from 50+ failure trajectories, holds Claude-Sonnet to $19.4\%$ harm and all nine calibrated subjects to $\le 20\%$. \textbf{(M2)~A per-token-KL distillation recipe} transfers a prompted Qwen3-32B teacher into 8B Qwen3 and Llama-3.1 students, the strongest open-weight recipe we measure. \textbf{(Lesson)}~Both mechanisms move \emph{along} a common leak/over-refusal trade-off rather than crossing it. This is a structural floor that single-knob RL also fails to break. It points at what the next generation of loyalty mechanisms must address.
 \end{abstract}
+\begin{center}
+\small
+Code: \url{https://github.com/19PINE-AI/principal-loyalty} \\[2pt]
+Website: \url{https://01.me/research/principal-loyalty}
+\end{center}
+\vspace{-0.6em}
 
 \begin{figure}[!h]
 \centering
