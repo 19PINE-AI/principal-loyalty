@@ -99,33 +99,33 @@ def fig0_problem():
         ax.text(x + w/2, y + 0.45, sub, ha="center", va="bottom",
                 fontsize=8.5, style="italic", color="#444")
 
-    # Three role boxes: width 3.8 with 4.5-unit gaps so labels never bleed
-    # into the boxes, and so the longest subtitle line fits comfortably.
-    box(0.3, 3.4, 3.8, 2.4, "PRINCIPAL",   "user / company\nyou represent",  "#FBEEEA", "#C0504D")
-    box(8.6, 3.4, 3.8, 2.4, "AGENT",       "LLM acting\non P's behalf",      "#EAF1F8", "#4F81BD")
-    box(16.9, 3.4, 3.8, 2.4, "COUNTERPARTY","other party\n(may conflict)",   "#EFE6F3", "#8064A2")
+    # Three role boxes: width 4.6 so the 12-char "COUNTERPARTY" label fits
+    # inside its box, with 3.3-unit gaps that still hold the arrow labels.
+    box(0.3,  3.4, 4.6, 2.4, "PRINCIPAL",   "user / company\nyou represent",  "#FBEEEA", "#C0504D")
+    box(8.2,  3.4, 4.6, 2.4, "AGENT",       "LLM acting\non P's behalf",      "#EAF1F8", "#4F81BD")
+    box(16.1, 3.4, 4.6, 2.4, "COUNTERPARTY","other party\n(may conflict)",   "#EFE6F3", "#8064A2")
 
     # P <-> A — back-and-forth: instructions one way, results the other
-    a1a = FancyArrowPatch((4.1, 4.85), (8.6, 4.85),
+    a1a = FancyArrowPatch((4.9, 4.85), (8.2, 4.85),
                           arrowstyle="-|>", mutation_scale=13,
                           color="#C0504D", linewidth=1.5)
-    a1b = FancyArrowPatch((8.6, 4.15), (4.1, 4.15),
+    a1b = FancyArrowPatch((8.2, 4.15), (4.9, 4.15),
                           arrowstyle="-|>", mutation_scale=13,
                           color="#C0504D", linewidth=1.5)
     ax.add_patch(a1a); ax.add_patch(a1b)
-    ax.text(6.35, 5.20, "briefing, requests", ha="center", fontsize=8, color="#C0504D")
-    ax.text(6.35, 3.55, "results, clarifications", ha="center", fontsize=8, color="#C0504D")
+    ax.text(6.55, 5.20, "briefing, requests", ha="center", fontsize=7.5, color="#C0504D")
+    ax.text(6.55, 3.55, "results, clarifications", ha="center", fontsize=7.5, color="#C0504D")
 
     # A <-> C — represents one way, probes/pressure the other
-    a2 = FancyArrowPatch((12.4, 4.85), (16.9, 4.85),
+    a2 = FancyArrowPatch((12.8, 4.85), (16.1, 4.85),
                          arrowstyle="-|>", mutation_scale=13,
                          color="#666", linewidth=1.5)
-    a3 = FancyArrowPatch((16.9, 4.15), (12.4, 4.15),
+    a3 = FancyArrowPatch((16.1, 4.15), (12.8, 4.15),
                          arrowstyle="-|>", mutation_scale=13,
                          color="#8064A2", linewidth=1.5)
     ax.add_patch(a2); ax.add_patch(a3)
-    ax.text(14.65, 5.20, "represents", ha="center", fontsize=8, color="#666")
-    ax.text(14.65, 3.55, "probes, pressure", ha="center", fontsize=8, color="#8064A2")
+    ax.text(14.45, 5.20, "represents", ha="center", fontsize=7.5, color="#666")
+    ax.text(14.45, 3.55, "probes, pressure", ha="center", fontsize=7.5, color="#8064A2")
 
     # Loyalty axes panel (bottom)
     ax.add_patch(FancyBboxPatch(
