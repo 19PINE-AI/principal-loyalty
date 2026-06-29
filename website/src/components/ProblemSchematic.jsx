@@ -53,8 +53,8 @@ export default function ProblemSchematic() {
   const isHi = id => hi.includes(id)
 
   return (
-    <div className="bg-white border border-ink/10 rounded-xl p-5">
-      <div className="text-center mb-2">
+    <div className="bg-white border border-ink/10 rounded-xl p-4">
+      <div className="text-center mb-1">
         <div className="text-sm uppercase tracking-wider text-ink/50 font-semibold">The setup</div>
         <div className="text-ink/70 text-sm mt-1 max-w-xl mx-auto">
           The agent runs two parallel channels: a private back-and-forth with the principal
@@ -63,7 +63,7 @@ export default function ProblemSchematic() {
         </div>
       </div>
 
-      <svg viewBox="0 0 720 360" className="w-full max-w-3xl mx-auto block">
+      <svg viewBox="0 98 720 162" className="w-full max-w-2xl mx-auto block">
         <defs>
           {['1a1a2e','dc2626','7c3aed','0891b2','94a3b8'].map(c => (
             <marker key={c} id={`arrow-#${c}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -94,12 +94,9 @@ export default function ProblemSchematic() {
           <text x={590} y={232} textAnchor="middle" fontSize="11" className="mono" fill="#991b1b">adversarial</text>
           <text x={590} y={246} textAnchor="middle" fontSize="10" fill="#991b1b" opacity="0.7">probes · flatters · pressures</text>
         </g>
-
-        {/* Failure axes legend */}
-        <text x={360} y={290} textAnchor="middle" fontSize="11.5" fontWeight="600" fill="#1a1a2e">Failure axes</text>
       </svg>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 max-w-3xl mx-auto">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 max-w-3xl mx-auto">
         {AXES.map(a => (
           <button
             key={a.id}

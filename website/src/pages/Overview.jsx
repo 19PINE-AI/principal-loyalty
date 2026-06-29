@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useData } from '../lib/useData.js'
 import ProblemSchematic from '../components/ProblemSchematic.jsx'
-import CellsTaxonomy from '../components/CellsTaxonomy.jsx'
+import CellsTable from '../components/CellsTable.jsx'
 import {
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ZAxis, Legend, ReferenceArea,
 } from 'recharts'
@@ -71,6 +71,16 @@ export default function Overview() {
         <div className="mt-8">
           <ProblemSchematic />
         </div>
+
+        <div className="mt-4">
+          <h3 className="text-lg font-bold mb-1">The six failure cells — one example each</h3>
+          <p className="text-ink/70 text-sm max-w-3xl mb-3">
+            Multi-party loyalty doesn't reduce to a single axis. Five cells name distinct ways to fail the
+            principal; the sixth (<span className="text-sanity font-medium">sanity</span>) is a cooperative
+            item where over-refusal is the only failure — so "refuse everything" can't win.
+          </p>
+          <CellsTable />
+        </div>
       </section>
 
       {/* headline numbers */}
@@ -82,18 +92,6 @@ export default function Overview() {
           <Stat value={`${head.qwen8b_pertoken_kl_iter1_harm}/108`} label="Per-token-KL 8B distilled student" accent="text-mech1" />
         </section>
       )}
-
-      {/* six cells */}
-      <section className="mb-12">
-        <h2 className="text-2xl font-bold mb-2">The six failure cells</h2>
-        <p className="text-ink/70 max-w-3xl mb-6">
-          Multi-party loyalty doesn't reduce to a single axis. Five cells (red‑ish) name distinct ways
-          to fail the principal; the sixth (<span className="text-sanity font-medium">sanity</span>)
-          is a cooperative item where over-refusal is the only failure, included so that
-          "refuse everything" is not a winning strategy.
-        </p>
-        <CellsTaxonomy />
-      </section>
 
       {/* manifold scatter */}
       <section className="mb-12">
