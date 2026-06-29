@@ -150,75 +150,6 @@ def fig0_problem():
 
 
 # ============================================================
-# Figure 0b: Six failure modes — annotated grid
-# ============================================================
-def fig0b_cells():
-    from matplotlib.patches import FancyBboxPatch
-    fig, ax = plt.subplots(figsize=(9.5, 4.8))
-    ax.set_xlim(0, 19); ax.set_ylim(0, 7.7)
-    ax.set_aspect("equal")
-    ax.axis("off")
-
-    # Speaker prefixes are abbreviated C:/A:/P: (matching the [C]/[A] worked
-    # trace in the body) so the monospace dialogue fits inside every cell.
-    cells = [
-        # (col, row, name, axis_tag, example_lines, face, edge)
-        (0, 1, "LEAKAGE",     "leak",
-         ['C: "what\'s the minimum?"', 'A: "$12,000."'],
-         "#FBEEEA", "#C0504D"),
-        (1, 1, "CAPITULATION", "capitulate / bound",
-         ['C: "take $11,500 or I walk"', 'A: "$11,500 works."'],
-         "#FBEEEA", "#C0504D"),
-        (2, 1, "POSTURE",     "posture",
-         ['C: "are you flexible?"', 'A: "she needs to sell."'],
-         "#FBEEEA", "#C0504D"),
-        (0, 0, "AUTHORING",   "leak (via artifact)",
-         ['P: "draft my listing."', 'A: "...willing to take $12k."'],
-         "#FBEEEA", "#C0504D"),
-        (1, 0, "MODERATION",  "third-party leak",
-         ['C: "who else saw it?"', 'A: names other witnesses.'],
-         "#FBEEEA", "#C0504D"),
-        (2, 0, "SANITY",      "over-refuse (only failure)",
-         ['P: "draft my self-review."', 'A: "can\'t share that."'],
-         "#EAF1F8", "#4F81BD"),
-    ]
-
-    cw, ch = 5.8, 3.10
-    gap_x, gap_y = 0.5, 0.34
-    margin_x = 0.45
-    pad = 0.42  # inner left margin for left-aligned transcript lines
-    for (col, row, name, axis, lines, face, edge) in cells:
-        x = margin_x + col * (cw + gap_x)
-        y = 0.30 + row * (ch + gap_y)
-        ax.add_patch(FancyBboxPatch(
-            (x, y), cw, ch,
-            boxstyle="round,pad=0.06,rounding_size=0.14",
-            linewidth=1.3, edgecolor=edge, facecolor=face, alpha=0.95))
-        # header: name + red/blue axis tag on one baseline
-        ax.text(x + cw/2, y + ch - 0.50, name,
-                ha="center", va="top", fontsize=11.5,
-                fontweight="bold", color=edge)
-        ax.text(x + cw/2, y + ch - 1.04, "× " + axis,
-                ha="center", va="top", fontsize=9,
-                style="italic", color=edge)
-        # thin divider between header and transcript
-        ax.plot([x + pad, x + cw - pad], [y + ch - 1.42, y + ch - 1.42],
-                color=edge, linewidth=0.6, alpha=0.35)
-        # left-aligned monospace transcript (guarantees no overflow)
-        for li, line in enumerate(lines):
-            ax.text(x + pad, y + 0.92 - li * 0.52, line,
-                    ha="left", va="center", fontsize=8.5, color="#1a1a1a",
-                    family="monospace")
-
-    ax.text(9.5, 7.45, "Six failure cells  (one benchmark cell each)",
-            ha="center", fontsize=12.5, fontweight="bold")
-
-    plt.savefig(FIG_DIR / "arxiv_fig0b_cells.pdf", bbox_inches="tight", pad_inches=0.06)
-    plt.close()
-    print("[fig0b] saved")
-
-
-# ============================================================
 # Figure 1: Manifold scatter — variants on (leak %, MI %) plane
 # ============================================================
 def fig1_manifold():
@@ -806,7 +737,6 @@ def fig9_llama_kiter():
 
 if __name__ == "__main__":
     fig0_problem()
-    fig0b_cells()
     fig1_manifold()
     fig2_kiter()
     fig3_wilcoxon()

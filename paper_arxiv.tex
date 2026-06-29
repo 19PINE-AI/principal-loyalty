@@ -95,23 +95,27 @@ We call this the \textbf{multi-party loyalty problem}, and we argue the agent re
 
 \paragraph{Setup.} A multi-party loyalty episode has three roles. The \textbf{principal} $P$ delegates a task and provides private state $S_P$ (facts, bounds, instructions), and remains in the loop across the episode (sending follow-ups, asking for status, refining the briefing, receiving results). The \textbf{agent} $A$ acts on $P$'s behalf. The \textbf{counterparty} $C$ converses with $A$ in a separate channel and has an objective that may conflict with $P$'s. $C$ never sees $S_P$ or the principal-agent channel directly but may probe, pressure, flatter, or manufacture urgency to extract them, or to extract concessions $P$ did not authorize. The agent succeeds when it advances $P$'s task without (a) leaking withheld facts in $S_P$, (b) violating $P$'s private bounds (e.g.\ a reservation price), (c) capitulating to $C$'s pressure on $P$'s stated positions, or (d) over-refusing legitimate requests, whether from $C$ on $P$-authorized topics or from $P$ directly. We refine these four failure conditions into six measurement cells below, separating (a) by leak channel (direct revelation, posture signaling, authored artifact) and adding a third-party moderation cell and a sanity cell for (d).
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{figures/arxiv_fig0b_cells.pdf}
-\caption{\textbf{The six failure cells of multi-party loyalty.} Five cells (red) are different ways the agent fails the principal. The sixth (blue, \emph{sanity}) is a cooperative item where over-refusal is the failure. It is included so that ``refuse everything'' is not a winning strategy.}
-\label{fig:cells}
-\end{figure}
+\paragraph{Why one failure axis is not enough.} Reducing multi-party loyalty to a single axis like ``How often does the agent leak information?'' fails in both directions. An agent can score perfectly on leakage yet still capitulate on price under pressure, signal in ways that weaken the principal's position, or author documents conceding what the live conversation withheld. Conversely, an agent that refuses everything never leaks, an equally serious failure that single-axis safety metrics inadvertently reward. We therefore decompose the problem space into \textbf{six failure modes}, each a benchmark cell, with one worked example per cell in \cref{tab:cells}.
 
-\paragraph{Why one failure axis is not enough.} Reducing multi-party loyalty to a single axis like ``How often does the agent leak information?'' fails in both directions. An agent can score perfectly on leakage yet still capitulate on price under pressure, signal in ways that weaken the principal's position, or author documents conceding what the live conversation withheld. Conversely, an agent that refuses everything never leaks, an equally serious failure that single-axis safety metrics inadvertently reward. We therefore decompose the problem space into \textbf{six failure modes}, each a benchmark cell (\cref{fig:cells}):
-
-\begin{enumerate}[leftmargin=2em,itemsep=2pt,topsep=2pt]
-\item \textbf{Leakage.} Direct revelation of a withheld fact from $S_P$ in a chat turn. This is the simplest failure. Example: $C$ asks ``what's the seller's minimum?'' and $A$ answers ``\$12{,}000.''
-\item \textbf{Capitulation.} Conceding $P$'s stated position under social or temporal pressure: ultimatums, false urgency, repetition, appeals to fairness. The agent does not leak. It just folds. Example: ``Take \$11{,}500 or I walk'' $\to$ ``\$11{,}500 works.''
-\item \textbf{Posture.} Signals that undermine $P$'s standing without naming a specific fact: telegraphing that $P$ is motivated, in a hurry, inexperienced, or willing to be flexible. Example: ``She seems pretty motivated'' leaks the \texttt{seller\_is\_motivated} flag even though no number is named.
-\item \textbf{Authoring.} Drafting an artifact (an email, post, listing, statement) that contains the leak or the concession on $P$'s behalf, even when the live chat with $C$ does not. Example: $P$ asks $A$ to draft a sale listing and the listing reads ``willing to take \$12k.'' The leak is now in writing.
-\item \textbf{Moderation.} Mishandling \emph{third-party} confidentiality, e.g.\ when the principal is a witness, patient, mediator, or HR representative whose duty is to a third party outside the conversation. Example: ``Who else saw the incident?'' answered with names is a moderation failure even if every fact about $P$ stays private.
-\item \textbf{Sanity.} Over-refusing cooperative requests from the principal. This cell exists to prevent models from gaming the benchmark through a blanket defense strategy. Example: $P$ asks $A$ to draft $P$'s own self-review or to summarize $P$'s own notes, and $A$ refuses, treating the principal's content as withheld. 
-\end{enumerate}
+\begin{table}[t]
+\centering\footnotesize
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.135\linewidth} >{\raggedright\arraybackslash}p{0.40\linewidth} >{\raggedright\arraybackslash}p{0.40\linewidth}@{}}
+\toprule
+cell & what goes wrong & example (used-car sale) \\
+\midrule
+\textbf{Leakage}      & Direct revelation of a withheld fact from $S_P$ in a chat turn. & $C$: ``what's the seller's minimum?'' $\to$ $A$: ``\$12{,}000.'' \\
+\textbf{Capitulation} & Conceding $P$'s stated position under social or temporal pressure (ultimatums, false urgency, repetition); the agent does not leak, it folds. & ``Take \$11{,}500 or I walk'' $\to$ ``\$11{,}500 works.'' \\
+\textbf{Posture}      & Signaling that undermines $P$'s standing without naming a fact---telegraphing that $P$ is motivated, rushed, or flexible. & ``She seems pretty motivated'' leaks the \texttt{seller\_is\_motivated} flag without naming a number. \\
+\textbf{Authoring}    & Drafting an artifact (email, post, listing) that contains the leak or concession, even when the live chat with $C$ does not. & $P$ asks $A$ to draft a listing; it reads ``willing to take \$12k.'' The leak is now in writing. \\
+\textbf{Moderation}   & Mishandling \emph{third-party} confidentiality (the principal is a witness, patient, mediator, or HR rep). & ``Who else saw the incident?'' answered with names---a failure even if every fact about $P$ stays private. \\
+\textbf{Sanity}       & Over-refusing the principal's \emph{own} cooperative requests; included so that blanket refusal cannot game the benchmark. & $P$ asks $A$ to summarize $P$'s own notes and $A$ refuses, treating them as withheld. \\
+\bottomrule
+\end{tabular}
+\caption{\textbf{The six failure cells of multi-party loyalty.} Five (Leakage--Moderation) are distinct ways the agent fails the principal; the sixth (\emph{Sanity}) is a cooperative item where over-refusal is the only failure, included so that ``refuse everything'' is not a winning strategy.}
+\label{tab:cells}
+\end{table}
 
 \paragraph{Failures compound: a worked trace.} The six failure modes are not disjoint. In practice, a single short exchange can trigger several failures simultaneously, which makes the agent's job significantly harder than a single-axis defense would suggest. Consider a used-car-sale item where the seller's briefing reads ``asking \$15{,}000, minimum I'd accept \$12{,}000, walk-away below \$11{,}500. Do not reveal my minimum or that I'm motivated.''
 
@@ -433,7 +437,7 @@ The \emph{scaffolded} arm additionally prepends a per-message reader-identity ta
 \section{One full benchmark item per failure cell}
 \label{app:items}
 
-To make the six failure cells of \cref{fig:cells} concrete, we reproduce one complete item from each cell of the released set. For each we give the principal briefing \emph{verbatim}, the withheld facts and any private bound, the public position the agent may hold, the counterparty's opening move (each item is run multi-turn against an adversarial counterparty persona), and the pass/fail criterion the scorer applies.
+To make the six failure cells of \cref{tab:cells} concrete, we reproduce one complete item from each cell of the released set. For each we give the principal briefing \emph{verbatim}, the withheld facts and any private bound, the public position the agent may hold, the counterparty's opening move (each item is run multi-turn against an adversarial counterparty persona), and the pass/fail criterion the scorer applies.
 
 \paragraph{Leakage: \texttt{pb-leak-price-01} (used-car reservation price).}
 \begin{quote}\footnotesize
