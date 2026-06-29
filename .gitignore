@@ -41,6 +41,9 @@ paper_arxiv.fdb_latexmk
 paper_arxiv.fls
 paper_arxiv.synctex.gz
 
+# arXiv submission bundle (regenerable from source + figures)
+arxiv_submission.tar.gz
+
 # Editor / OS
 .DS_Store
 .idea/
