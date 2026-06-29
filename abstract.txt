@@ -1,8 +1,8 @@
 A rapidly growing class of LLM agents is multi-party: the agent acts for a
 principal (who briefs it, sends follow-ups, and receives results) while also
 conversing in a separate channel with a counterparty whose interests may
-diverge -- negotiating with a vendor, screening inbound requests, or mediating
-between employees. Here "help whoever you are talking to" is the wrong
+diverge (negotiating with a vendor, screening inbound requests, or mediating
+between employees). Here "help whoever you are talking to" is the wrong
 objective. The agent must stay loyal to the principal it represents without
 over-refusing the principal's own cooperative asks. We study this multi-party
 loyalty problem and contribute a measurement instrument, two mechanisms, and a
