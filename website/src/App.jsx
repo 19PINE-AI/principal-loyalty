@@ -1,16 +1,12 @@
 import { Routes, Route, NavLink, Link } from 'react-router-dom'
 import Overview from './pages/Overview.jsx'
 import Explorer from './pages/Explorer.jsx'
-import Items from './pages/Items.jsx'
-import Subjects from './pages/Subjects.jsx'
 import Training from './pages/Training.jsx'
 
 const NAV = [
   { to: '/',          label: 'Overview' },
-  { to: '/explorer',  label: 'Benchmark explorer' },
-  { to: '/subjects',  label: 'Frontier subjects' },
+  { to: '/explorer',  label: 'Principal Bench' },
   { to: '/training',  label: 'Training & variants' },
-  { to: '/items',     label: 'Test items' },
 ]
 
 function Nav() {
@@ -22,7 +18,7 @@ function Nav() {
     <header className="bg-white border-b border-ink/10 sticky top-0 z-30 backdrop-blur">
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-6 flex-wrap">
         <Link to="/" className="flex items-baseline gap-3 shrink-0">
-          <span className="font-bold text-lg tracking-tight">PrincipalBench</span>
+          <span className="font-bold text-lg tracking-tight">Principal Loyalty</span>
           <span className="text-xs text-ink/50 mono hidden sm:inline">multi-party loyalty</span>
         </Link>
         <nav className="flex flex-wrap gap-1">
@@ -38,7 +34,7 @@ function Footer() {
     <footer className="mt-20 border-t border-ink/10 bg-white">
       <div className="max-w-7xl mx-auto px-6 py-8 text-sm text-ink/60 flex flex-wrap gap-6 justify-between">
         <div>
-          <div className="font-semibold text-ink/80">PrincipalBench — Companion site</div>
+          <div className="font-semibold text-ink/80">Principal Loyalty — Companion site</div>
           <div className="mt-1">Whose Side Is Your Agent On? Multi-Party Principal Loyalty in LLM Agents.</div>
         </div>
         <div className="text-right">
@@ -59,8 +55,6 @@ function App() {
         <Routes>
           <Route path="/" element={<Overview />} />
           <Route path="/explorer" element={<Explorer />} />
-          <Route path="/items" element={<Items />} />
-          <Route path="/subjects" element={<Subjects />} />
           <Route path="/training" element={<Training />} />
         </Routes>
       </main>

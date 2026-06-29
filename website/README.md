@@ -1,6 +1,6 @@
-# PrincipalBench companion site
+# Principal Loyalty companion site
 
-A static React app that lets you browse the 75 benchmark items, compare the 13 frontier subjects, inspect the per-token-KL training runs, and read sample agent/counterparty conversations from the paper *Whose Side Is Your Agent On? Multi-Party Principal Loyalty in LLM Agents*.
+A static React app that lets you browse the 75 benchmark items, compare the 13 frontier models, inspect the per-token-KL training runs, and read sample agent/counterparty conversations from the paper *Whose Side Is Your Agent On? Multi-Party Principal Loyalty in LLM Agents*.
 
 ## Stack
 
@@ -49,12 +49,10 @@ The script reads `items/v0`, `items/v0_75`, `runs/phase4_promptv4_*/scored.jsonl
 ## Pages
 
 - **Overview** (`/`) — six failure cells, headline numbers, leak/MI floor scatter
-- **Benchmark explorer** (`/explorer`) — per-item task definition, the 13-subject × 3-arm result matrix, and the full agent transcript + judge verdict (with leak evidence) behind every cell
-- **Frontier subjects** (`/subjects`) — calibrated/over-refuse split with per-arm + held-out breakdowns
+- **Principal Bench** (`/explorer`) — searchable catalog of every benchmark item plus the 13-model × 3-arm result matrix and the full agent transcript + judge verdict (with leak evidence) behind every cell
 - **Training & variants** (`/training`) — distillation variant ladder and K-iteration line charts
-- **Test items** (`/items`) — searchable grid of all 75 items with details panel
 
-The explorer reads `explorer_index.json` and per-item `explorer/<id>.json` files (item meta + every subject×arm transcript, judge sub-flags, and leak evidence), emitted by `scripts/build_website_data.py`.
+Principal Bench reads `explorer_index.json` and per-item `explorer/<id>.json` files (item meta + every model×arm transcript, judge sub-flags, and leak evidence), emitted by `scripts/build_website_data.py`.
 
 ## Deploy
 

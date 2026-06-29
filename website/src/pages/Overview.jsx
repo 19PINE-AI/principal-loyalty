@@ -42,21 +42,21 @@ export default function Overview() {
           even as the <strong>counterparty</strong> probes, pressures, and flatters.
         </p>
         <p className="mt-3 max-w-3xl text-ink/70">
-          This site lets you browse the 75-item benchmark, compare 13 frontier subjects,
-          inspect the per-token-KL distillation runs, and — in the{' '}
-          <Link to="/explorer" className="text-mech1 font-medium hover:underline">benchmark explorer</Link> —
+          This site lets you browse the 75-item benchmark across 13 frontier models,
+          inspect the per-token-KL distillation runs, and — in{' '}
+          <Link to="/explorer" className="text-mech1 font-medium hover:underline">Principal Bench</Link> —
           open any item to read every model's transcript and the judge's verdict behind each result.
         </p>
 
-        {/* benchmark explorer — the centerpiece */}
+        {/* Principal Bench — the centerpiece */}
         <Link to="/explorer"
           className="group mt-8 block rounded-2xl border border-mech1/30 bg-gradient-to-br from-mech1/[0.07] via-white to-mech2/[0.07] p-6 hover:border-mech1/60 hover:shadow-lg transition">
           <div className="flex flex-wrap items-center justify-between gap-5">
             <div className="min-w-0">
               <div className="text-xs font-mono uppercase tracking-widest text-mech1">Start here · interactive</div>
-              <div className="text-2xl font-bold mt-1 group-hover:text-mech1 transition-colors">Open the benchmark explorer →</div>
+              <div className="text-2xl font-bold mt-1 group-hover:text-mech1 transition-colors">Open Principal Bench →</div>
               <p className="text-ink/70 mt-1.5 max-w-2xl text-sm">
-                Every benchmark item, the full subject × arm result matrix, and the raw agent transcript
+                Every benchmark item, the full model × arm result matrix, and the raw agent transcript
                 with the judge's verdict and leak evidence behind every cell.
               </p>
             </div>
@@ -87,7 +87,7 @@ export default function Overview() {
       {head && (
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
           <Stat value={head.items_total}   label="Multi-turn items (50 training + 25 held-out)" />
-          <Stat value={head.frontier_subjects} label="Frontier LLM subjects evaluated" />
+          <Stat value={head.frontier_subjects} label="Frontier LLMs evaluated" />
           <Stat value={`${head.claude_sonnet_scaffolded_harm_pct}%`} label="Claude-Sonnet harm under the loyalty scaffold" accent="text-mech2" />
           <Stat value={`${head.qwen8b_pertoken_kl_iter1_harm}/108`} label="Per-token-KL 8B distilled student" accent="text-mech1" />
         </section>
@@ -146,16 +146,11 @@ export default function Overview() {
       </section>
 
       {/* CTA grid */}
-      <section className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+      <section className="grid sm:grid-cols-2 gap-4 mb-8">
         <Link to="/explorer" className="block bg-white border border-ink/10 rounded-xl p-6 hover:border-mech1/40 hover:shadow-md transition">
           <div className="text-xs font-mono text-ink/50 uppercase tracking-wider">Explore</div>
           <div className="text-xl font-semibold mt-1">Every item × model</div>
-          <p className="text-ink/60 mt-2 text-sm">Open any evaluated item, see the subject × arm result matrix, and read each agent transcript with the judge's verdict.</p>
-        </Link>
-        <Link to="/subjects" className="block bg-white border border-ink/10 rounded-xl p-6 hover:border-mech1/40 hover:shadow-md transition">
-          <div className="text-xs font-mono text-ink/50 uppercase tracking-wider">Compare</div>
-          <div className="text-xl font-semibold mt-1">13 frontier subjects</div>
-          <p className="text-ink/60 mt-2 text-sm">Selective vs over-refusing cluster, per-arm decomposition, held-out validation.</p>
+          <p className="text-ink/60 mt-2 text-sm">Open any evaluated item, see the model × arm result matrix, and read each agent transcript with the judge's verdict.</p>
         </Link>
         <Link to="/training" className="block bg-white border border-ink/10 rounded-xl p-6 hover:border-mech1/40 hover:shadow-md transition">
           <div className="text-xs font-mono text-ink/50 uppercase tracking-wider">Inspect</div>
