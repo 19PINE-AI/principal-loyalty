@@ -189,7 +189,7 @@ print(f"subjects: {len(subjects)} | per-arm runs: {len(subject_arms)} | held-out
 
 # ---------- variants ladder (paper Fig 4) ----------
 variants = [
-    {"name": "v4.1 base",      "harm": 56, "color": "#94a3b8", "sig": "",        "kind": "base"},
+    {"name": "Base (SFT+DPO)", "harm": 56, "color": "#94a3b8", "sig": "",        "kind": "base"},
     {"name": "Per-turn DPO",   "harm": 54, "color": "#fbbf24", "sig": "n.s.",    "kind": "variant"},
     {"name": "Per-turn SFT i1","harm": 44, "color": "#84cc16", "sig": "p=.10",   "kind": "variant"},
     {"name": "Per-turn SFT i2","harm": 36, "color": "#84cc16", "sig": "p=.10",   "kind": "variant"},

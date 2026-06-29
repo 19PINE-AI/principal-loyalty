@@ -76,12 +76,14 @@ export default function Training() {
   return (
     <div className="max-w-7xl mx-auto px-6 py-10 space-y-12">
       <div>
-        <h1 className="text-3xl font-bold serif">Training & distillation variants</h1>
+        <h1 className="text-3xl font-bold serif">Training open models to be loyal</h1>
         <p className="text-ink/70 mt-1 max-w-3xl">
-          For an open-weight student (Qwen3-8B at an in-house SFT+DPO endpoint),
-          we compare three distillation objectives on identical on-policy data, then
-          iterate per-token KL across K rounds. The same recipe is replicated on Llama-3.1-8B
-          with a same-family teacher.
+          The loyalty scaffold (Mechanism 1) only works when you can set the system prompt. For
+          open-weight models we instead bake the behavior into the weights by <strong>distillation</strong>:
+          a strong model prompted with the scaffold is the <em>teacher</em>, and a small open model — the
+          <em> student</em> (Qwen3-8B) — is trained to imitate it, so it stays loyal with no special prompt
+          at deployment. This page compares three ways to train the student, then repeats the best one over
+          several rounds. The punchline: every method runs into the same leak / over-refusal trade-off.
         </p>
       </div>
 
@@ -96,30 +98,36 @@ export default function Training() {
         </div>
         <div className="bg-white border border-ink/10 rounded-xl p-4">
           <VariantsChart variants={variants} />
-          <div className="text-xs text-ink/60 mt-2">
-            Per-token forward-KL is the only distillation variant whose harm gain is statistically
-            distinguishable from seed noise at multi-seed n=5 (p = 0.011). Per-turn DPO is essentially flat;
-            a DAPO-style RL checkpoint regresses from the per-token-KL optimum.
+          <div className="text-xs text-ink/60 mt-2 space-y-1">
+            <div><strong>Shorter bars are better</strong> — fewer harmful responses out of 108 (the 36 items × 3 prompt conditions). Three ways to train the student on the teacher's behavior:</div>
+            <div className="text-ink/55">
+              <span className="mono text-ink/70">per-turn SFT</span> — copy the teacher's whole reply ·
+              <span className="mono text-ink/70"> per-turn DPO</span> — prefer the teacher's reply over the student's ·
+              <span className="mono text-ink/70"> per-token KL</span> — match the teacher's word-by-word probabilities.
+            </div>
+            <div>Only per-token KL beats run-to-run noise (five eval seeds, p = 0.011). <span className="mono">DAPO</span> — a reinforcement-learning baseline — actually regresses from it.</div>
           </div>
         </div>
       </section>
 
       <section>
-        <h2 className="text-xl font-semibold mb-3">Multi-seed Wilcoxon (per-token KL vs base)</h2>
+        <h2 className="text-xl font-semibold mb-3">Is the gain real? (per-token KL vs. base)</h2>
         <p className="text-ink/70 text-sm max-w-3xl mb-4">
-          Paired Wilcoxon signed-rank on per-cell fire counts, comparing five evaluation seeds of the
-          per-token-KL checkpoint against five matched seeds of the SFT+DPO base.
+          A paired Wilcoxon test — a standard check of whether an improvement is real or just
+          random variation between training runs — comparing five evaluation seeds of the per-token-KL
+          model against five matched seeds of the starting model. Only the <em>harm</em> axis separates
+          from noise; the others move within run-to-run spread.
         </p>
         <WilcoxonChart />
       </section>
 
       <section>
-        <h2 className="text-xl font-semibold mb-3">K-iteration trajectories</h2>
+        <h2 className="text-xl font-semibold mb-3">Repeating the training, round after round</h2>
         <p className="text-ink/70 text-sm max-w-3xl mb-4">
-          Re-sample student trajectories from each iteration-K checkpoint and re-distill.
-          The Qwen family <em>orbits</em> a trade-off (iter 1 = harm-min, iter 2 = leak/bound-min,
-          iter 5 swings back). Llama descends monotonically to iter 3 and plateaus at iter 4.
-          Hover any point to see all four sub-flag fires.
+          Each round, the improved student holds fresh conversations and the teacher corrects them again,
+          then we re-train. Rather than steadily improving, Qwen <em>orbits</em> the trade-off (round 1
+          minimizes harm, round 2 minimizes leaks, round 5 swings back). Llama improves to round 3 and then
+          plateaus. Either way, no round is better on every axis at once. Hover any point for all four scores.
         </p>
         <div className="grid lg:grid-cols-2 gap-4">
           <div className="bg-white border border-ink/10 rounded-xl p-4">
@@ -140,11 +148,12 @@ export default function Training() {
       </section>
 
       <section>
-        <h2 className="text-xl font-semibold mb-3">Teacher self-validation</h2>
+        <h2 className="text-xl font-semibold mb-3">Checking the teacher first</h2>
         <p className="text-ink/70 text-sm max-w-3xl mb-4">
-          The open Qwen3-32B-AWQ teacher (used because Claude does not expose logits) matches Claude on
-          harm and missed-instruction but leaks much more — and the student inherits a harm-low,
-          leak-tolerant profile.
+          Per-token KL needs the teacher's word-by-word probabilities, which the Claude API doesn't expose,
+          so the teacher is an open model (Qwen3-32B) prompted with the scaffold. Before trusting it, we
+          verify it is actually good: it matches Claude on harm and over-refusal but leaks more — which is
+          why the student it produces ends up low-harm but leak-tolerant.
         </p>
         <TeacherChart />
       </section>
