@@ -22,6 +22,17 @@
   "harm_pct": 8.8
  },
  {
+  "key": "qwen32b",
+  "display": "Qwen3-32B",
+  "cluster": "calibrated",
+  "n": 68,
+  "harm": 12,
+  "leak": 18,
+  "bound": 9,
+  "mi": 3,
+  "harm_pct": 17.6
+ },
+ {
   "key": "claude_opus",
   "display": "Claude-Opus",
   "cluster": "calibrated",
@@ -97,5 +108,16 @@
   "bound": 0,
   "mi": 67,
   "harm_pct": 93.1
+ },
+ {
+  "key": "qwen35_27b",
+  "display": "Qwen3.5-27B",
+  "cluster": "over-refuse",
+  "n": 68,
+  "harm": 53,
+  "leak": 0,
+  "bound": 0,
+  "mi": 53,
+  "harm_pct": 77.9
  }
 ]

@@ -29,8 +29,16 @@ OUT.mkdir(parents=True, exist_ok=True)
 def jsonl(path: Path):
     if not path.exists():
         return []
+    out = []
     with path.open() as f:
-        return [json.loads(l) for l in f if l.strip()]
+        for l in f:
+            if not l.strip():
+                continue
+            try:
+                out.append(json.loads(l))
+            except json.JSONDecodeError:
+                continue  # skip truncated/partial lines
+    return out
 
 
 def load_items(dirname: str):
@@ -125,19 +133,19 @@ cells = [
 # prompted/scaffolded come from runs/phase4_promptv4_<subject>/scored.jsonl.
 subjects_meta = [
     # (subject_key, display, cluster, run_dir, run_dir_heldout, plain, prompted, scaffolded, agg_mean, agg_sd)
-    ("gemini25flash",       "Gemini-2.5-flash",         "calibrated",  "phase4_promptv4_gemini25flash",     None,                                       17, 20, 14,  5.5, 6.3),
-    ("mistral_large",       "Mistral-Large",            "calibrated",  "phase4_promptv4_mistral_large",     None,                                       11, 14, 11, 11.0, 2.8),
+    ("gemini25flash",       "Gemini-2.5-flash",         "calibrated",  "phase4_promptv4_gemini25flash",     None,                                       19, 14, 17,  5.5, 6.3),
+    ("mistral_large",       "Mistral-Large",            "calibrated",  "phase4_promptv4_mistral_large",     None,                                        9,  6, 22, 11.0, 2.8),
     ("gemini3p1_lite",      "Gemini-3p1-flash-lite",    "calibrated",  "phase4_promptv4_gemini3p1_lite",    "phase4_promptv4_gemini3p1_lite_heldout",   17, 17,  0, 12.0, 2.1),
     ("deepseek",            "DeepSeek-v3.1",            "calibrated",  "phase4_promptv4_deepseek",          "phase4_promptv4_deepseek_heldout",         11,  9, 11, 12.3, 2.5),
-    ("qwen32b",             "Qwen3-32B",                "calibrated",  None,                                None,                                       24, 12, 14, 16.3, 2.6),
+    ("qwen32b",             "Qwen3-32B",                "calibrated",  "phase4_promptv4_qwen32b_openrouter","phase4_promptv4_qwen32b_openrouter_heldout",25, 12, 14, 16.5, 2.6),
     ("claude_opus",         "Claude-Opus",              "calibrated",  "phase4_promptv4_claude_opus",       "phase4_promptv4_claude_opus_heldout",      11, 19, 19, 18.1, 2.8),
-    ("llama70b",            "Llama-3.1-70B",            "calibrated",  "phase4_promptv4_llama70b",          "phase4_promptv4_llama70b_heldout",          9, 14, 22, 19.2, 2.7),
+    ("llama70b",            "Llama-3.1-70B",            "calibrated",  "phase4_promptv4_llama70b",          "phase4_promptv4_llama70b_heldout",         11, 21, 17, 19.2, 2.7),
     ("gemini3flash",        "Gemini-3-flash",           "calibrated",  "phase4_promptv4_gemini3flash",      "phase4_promptv4_gemini3flash_heldout",     17, 20, 15, 19.4, 2.3),
-    ("claude_sonnet",       "Claude-Sonnet",            "calibrated",  None,                                "phase4_promptv4_claude_heldout",           19, 22, 17, 19.5, 1.5),
-    ("glm46",               "GLM-4.6",                  "intermediate","phase4_promptv4_glm46",             "phase4_promptv4_glm46_heldout",            51, 52, 43, 46.0, 2.9),
-    ("gpt5mini",            "GPT-5-mini",               "over-refuse", "phase4_promptv4_gpt5mini",          "phase4_promptv4_gpt5mini_heldout",         55, 67, 64, 53.6, 5.1),
+    ("claude_sonnet",       "Claude-Sonnet",            "calibrated",  "phase4_promptv4_claude_seed2",      "phase4_promptv4_claude_heldout",           19, 22, 17, 19.5, 1.5),
+    ("glm46",               "GLM-4.6",                  "intermediate","phase4_promptv4_glm46",             "phase4_promptv4_glm46_heldout",            43, 61, 43, 46.0, 2.9),
+    ("gpt5mini",            "GPT-5-mini",               "over-refuse", "phase4_promptv4_gpt5mini",          "phase4_promptv4_gpt5mini_heldout",         44, 76, 65, 53.6, 5.1),
     ("gpt5",                "GPT-5",                    "over-refuse", "phase4_promptv4_gpt5",              "phase4_promptv4_gpt5_heldout",             63, 71, 71, 71.1, 2.2),
-    ("qwen35_27b",          "Qwen3.5-27B",              "over-refuse", None,                                None,                                       72, 79, 59, 75.3, 2.9),
+    ("qwen35_27b",          "Qwen3.5-27B",              "over-refuse", "phase4_promptv4_qwen27b",           "phase4_promptv4_qwen27b_heldout",          72, 79, 59, 75.3, 2.9),
 ]
 
 subjects = []
@@ -186,7 +194,7 @@ variants = [
     {"name": "Per-turn SFT i1","harm": 44, "color": "#84cc16", "sig": "p=.10",   "kind": "variant"},
     {"name": "Per-turn SFT i2","harm": 36, "color": "#84cc16", "sig": "p=.10",   "kind": "variant"},
     {"name": "Per-token KL i1","harm": 33, "color": "#7c3aed", "sig": "p=.011*", "kind": "mechanism"},
-    {"name": "Per-token KL i2","harm": 38, "color": "#7c3aed", "sig": "p=.012*", "kind": "mechanism"},
+    {"name": "Per-token KL i2","harm": 38, "color": "#7c3aed", "sig": "p=.044*", "kind": "mechanism"},
     {"name": "Claude + scaffold","harm":21,"color": "#0891b2", "sig": "",        "kind": "mechanism"},
 ]
 (OUT / "variants.json").write_text(json.dumps(variants, indent=1))
@@ -375,6 +383,107 @@ headline = {
     "pertoken_kl_p": 0.0114,
 }
 (OUT / "headline.json").write_text(json.dumps(headline, indent=1))
+
+
+# ---------- comprehensive per-item explorer (all subjects × arms) ----------
+# For every benchmark item, gather each evaluated subject's full transcript and
+# the judge's verdict under each prompt arm, so readers can inspect the raw
+# agent responses and the evaluation behind every cell of the result matrix.
+EXPLORER_SUBJECTS = [
+    ("claude_sonnet",  "Claude-Sonnet",         "calibrated",   ["phase4_promptv4_claude_seed2",        "phase4_promptv4_claude_heldout"]),
+    ("claude_opus",    "Claude-Opus",           "calibrated",   ["phase4_promptv4_claude_opus",         "phase4_promptv4_claude_opus_heldout"]),
+    ("deepseek",       "DeepSeek-v3.1",         "calibrated",   ["phase4_promptv4_deepseek",            "phase4_promptv4_deepseek_heldout"]),
+    ("gemini25flash",  "Gemini-2.5-flash",      "calibrated",   ["phase4_promptv4_gemini25flash"]),
+    ("gemini3flash",   "Gemini-3-flash",        "calibrated",   ["phase4_promptv4_gemini3flash",        "phase4_promptv4_gemini3flash_heldout"]),
+    ("gemini3p1_lite", "Gemini-3p1-flash-lite", "calibrated",   ["phase4_promptv4_gemini3p1_lite",      "phase4_promptv4_gemini3p1_lite_heldout"]),
+    ("llama70b",       "Llama-3.1-70B",         "calibrated",   ["phase4_promptv4_llama70b",            "phase4_promptv4_llama70b_heldout"]),
+    ("mistral_large",  "Mistral-Large",         "calibrated",   ["phase4_promptv4_mistral_large",       "phase4_promptv4_mistral_large_heldout"]),
+    ("qwen32b",        "Qwen3-32B",             "calibrated",   ["phase4_promptv4_qwen32b_openrouter",  "phase4_promptv4_qwen32b_openrouter_heldout"]),
+    ("glm46",          "GLM-4.6",               "intermediate", ["phase4_promptv4_glm46",               "phase4_promptv4_glm46_heldout"]),
+    ("gpt5mini",       "GPT-5-mini",            "over-refuse",  ["phase4_promptv4_gpt5mini",            "phase4_promptv4_gpt5mini_heldout"]),
+    ("gpt5",           "GPT-5",                 "over-refuse",  ["phase4_promptv4_gpt5",                "phase4_promptv4_gpt5_heldout"]),
+    ("qwen35_27b",     "Qwen3.5-27B",           "over-refuse",  ["phase4_promptv4_qwen27b",             "phase4_promptv4_qwen27b_heldout"]),
+]
+ARMS = ["plain", "prompted", "scaffolded"]
+ARM_ORDER = {a: i for i, a in enumerate(ARMS)}
+CLUSTER_ORDER = {"calibrated": 0, "intermediate": 1, "over-refuse": 2}
+
+
+def clean_turns(turns):
+    out = []
+    for t in turns:
+        sp = t.get("speaker", "")
+        if sp not in ("agent", "counterparty", "principal"):
+            continue
+        out.append({"speaker": sp, "text": (t.get("text") or "").strip()})
+    return out
+
+
+explorer = {}
+for it in all_items:
+    explorer[it["id"]] = {
+        "id": it["id"], "cell": it["cell"], "subcell": it["subcell"],
+        "title": it["title"], "split": it["split"],
+        "principal_briefing": it["principal_briefing"],
+        "private_facts": it["private_facts"],
+        "private_bounds": it["private_bounds"],
+        "stated_positions": it["stated_positions"],
+        "counterparty_persona": it["counterparty_persona"],
+        "counterparty_strategy": it["counterparty_strategy"],
+        "counterparty_opening": it["counterparty_opening"],
+        "runs": [],
+    }
+
+for key, disp, cluster, run_dirs in EXPLORER_SUBJECTS:
+    for rd in run_dirs:
+        scored = {}
+        for r in jsonl(ROOT / "runs" / rd / "scored.jsonl"):
+            scored[(r.get("item_id"), r.get("arm"))] = r
+        for t in jsonl(ROOT / "runs" / rd / "trajectories.jsonl"):
+            iid, arm = t.get("item_id"), t.get("arm")
+            if iid not in explorer:
+                continue
+            s = scored.get((iid, arm)) or {}
+            h = s.get("harm") or {}
+            explorer[iid]["runs"].append({
+                "subject": key, "display": disp, "cluster": cluster, "arm": arm,
+                "scored": bool(s),
+                "harm_fire": bool(h.get("harm_fire")),
+                "leak_rate": s.get("leak_rate", 0) or 0,
+                "n_leaked": s.get("n_leaked", 0) or 0,
+                "n_withhold": s.get("n_withhold", 0) or 0,
+                "leaked_private_bound": bool(h.get("leaked_private_bound")),
+                "missed_instruction": bool(h.get("missed_instruction")),
+                "fabrication": bool(h.get("fabrication")),
+                "deception": bool(h.get("deception")),
+                "against_principal": bool(h.get("against_principal")),
+                "notes": h.get("notes", ""),
+                "leaks": [
+                    {"fact": lk.get("fact_name", ""), "leaked": bool(lk.get("leaked")),
+                     "evidence": (lk.get("evidence") or "")[:400]}
+                    for lk in (s.get("leaks") or [])
+                ],
+                "n_agent_turns": t.get("n_agent_turns", 0),
+                "early_end_reason": t.get("early_end_reason", ""),
+                "turns": clean_turns(t.get("turns", [])),
+            })
+
+(OUT / "explorer").mkdir(exist_ok=True)
+explorer_index = []
+for iid, doc in explorer.items():
+    doc["runs"].sort(key=lambda r: (CLUSTER_ORDER.get(r["cluster"], 9), r["display"], ARM_ORDER.get(r["arm"], 9)))
+    n_runs = len(doc["runs"])
+    n_harm = sum(1 for r in doc["runs"] if r["harm_fire"])
+    (OUT / "explorer" / f"{iid}.json").write_text(json.dumps(doc, separators=(",", ":")))
+    explorer_index.append({
+        "id": iid, "cell": doc["cell"], "subcell": doc["subcell"],
+        "title": doc["title"], "split": doc["split"], "n_runs": n_runs,
+        "harm_rate": round(100.0 * n_harm / n_runs) if n_runs else None,
+    })
+explorer_index.sort(key=lambda e: (e["cell"], e["id"]))
+(OUT / "explorer_index.json").write_text(json.dumps(explorer_index, indent=1))
+print(f"explorer: {sum(1 for e in explorer_index if e['n_runs'])} items with runs / "
+      f"{len(explorer_index)} total; {sum(e['n_runs'] for e in explorer_index)} subject×arm cells")
 
 
 print("[done] data extracted to website/public/data/")

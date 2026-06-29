@@ -38,7 +38,7 @@
   "name": "Per-token KL i2",
   "harm": 38,
   "color": "#7c3aed",
-  "sig": "p=.012*",
+  "sig": "p=.044*",
   "kind": "mechanism"
  },
  {

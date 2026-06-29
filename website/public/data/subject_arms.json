@@ -311,6 +311,84 @@
    }
   }
  },
+ "qwen32b": {
+  "display": "Qwen3-32B",
+  "cluster": "calibrated",
+  "agg": {
+   "n": 111,
+   "harm": 18,
+   "leak": 33,
+   "bound": 3,
+   "mi": 17
+  },
+  "per_arm": {
+   "prompted": {
+    "n": 37,
+    "harm": 4,
+    "leak": 10,
+    "bound": 1,
+    "mi": 4
+   },
+   "scaffolded": {
+    "n": 37,
+    "harm": 5,
+    "leak": 8,
+    "bound": 2,
+    "mi": 5
+   },
+   "plain": {
+    "n": 37,
+    "harm": 9,
+    "leak": 15,
+    "bound": 0,
+    "mi": 8
+   }
+  },
+  "per_cell": {
+   "authoring": {
+    "n": 15,
+    "harm": 6,
+    "leak": 8,
+    "bound": 0,
+    "mi": 6
+   },
+   "sanity": {
+    "n": 35,
+    "harm": 6,
+    "leak": 0,
+    "bound": 0,
+    "mi": 5
+   },
+   "capitulation": {
+    "n": 17,
+    "harm": 3,
+    "leak": 9,
+    "bound": 3,
+    "mi": 3
+   },
+   "leakage": {
+    "n": 15,
+    "harm": 2,
+    "leak": 6,
+    "bound": 0,
+    "mi": 2
+   },
+   "moderation": {
+    "n": 15,
+    "harm": 1,
+    "leak": 5,
+    "bound": 0,
+    "mi": 1
+   },
+   "posture": {
+    "n": 14,
+    "harm": 0,
+    "leak": 5,
+    "bound": 0,
+    "mi": 0
+   }
+  }
+ },
  "claude_opus": {
   "display": "Claude-Opus",
   "cluster": "calibrated",
@@ -545,6 +623,84 @@
    }
   }
  },
+ "claude_sonnet": {
+  "display": "Claude-Sonnet",
+  "cluster": "calibrated",
+  "agg": {
+   "n": 105,
+   "harm": 22,
+   "leak": 14,
+   "bound": 6,
+   "mi": 21
+  },
+  "per_arm": {
+   "scaffolded": {
+    "n": 36,
+    "harm": 7,
+    "leak": 3,
+    "bound": 2,
+    "mi": 7
+   },
+   "plain": {
+    "n": 35,
+    "harm": 6,
+    "leak": 8,
+    "bound": 3,
+    "mi": 5
+   },
+   "prompted": {
+    "n": 34,
+    "harm": 9,
+    "leak": 3,
+    "bound": 1,
+    "mi": 9
+   }
+  },
+  "per_cell": {
+   "authoring": {
+    "n": 15,
+    "harm": 1,
+    "leak": 2,
+    "bound": 0,
+    "mi": 1
+   },
+   "sanity": {
+    "n": 29,
+    "harm": 11,
+    "leak": 0,
+    "bound": 0,
+    "mi": 10
+   },
+   "capitulation": {
+    "n": 17,
+    "harm": 7,
+    "leak": 5,
+    "bound": 6,
+    "mi": 7
+   },
+   "leakage": {
+    "n": 14,
+    "harm": 1,
+    "leak": 3,
+    "bound": 0,
+    "mi": 1
+   },
+   "moderation": {
+    "n": 15,
+    "harm": 1,
+    "leak": 0,
+    "bound": 0,
+    "mi": 1
+   },
+   "posture": {
+    "n": 15,
+    "harm": 1,
+    "leak": 4,
+    "bound": 0,
+    "mi": 1
+   }
+  }
+ },
  "glm46": {
   "display": "GLM-4.6",
   "cluster": "intermediate",
@@ -776,6 +932,84 @@
     "leak": 1,
     "bound": 0,
     "mi": 6
+   }
+  }
+ },
+ "qwen35_27b": {
+  "display": "Qwen3.5-27B",
+  "cluster": "over-refuse",
+  "agg": {
+   "n": 104,
+   "harm": 73,
+   "leak": 3,
+   "bound": 0,
+   "mi": 73
+  },
+  "per_arm": {
+   "prompted": {
+    "n": 34,
+    "harm": 27,
+    "leak": 0,
+    "bound": 0,
+    "mi": 27
+   },
+   "plain": {
+    "n": 36,
+    "harm": 26,
+    "leak": 1,
+    "bound": 0,
+    "mi": 26
+   },
+   "scaffolded": {
+    "n": 34,
+    "harm": 20,
+    "leak": 2,
+    "bound": 0,
+    "mi": 20
+   }
+  },
+  "per_cell": {
+   "authoring": {
+    "n": 14,
+    "harm": 5,
+    "leak": 2,
+    "bound": 0,
+    "mi": 5
+   },
+   "sanity": {
+    "n": 30,
+    "harm": 18,
+    "leak": 0,
+    "bound": 0,
+    "mi": 18
+   },
+   "capitulation": {
+    "n": 18,
+    "harm": 15,
+    "leak": 0,
+    "bound": 0,
+    "mi": 15
+   },
+   "leakage": {
+    "n": 14,
+    "harm": 12,
+    "leak": 1,
+    "bound": 0,
+    "mi": 12
+   },
+   "moderation": {
+    "n": 14,
+    "harm": 11,
+    "leak": 0,
+    "bound": 0,
+    "mi": 11
+   },
+   "posture": {
+    "n": 14,
+    "harm": 12,
+    "leak": 0,
+    "bound": 0,
+    "mi": 12
    }
   }
  }

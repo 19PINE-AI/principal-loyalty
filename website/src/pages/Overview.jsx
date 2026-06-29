@@ -37,7 +37,9 @@ export default function Overview() {
         </p>
         <p className="mt-3 max-w-3xl text-ink/70">
           This site lets you browse the 75-item benchmark, compare 13 frontier subjects,
-          inspect the per-token-KL distillation runs, and read sample conversations.
+          inspect the per-token-KL distillation runs, and — in the{' '}
+          <Link to="/explorer" className="text-mech1 font-medium hover:underline">benchmark explorer</Link> —
+          open any item to read every model's transcript and the judge's verdict behind each result.
         </p>
 
         <div className="mt-8">
@@ -69,11 +71,12 @@ export default function Overview() {
 
       {/* manifold scatter */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold mb-2">The leak / over-refusal floor</h2>
+        <h2 className="text-2xl font-bold mb-2">The leak / over-refusal Pareto frontier</h2>
         <p className="text-ink/70 max-w-3xl mb-4">
-          Plot every variant on a leak (x) vs missed-instruction (y) plane. The favorable lower-left
-          corner stays empty. Both mechanisms — the prompt-time scaffold and per-token-KL distillation —
-          move <em>along</em> this floor, never across it.
+          Plot every variant on a leak (x) vs missed-instruction (y) plane. The jointly favorable
+          lower-left corner stays empty. Both mechanisms — the prompt-time scaffold and per-token-KL
+          distillation — move <em>along</em> this frontier, never across it; single-objective
+          (scalar-reward) RL fails to break it too.
         </p>
         {manifold && (
           <div className="bg-white border border-ink/10 rounded-xl p-4">
@@ -117,15 +120,15 @@ export default function Overview() {
 
       {/* CTA grid */}
       <section className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <Link to="/items" className="block bg-white border border-ink/10 rounded-xl p-6 hover:border-mech1/40 hover:shadow-md transition">
-          <div className="text-xs font-mono text-ink/50 uppercase tracking-wider">Browse</div>
-          <div className="text-xl font-semibold mt-1">75 test items</div>
-          <p className="text-ink/60 mt-2 text-sm">Search and filter the full benchmark by cell, split, and counterparty strategy.</p>
+        <Link to="/explorer" className="block bg-white border border-ink/10 rounded-xl p-6 hover:border-mech1/40 hover:shadow-md transition">
+          <div className="text-xs font-mono text-ink/50 uppercase tracking-wider">Explore</div>
+          <div className="text-xl font-semibold mt-1">Every item × model</div>
+          <p className="text-ink/60 mt-2 text-sm">Open any evaluated item, see the subject × arm result matrix, and read each agent transcript with the judge's verdict.</p>
         </Link>
         <Link to="/subjects" className="block bg-white border border-ink/10 rounded-xl p-6 hover:border-mech1/40 hover:shadow-md transition">
           <div className="text-xs font-mono text-ink/50 uppercase tracking-wider">Compare</div>
           <div className="text-xl font-semibold mt-1">13 frontier subjects</div>
-          <p className="text-ink/60 mt-2 text-sm">Calibrated vs over-refuse cluster, per-arm decomposition, held-out validation.</p>
+          <p className="text-ink/60 mt-2 text-sm">Selective vs over-refusing cluster, per-arm decomposition, held-out validation.</p>
         </Link>
         <Link to="/training" className="block bg-white border border-ink/10 rounded-xl p-6 hover:border-mech1/40 hover:shadow-md transition">
           <div className="text-xs font-mono text-ink/50 uppercase tracking-wider">Inspect</div>

@@ -46,6 +46,14 @@ export const CLUSTER_COLORS = {
   'over-refuse':'#dc2626',
 }
 
+// The paper renames the clusters "selective" / "over-refusing"; data keys stay
+// stable while these labels are what the reader sees.
+export const CLUSTER_LABEL = {
+  calibrated:   'selective',
+  intermediate: 'intermediate',
+  'over-refuse':'over-refusing',
+}
+
 export const ARM_LABELS = {
   plain: 'Plain (no instructions)',
   prompted: 'Prompted (loyalty scaffold)',

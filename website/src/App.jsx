@@ -1,16 +1,16 @@
 import { Routes, Route, NavLink, Link } from 'react-router-dom'
 import Overview from './pages/Overview.jsx'
+import Explorer from './pages/Explorer.jsx'
 import Items from './pages/Items.jsx'
 import Subjects from './pages/Subjects.jsx'
 import Training from './pages/Training.jsx'
-import Trajectories from './pages/Trajectories.jsx'
 
 const NAV = [
-  { to: '/',             label: 'Overview' },
-  { to: '/items',        label: 'Test items' },
-  { to: '/subjects',     label: 'Frontier subjects' },
-  { to: '/training',     label: 'Training & variants' },
-  { to: '/trajectories', label: 'Sample conversations' },
+  { to: '/',          label: 'Overview' },
+  { to: '/explorer',  label: 'Benchmark explorer' },
+  { to: '/subjects',  label: 'Frontier subjects' },
+  { to: '/training',  label: 'Training & variants' },
+  { to: '/items',     label: 'Test items' },
 ]
 
 function Nav() {
@@ -42,7 +42,7 @@ function Footer() {
           <div className="mt-1">Whose Side Is Your Agent On? Multi-Party Principal Loyalty in LLM Agents.</div>
         </div>
         <div className="text-right">
-          <a href="https://github.com/bojieli/principal-loyalty" target="_blank" rel="noreferrer" className="hover:text-ink">GitHub</a>
+          <a href="https://github.com/19PINE-AI/principal-loyalty" target="_blank" rel="noreferrer" className="hover:text-ink">GitHub</a>
           <span className="mx-2">·</span>
           <a href="/paper_arxiv.pdf" target="_blank" rel="noreferrer" className="hover:text-ink">Paper PDF</a>
         </div>
@@ -58,10 +58,10 @@ function App() {
       <main className="flex-1">
         <Routes>
           <Route path="/" element={<Overview />} />
+          <Route path="/explorer" element={<Explorer />} />
           <Route path="/items" element={<Items />} />
           <Route path="/subjects" element={<Subjects />} />
           <Route path="/training" element={<Training />} />
-          <Route path="/trajectories" element={<Trajectories />} />
         </Routes>
       </main>
       <Footer />

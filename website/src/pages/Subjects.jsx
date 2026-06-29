@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useData, CLUSTER_COLORS, ARM_LABELS, CELL_DOT } from '../lib/useData.js'
+import { useData, CLUSTER_COLORS, CLUSTER_LABEL, ARM_LABELS, CELL_DOT } from '../lib/useData.js'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend, ReferenceLine,
 } from 'recharts'
@@ -12,7 +12,7 @@ function ClusterLegend() {
       {Object.entries(CLUSTER_COLORS).map(([k, v]) => (
         <div key={k} className="flex items-center gap-1.5">
           <span className="inline-block w-3 h-3 rounded-sm" style={{ background: v }} />
-          {k}
+          {CLUSTER_LABEL[k] || k}
         </div>
       ))}
     </div>
@@ -34,14 +34,14 @@ function MultiSeedChart({ subjects }) {
           return (
             <div className="bg-white px-3 py-2 rounded shadow border border-ink/10 text-sm">
               <div className="font-semibold">{d.display}</div>
-              <div className="mono text-xs text-ink/70">cluster: {d.cluster}</div>
+              <div className="mono text-xs text-ink/70">cluster: {CLUSTER_LABEL[d.cluster] || d.cluster}</div>
               <div className="mono text-xs mt-1">multi-seed mean: <b>{d.mean.toFixed(1)}%</b> ± {d.sd.toFixed(1)}</div>
               <div className="mono text-xs mt-1">single seed: plain {d.plain}% · prompted {d.prompted}% · scaffolded {d.scaffolded}%</div>
             </div>
           )
         }} />
-        <ReferenceLine y={20} stroke="#16a34a" strokeDasharray="4 4" label={{ value: 'calibrated ceiling 20%', fontSize: 10, fill: '#16a34a', position: 'left' }} />
-        <ReferenceLine y={53.6} stroke="#dc2626" strokeDasharray="4 4" label={{ value: 'over-refuse floor 53.6%', fontSize: 10, fill: '#dc2626', position: 'left' }} />
+        <ReferenceLine y={20} stroke="#16a34a" strokeDasharray="4 4" label={{ value: 'selective ≤ 20%', fontSize: 10, fill: '#16a34a', position: 'insideBottomRight' }} />
+        <ReferenceLine y={53.6} stroke="#dc2626" strokeDasharray="4 4" label={{ value: 'over-refusing ≥ 53.6%', fontSize: 10, fill: '#dc2626', position: 'insideTopRight' }} />
         <Bar dataKey="mean" radius={[3, 3, 0, 0]}>
           {data.map((d, i) => <Cell key={i} fill={d.fill} />)}
         </Bar>
@@ -155,21 +155,23 @@ export default function Subjects() {
         <h1 className="text-3xl font-bold serif">Frontier subjects</h1>
         <p className="text-ink/70 mt-1 max-w-3xl">
           Thirteen frontier LLMs evaluated under three system-prompt arms on the 36-item core,
-          with multi-seed n=5. The cluster split is sharp: nine calibrated subjects below 20% harm,
-          three over-refuse subjects above 53% — driven by missed-instruction, not leakage.
+          with multi-seed n=5. The cluster split is sharp: nine <strong>selective</strong> subjects
+          below 20% harm (they decline adversarial probes while still following the principal's
+          legitimate requests), three <strong>over-refusing</strong> subjects above 53% — driven by
+          missed-instruction, not leakage.
         </p>
       </div>
 
       <section>
         <div className="flex flex-wrap items-baseline justify-between mb-3 gap-3">
-          <h2 className="text-xl font-semibold">Calibrated vs over-refuse split</h2>
+          <h2 className="text-xl font-semibold">Selective vs over-refusing split</h2>
           <ClusterLegend />
         </div>
         <div className="bg-white border border-ink/10 rounded-xl p-4">
           <MultiSeedChart subjects={sortedSubjects} />
           <div className="text-xs text-ink/60 mt-2">
-            Multi-seed (n=5) mean harm, paired evaluation seeds, 36-item core. Calibrated cluster (green)
-            holds ≤ 20%; over-refuse cluster (red) is pegged on missed-instruction.
+            Multi-seed (n=5) mean harm, paired evaluation seeds, 36-item core. Selective cluster (green)
+            holds ≤ 20%; over-refusing cluster (red) is pegged on missed-instruction.
             Per-arm paired Wilcoxon vs cluster mean is significant at every arm
             (plain p = 1.8e-6, prompted p = 2.2e-7, scaffolded p = 5.9e-7).
           </div>
@@ -187,7 +189,7 @@ export default function Subjects() {
           ))}
         </div>
         <p className="text-xs text-ink/60 mt-2">
-          The over-refuse cluster fires 55–72% harm at the no-instruction <code className="mono">plain</code> arm,
+          The over-refusing cluster fires 55–72% harm at the no-instruction <code className="mono">plain</code> arm,
           before any loyalty scaffold is added — the split is intrinsic to post-training, not prompt-induced.
         </p>
       </section>
@@ -197,7 +199,7 @@ export default function Subjects() {
         <div className="bg-white border border-ink/10 rounded-xl p-4">
           <HeldoutChart held={held} />
           <div className="text-xs text-ink/60 mt-2">
-            On 24 items authored after training was frozen, calibrated subjects stay ≤ 24% and over-refuse
+            On 24 items authored after training was frozen, selective subjects stay ≤ 24% and over-refusing
             subjects ≥ 76%; GPT-5 amplifies from 71% to 93%. Per-arm test remains significant (p ≤ 1.8e-5).
           </div>
         </div>
