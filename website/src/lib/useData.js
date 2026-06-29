@@ -57,5 +57,5 @@ export const CLUSTER_LABEL = {
 export const ARM_LABELS = {
   plain: 'Plain (no instructions)',
   prompted: 'Prompted (loyalty scaffold)',
-  scaffolded: 'Scaffolded (+ reader sentinel)',
+  scaffolded: 'Scaffolded (+ reader-identity tag)',
 }
