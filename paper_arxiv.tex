@@ -336,23 +336,14 @@ iteration & harm & leak & bound & MI & harm & leak & bound & MI \\
 \label{sec:selfval}
 \textbf{Cross-family transfer.} Distilling Llama-3.1-8B from a same-family Llama-3.1-70B-Instruct-AWQ teacher (shared tokenizer) descends comparably to the Qwen3 headline (\cref{tab:kiter,fig:kiter}) and carries a comparable train-to-held-out gap (harm $15.7\%\to26.7\%$), confirming the recipe is not specific to a single base family.
 
-\textbf{Teacher self-validation.} The open teacher (Qwen3-32B-AWQ prompted with the loyalty scaffold, audit-gated, $n{=}31$) matches Claude-Sonnet's low harm and missed-instruction on the scaffolded arm but leaks far more (\cref{fig:teacher}). It trades \emph{leak for harm}, which is why the per-token-KL student inherits a harm-low, leak-tolerant profile.
+\textbf{Teacher self-validation.} The open teacher (Qwen3-32B-AWQ prompted with the loyalty scaffold, audit-gated, $n{=}31$) matches Claude-Sonnet's low harm and missed-instruction on the scaffolded arm but leaks far more (\cref{fig:teacher_robust}a). It trades \emph{leak for harm}, which is why the per-token-KL student inherits a harm-low, leak-tolerant profile.
 
-\textbf{Counterparty robustness and held-out generalization.} Swapping the counterparty model (Claude-Sonnet $\to$ GPT-5 $\to$ Gemini-3-flash) raises harm $33\to38\to49$ (\cref{fig:robustness}) but leak only $13\to14\to20$: the leak-axis gain transfers across counterparties more cleanly than the harm-axis gain. On held-out items the same checkpoint carries an $\approx$10-point train-to-held-out harm gap (\cref{fig:robustness}), the recipe's main caveat, which we examine in \cref{sec:limits}.
+\textbf{Counterparty robustness and held-out generalization.} Swapping the counterparty model (Claude-Sonnet $\to$ GPT-5 $\to$ Gemini-3-flash) raises harm $33\to38\to49$ (\cref{fig:teacher_robust}b) but leak only $13\to14\to20$: the leak-axis gain transfers across counterparties more cleanly than the harm-axis gain. On held-out items the same checkpoint carries an $\approx$10-point train-to-held-out harm gap (\cref{fig:teacher_robust}c), the recipe's main caveat, which we examine in \cref{sec:limits}.
 
 \begin{figure}[t]
 \centering
-\begin{subfigure}[t]{0.43\linewidth}\centering
-\includegraphics[width=\linewidth]{figures/arxiv_fig4_teacher.pdf}
-\caption{Teacher self-validation. The open teacher matches Claude on harm and missed-instruction but leaks much more.}
-\label{fig:teacher}
-\end{subfigure}\hfill
-\begin{subfigure}[t]{0.55\linewidth}\centering
-\includegraphics[width=\linewidth]{figures/arxiv_fig5_robustness.pdf}
-\caption{Counterparty swap (left bars) and held-out generalization (right bars). Per-token KL has the lowest training harm but the largest train-to-held-out gap.}
-\label{fig:robustness}
-\end{subfigure}
-\caption{\textbf{Teacher validation and student robustness} (per-token-KL iteration 1 unless noted).}
+\includegraphics[width=\linewidth]{figures/arxiv_fig_teacher_robust.pdf}
+\caption{\textbf{Teacher validation and student robustness} (per-token-KL iteration~1 unless noted). \textbf{(a)}~The open Qwen3-32B teacher matches Claude-Sonnet on harm and missed-instruction but leaks much more. \textbf{(b)}~Swapping the counterparty model raises harm for both variants; per-token KL is somewhat more counterparty-sensitive than per-turn SFT. \textbf{(c)}~Per-token KL has the lowest training harm but the largest train-to-held-out gap, and naive $3{\times}$ data scaling regresses on held-out.}
 \label{fig:teacher_robust}
 \end{figure}
 
@@ -403,11 +394,11 @@ deterministic leak probe                      & $15.8$ & $13.8$ & $0.53$ \\
 \label{tab:judge}
 \end{table}
 
-\paragraph{Counterparty range.} Per-token KL is more counterparty-sensitive on the harm axis than per-turn SFT (\cref{fig:robustness}).
+\paragraph{Counterparty range.} Per-token KL is more counterparty-sensitive on the harm axis than per-turn SFT (\cref{fig:teacher_robust}b).
 
 \paragraph{LLM counterparty, not human adversary.} The counterparty in every item is itself an LLM with a parameterized persona and opening move, not a human red-teamer. Humans can use rapport, off-distribution framings, and externally grounded social pressure that scripted counterparties miss, so our calibrated/over-refuse split and our mechanism effect sizes are upper bounds on what holds under human adversaries.
 
-\paragraph{Train-to-held-out gap on per-token KL.} Both per-token-KL checkpoints (Qwen iteration~1, Llama iteration~3) carry an $\approx$10-point train-to-held-out harm gap (\cref{fig:robustness}). Per-turn SFT (iteration~2) nearly closes it, so the gap appears to be a feature of the per-token-KL objective rather than of distillation in general. We report it but do not yet have a fix.
+\paragraph{Train-to-held-out gap on per-token KL.} Both per-token-KL checkpoints (Qwen iteration~1, Llama iteration~3) carry an $\approx$10-point train-to-held-out harm gap (\cref{fig:teacher_robust}c). Per-turn SFT (iteration~2) nearly closes it, so the gap appears to be a feature of the per-token-KL objective rather than of distillation in general. We report it but do not yet have a fix.
 
 \paragraph{Benchmark scale.} The multi-seed $n{=}5$ statistics use a 36-item core (drawn from the 50 training items), so rarer failure modes (posture, moderation) carry wider per-cell uncertainty than the more common ones (leakage, capitulation). The held-out set of 25 items supports the cross-subject and per-recipe comparisons we report, but not fine-grained per-cell held-out claims.
 

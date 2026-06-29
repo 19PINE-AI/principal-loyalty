@@ -515,6 +515,92 @@ def fig5_robustness():
 
 
 # ============================================================
+# Figure 4+5 combined: teacher validation + student robustness
+# Three equal-width panels in one row, so none is squeezed when
+# the float is set at \linewidth (replaces the unbalanced 2-subfig
+# layout where the robustness sub-panels were crushed to a quarter
+# of the column each).
+# ============================================================
+def fig_teacher_robust():
+    fig, (axA, axB, axC) = plt.subplots(
+        1, 3, figsize=(13.0, 3.5),
+        gridspec_kw=dict(wspace=0.34, left=0.055, right=0.995,
+                         bottom=0.17, top=0.86))
+
+    # --- Panel A: teacher self-validation -----------------------------
+    metrics = ["harm", "leak", "bound", "MI"]
+    qwen_pct   = [100*4/31, 100*21/31, 100*0/31, 100*3/31]
+    claude_pct = [100*6/36, 100*6/36,  100*1/36, 100*6/36]
+    x = np.arange(len(metrics)); w = 0.36
+    axA.bar(x - w/2, claude_pct, w, color=C_MECH2, alpha=0.88,
+            edgecolor="black", linewidth=0.5, label="Claude-Sonnet ($n{=}36$)")
+    axA.bar(x + w/2, qwen_pct,   w, color=C_MECH1, alpha=0.88,
+            edgecolor="black", linewidth=0.5, label="Qwen3-32B teacher ($n{=}31$)")
+    for i, (c, q) in enumerate(zip(claude_pct, qwen_pct)):
+        axA.text(i - w/2, c + 2.0, f"{c:.0f}", ha="center", fontsize=9)
+        axA.text(i + w/2, q + 2.0, f"{q:.0f}", ha="center", fontsize=9)
+    axA.set_xticks(x); axA.set_xticklabels(metrics)
+    axA.set_ylabel("Fire rate (%), scaffolded arm")
+    axA.set_title("(a) Teacher self-validation", fontsize=11.5)
+    axA.legend(loc="upper right", fontsize=8.5)
+    axA.set_ylim(0, 85); axA.grid(True, alpha=0.3, axis="y")
+
+    # --- Panel B: counterparty robustness -----------------------------
+    cps = ["Claude\n(default)", "GPT-5", "Gemini-3\nflash"]
+    pt_kl_harm = core_series(["phase5_pertoken_kl_iter1",
+                              "phase5_pertoken_kl_iter1_cp_gpt5",
+                              "phase5_pertoken_kl_iter1_cp_gemini"], "harm")
+    sft_harm   = [36, 34, 41]
+    x = np.arange(len(cps)); w = 0.36
+    axB.bar(x - w/2, pt_kl_harm, w, color=C_MECH1,   alpha=0.88,
+            edgecolor="black", linewidth=0.5, label="Per-token KL i1")
+    axB.bar(x + w/2, sft_harm,   w, color=C_TRAINED, alpha=0.88,
+            edgecolor="black", linewidth=0.5, label="Per-turn SFT i2")
+    for i in range(len(cps)):
+        axB.text(i - w/2, pt_kl_harm[i] + 1.0, f"{pt_kl_harm[i]}", ha="center", fontsize=9)
+        axB.text(i + w/2, sft_harm[i] + 1.0,   f"{sft_harm[i]}",   ha="center", fontsize=9)
+    axB.set_xticks(x); axB.set_xticklabels(cps)
+    axB.set_ylabel("Harm fires / 108")
+    axB.set_title("(b) Counterparty robustness", fontsize=11.5)
+    axB.legend(loc="upper left", fontsize=8.5)
+    axB.set_ylim(0, 60); axB.grid(True, alpha=0.3, axis="y")
+
+    # --- Panel C: held-out gap + data scaling -------------------------
+    sets = ["Training\n(36 items)", "Held-out\n(24 items)"]
+    def _train(d):
+        c = core_counts(d); return 100.0 * c["harm"] / c["n"]
+    def _heldout(d):
+        c = counts(_ra.scope(_ra.load(ROOT / "runs" / d / "scored.jsonl"), to_core=False))
+        return 100.0 * c["harm"] / c["n"]
+    pt_kl_iter1 = [_train("phase5_pertoken_kl_iter1"),
+                   _heldout("phase5_pertoken_kl_iter1_heldout_v0_75")]
+    sft_iter2   = [_train("phase5_onpolicy_sft_iter2"),
+                   _heldout("phase5_onpolicy_iter2_heldout")]
+    scaled3x    = [_train("phase5_pertoken_kl_scaled3x_iter1"),
+                   _heldout("phase5_pertoken_kl_scaled3x_iter1_heldout_v0_75")]
+    x2 = np.arange(len(sets)); w2 = 0.27
+    axC.bar(x2 - w2, pt_kl_iter1, w2, color=C_MECH1,   alpha=0.88,
+            edgecolor="black", linewidth=0.5, label="KL i1 (113 pts)")
+    axC.bar(x2,      sft_iter2,   w2, color=C_TRAINED, alpha=0.88,
+            edgecolor="black", linewidth=0.5, label="SFT i2 (113 pts)")
+    axC.bar(x2 + w2, scaled3x,    w2, color=C_GOLD,    alpha=0.88,
+            edgecolor="black", linewidth=0.5, label="KL scaled3$\\times$ (480 pts)")
+    for i in range(2):
+        axC.text(i - w2, pt_kl_iter1[i] + 1.2, f"{pt_kl_iter1[i]:.0f}", ha="center", fontsize=9)
+        axC.text(i,      sft_iter2[i]   + 1.2, f"{sft_iter2[i]:.0f}",   ha="center", fontsize=9)
+        axC.text(i + w2, scaled3x[i]    + 1.2, f"{scaled3x[i]:.0f}",    ha="center", fontsize=9)
+    axC.set_xticks(x2); axC.set_xticklabels(sets)
+    axC.set_ylabel("Harm rate (%)")
+    axC.set_title("(c) Held-out + data scaling", fontsize=11.5)
+    axC.legend(loc="upper left", fontsize=8.5)
+    axC.set_ylim(0, 70); axC.grid(True, alpha=0.3, axis="y")
+
+    plt.savefig(FIG_DIR / "arxiv_fig_teacher_robust.pdf", bbox_inches="tight")
+    plt.close()
+    print("[fig_teacher_robust] saved")
+
+
+# ============================================================
 # Figure 6: Sample-efficiency / variant comparison
 # ============================================================
 def fig6_variants():
@@ -726,6 +812,7 @@ if __name__ == "__main__":
     fig3_wilcoxon()
     fig4_teacher()
     fig5_robustness()
+    fig_teacher_robust()
     fig6_variants()
     fig7_xsubj()
     fig8_heldout_xsubj()
