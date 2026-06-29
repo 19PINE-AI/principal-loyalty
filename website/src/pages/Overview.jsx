@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useData } from '../lib/useData.js'
 import ProblemSchematic from '../components/ProblemSchematic.jsx'
+import CellsTaxonomy from '../components/CellsTaxonomy.jsx'
 import {
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ZAxis, Legend, ReferenceArea,
 } from 'recharts'
@@ -14,19 +15,15 @@ function Stat({ value, label, accent }) {
   )
 }
 
-function PaperFigure({ src, alt, caption }) {
-  return (
-    <figure className="bg-white border border-ink/10 rounded-xl p-3 shadow-sm">
-      <img src={`${import.meta.env.BASE_URL}${src}`} alt={alt} loading="lazy"
-        className="w-full h-auto rounded mx-auto" />
-      {caption && <figcaption className="text-xs text-ink/55 mt-2 px-1 leading-relaxed">{caption}</figcaption>}
-    </figure>
-  )
-}
-
 export default function Overview() {
   const { data: head } = useData('headline.json')
   const { data: manifold } = useData('manifold.json')
+
+  // Points shown on the Overview frontier figure (Qwen variants + Claude teacher,
+  // matching Figure 1); the dashed line traces the leak/over-refusal frontier.
+  const FRONTIER = ['Per-token KL i2', 'Per-token KL i1', 'Claude + scaffold']
+  const plotted = (manifold || []).filter(d => d.label !== 'Llama KL i3')
+  const frontierPts = plotted.filter(d => FRONTIER.includes(d.label)).sort((a, b) => a.leak - b.leak)
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10">
@@ -95,9 +92,7 @@ export default function Overview() {
           is a cooperative item where over-refusal is the only failure, included so that
           "refuse everything" is not a winning strategy.
         </p>
-        <PaperFigure src="figures/arxiv_fig0b_cells.png"
-          alt="The six failure cells of multi-party loyalty"
-          caption="Figure 2 from the paper — five red cells are distinct ways to fail the principal; the sixth (blue, sanity) is a cooperative item where over-refusal is the failure." />
+        <CellsTaxonomy />
       </section>
 
       {/* manifold scatter */}
@@ -109,10 +104,6 @@ export default function Overview() {
           distillation — move <em>along</em> this frontier, never across it; single-objective
           (scalar-reward) RL fails to break it too.
         </p>
-        <PaperFigure src="figures/arxiv_fig1_manifold.png"
-          alt="Leak vs missed-instruction Pareto frontier"
-          caption="Figure 1 from the paper. Every variant lands on a common leak/over-refusal frontier; the prompted Claude teacher and the per-token-KL 8B student sit on the same frontier at different operating points." />
-        <div className="text-sm font-semibold mt-6 mb-2 text-ink/70">Interactive version — hover any point</div>
         {manifold && (
           <div className="bg-white border border-ink/10 rounded-xl p-4">
             <ResponsiveContainer width="100%" height={460}>
@@ -138,11 +129,14 @@ export default function Overview() {
                   )
                 }} />
                 <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: 10 }} />
-                <Scatter name="Base" data={manifold.filter(d => d.kind==='base')} fill="#94a3b8" isAnimationActive animationDuration={900} />
-                <Scatter name="Per-turn variants" data={manifold.filter(d => d.kind==='variant')} fill="#84cc16" isAnimationActive animationDuration={900} animationBegin={120} />
-                <Scatter name="Per-token KL (Mech 2)" data={manifold.filter(d => d.kind==='mechanism')} fill="#7c3aed" isAnimationActive animationDuration={900} animationBegin={240} />
-                <Scatter name="RL (DAPO)" data={manifold.filter(d => d.kind==='rl')} fill="#f97316" isAnimationActive animationDuration={900} animationBegin={360} />
-                <Scatter name="Claude + scaffold (Mech 1)" data={manifold.filter(d => d.kind==='scaffold')} fill="#0891b2" isAnimationActive animationDuration={900} animationBegin={480} />
+                <Scatter name="leak / over-refusal frontier" data={frontierPts} fill="none" legendType="plainline"
+                  line={{ stroke: '#16a34a', strokeWidth: 2, strokeDasharray: '6 4' }} lineType="joint"
+                  shape={() => <g />} isAnimationActive={false} />
+                <Scatter name="Base" data={plotted.filter(d => d.kind==='base')} fill="#94a3b8" isAnimationActive animationDuration={900} />
+                <Scatter name="Per-turn variants" data={plotted.filter(d => d.kind==='variant')} fill="#84cc16" isAnimationActive animationDuration={900} animationBegin={120} />
+                <Scatter name="Per-token KL (Mech 2)" data={plotted.filter(d => d.kind==='mechanism')} fill="#7c3aed" isAnimationActive animationDuration={900} animationBegin={240} />
+                <Scatter name="RL (DAPO)" data={plotted.filter(d => d.kind==='rl')} fill="#f97316" isAnimationActive animationDuration={900} animationBegin={360} />
+                <Scatter name="Claude + scaffold (Mech 1)" data={plotted.filter(d => d.kind==='scaffold')} fill="#0891b2" isAnimationActive animationDuration={900} animationBegin={480} />
               </ScatterChart>
             </ResponsiveContainer>
             <div className="text-xs text-ink/60 mt-2">

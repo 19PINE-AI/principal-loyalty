@@ -1,4 +1,4 @@
-\begin{thebibliography}{39}
+\begin{thebibliography}{38}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -218,23 +218,13 @@ Rafael Rafailov, Archit Sharma, Eric Mitchell, Stefano Ermon, Christopher~D.\
   (NeurIPS)}, 2023.
 \newblock URL \url{https://arxiv.org/abs/2305.18290}.
 
-\bibitem[Shao et~al.(2024{\natexlab{a}})Shao, Li, Shi, Liu, and
-  Yang]{shao2024privacylens}
+\bibitem[Shao et~al.(2024)Shao, Li, Shi, Liu, and Yang]{shao2024privacylens}
 Yijia Shao, Tianshi Li, Weiyan Shi, Yanchen Liu, and Diyi Yang.
 \newblock {PrivacyLens}: Evaluating privacy norm awareness of language models
   in action.
 \newblock In \emph{Advances in Neural Information Processing Systems (NeurIPS)
-  Datasets and Benchmarks Track}, 2024{\natexlab{a}}.
+  Datasets and Benchmarks Track}, 2024.
 \newblock URL \url{https://arxiv.org/abs/2409.00138}.
-
-\bibitem[Shao et~al.(2024{\natexlab{b}})Shao, Wang, Zhu, Xu, Song, Bi, Zhang,
-  Zhang, Li, Wu, and Guo]{shao2024deepseekmath}
-Zhihong Shao, Peiyi Wang, Qihao Zhu, Runxin Xu, Junxiao Song, Xiao Bi, Haowei
-  Zhang, Mingchuan Zhang, Y.\~K.\ Li, Y.\ Wu, and Daya Guo.
-\newblock {DeepSeekMath}: Pushing the limits of mathematical reasoning in open
-  language models.
-\newblock 2024{\natexlab{b}}.
-\newblock URL \url{https://arxiv.org/abs/2402.03300}.
 
 \bibitem[Sharma et~al.(2023)Sharma, Tong, Korbak, Duvenaud, Askell, Bowman,
   Cheng, Durmus, Hatfield-Dodds, et~al.]{sharma2023sycophancy}
