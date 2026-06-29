@@ -328,7 +328,7 @@ def fig1_manifold():
     ax.set_ylabel("Missed-instruction rate (%)")
     ax.set_xlim(0, xmax)
     ax.set_ylim(0, 53)
-    ax.set_title("A common leak / missed-instruction floor: the favorable corner stays empty",
+    ax.set_title("A common leak / over-refusal Pareto frontier: the favorable corner stays empty",
                  fontsize=12)
     # Legend in a column outside the data area to avoid overlap.
     leg = ax.legend(handles=handles, loc="center left", bbox_to_anchor=(1.02, 0.5),
@@ -678,7 +678,7 @@ def fig7_xsubj():
         ax.text(m + sd + 1.5, yi, f"{m:.1f}", va="center", fontsize=10)
     ax.set_yticks(y); ax.set_yticklabels(labels, fontsize=10)
     ax.set_xlabel("Aggregate harm rate (%, mean $\\pm$ sd, n=5 seeds)")
-    ax.set_title("Calibrated / over-refuse split, 13 frontier subjects")
+    ax.set_title("Selective / over-refusing split, 13 frontier subjects")
     ax.axvspan(0, 20, alpha=0.06, color=C_MECH1)
     ax.axvspan(50, 80, alpha=0.06, color=C_BASE)
     ax.set_xlim(0, 92)
@@ -687,11 +687,11 @@ def fig7_xsubj():
     # Custom legend
     from matplotlib.patches import Patch
     legend = [Patch(facecolor=C_MECH1, alpha=0.88, edgecolor="black", linewidth=0.6,
-                    label="calibrated ($\\leq 20\\%$)"),
+                    label="selective ($\\leq 20\\%$)"),
               Patch(facecolor=C_GOLD, alpha=0.88, edgecolor="black", linewidth=0.6,
                     label="intermediate"),
               Patch(facecolor=C_BASE, alpha=0.88, edgecolor="black", linewidth=0.6,
-                    label="over-refuse ($\\geq 50\\%$)")]
+                    label="over-refusing ($\\geq 50\\%$)")]
     # Legend in the upper-right whitespace left by the short calibrated bars,
     # so it never overlaps the long over-refuse bars / value labels at bottom.
     ax.legend(handles=legend, loc="upper right", fontsize=10,

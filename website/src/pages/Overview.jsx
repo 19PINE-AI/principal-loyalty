@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useData } from '../lib/useData.js'
 import ProblemSchematic from '../components/ProblemSchematic.jsx'
-import CellsTaxonomy from '../components/CellsTaxonomy.jsx'
 import {
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ZAxis, Legend, ReferenceArea,
 } from 'recharts'
@@ -12,6 +11,16 @@ function Stat({ value, label, accent }) {
       <div className={`text-3xl font-bold tracking-tight ${accent || 'text-ink'}`}>{value}</div>
       <div className="text-sm text-ink/60 mt-1">{label}</div>
     </div>
+  )
+}
+
+function PaperFigure({ src, alt, caption }) {
+  return (
+    <figure className="bg-white border border-ink/10 rounded-xl p-3 shadow-sm">
+      <img src={`${import.meta.env.BASE_URL}${src}`} alt={alt} loading="lazy"
+        className="w-full h-auto rounded mx-auto" />
+      {caption && <figcaption className="text-xs text-ink/55 mt-2 px-1 leading-relaxed">{caption}</figcaption>}
+    </figure>
   )
 }
 
@@ -42,6 +51,26 @@ export default function Overview() {
           open any item to read every model's transcript and the judge's verdict behind each result.
         </p>
 
+        {/* benchmark explorer — the centerpiece */}
+        <Link to="/explorer"
+          className="group mt-8 block rounded-2xl border border-mech1/30 bg-gradient-to-br from-mech1/[0.07] via-white to-mech2/[0.07] p-6 hover:border-mech1/60 hover:shadow-lg transition">
+          <div className="flex flex-wrap items-center justify-between gap-5">
+            <div className="min-w-0">
+              <div className="text-xs font-mono uppercase tracking-widest text-mech1">Start here · interactive</div>
+              <div className="text-2xl font-bold mt-1 group-hover:text-mech1 transition-colors">Open the benchmark explorer →</div>
+              <p className="text-ink/70 mt-1.5 max-w-2xl text-sm">
+                Every benchmark item, the full subject × arm result matrix, and the raw agent transcript
+                with the judge's verdict and leak evidence behind every cell.
+              </p>
+            </div>
+            <div className="flex gap-6 text-center shrink-0">
+              <div><div className="text-3xl font-bold text-mech1">60</div><div className="text-xs text-ink/55 mt-0.5">items<br/>evaluated</div></div>
+              <div><div className="text-3xl font-bold text-mech1">13</div><div className="text-xs text-ink/55 mt-0.5">frontier<br/>models</div></div>
+              <div><div className="text-3xl font-bold text-mech1">2,268</div><div className="text-xs text-ink/55 mt-0.5">scored<br/>transcripts</div></div>
+            </div>
+          </div>
+        </Link>
+
         <div className="mt-8">
           <ProblemSchematic />
         </div>
@@ -66,7 +95,9 @@ export default function Overview() {
           is a cooperative item where over-refusal is the only failure, included so that
           "refuse everything" is not a winning strategy.
         </p>
-        <CellsTaxonomy />
+        <PaperFigure src="figures/arxiv_fig0b_cells.png"
+          alt="The six failure cells of multi-party loyalty"
+          caption="Figure 2 from the paper — five red cells are distinct ways to fail the principal; the sixth (blue, sanity) is a cooperative item where over-refusal is the failure." />
       </section>
 
       {/* manifold scatter */}
@@ -78,6 +109,10 @@ export default function Overview() {
           distillation — move <em>along</em> this frontier, never across it; single-objective
           (scalar-reward) RL fails to break it too.
         </p>
+        <PaperFigure src="figures/arxiv_fig1_manifold.png"
+          alt="Leak vs missed-instruction Pareto frontier"
+          caption="Figure 1 from the paper. Every variant lands on a common leak/over-refusal frontier; the prompted Claude teacher and the per-token-KL 8B student sit on the same frontier at different operating points." />
+        <div className="text-sm font-semibold mt-6 mb-2 text-ink/70">Interactive version — hover any point</div>
         {manifold && (
           <div className="bg-white border border-ink/10 rounded-xl p-4">
             <ResponsiveContainer width="100%" height={460}>

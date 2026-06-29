@@ -167,6 +167,16 @@ export default function Subjects() {
           <h2 className="text-xl font-semibold">Selective vs over-refusing split</h2>
           <ClusterLegend />
         </div>
+        <figure className="bg-white border border-ink/10 rounded-xl p-3 shadow-sm mb-4">
+          <img src={`${import.meta.env.BASE_URL}figures/arxiv_fig7_xsubj.png`} loading="lazy"
+            alt="Selective vs over-refusing split across 13 frontier subjects"
+            className="w-full h-auto rounded mx-auto" />
+          <figcaption className="text-xs text-ink/55 mt-2 px-1">
+            Figure from the paper — the cross-subject split (multi-seed n=5). Nine selective subjects
+            sit ≤ 19.5% harm, three over-refusing subjects ≥ 53.6%; the gap is intrinsic to post-training.
+          </figcaption>
+        </figure>
+        <div className="text-sm font-semibold mb-2 text-ink/70">Interactive version</div>
         <div className="bg-white border border-ink/10 rounded-xl p-4">
           <MultiSeedChart subjects={sortedSubjects} />
           <div className="text-xs text-ink/60 mt-2">
