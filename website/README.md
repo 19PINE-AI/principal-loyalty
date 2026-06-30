@@ -49,10 +49,10 @@ The script reads `items/v0`, `items/v0_75`, `runs/phase4_promptv4_*/scored.jsonl
 ## Pages
 
 - **Overview** (`/`) — six failure cells, headline numbers, leak/MI floor scatter
-- **Principal Bench** (`/explorer`) — searchable catalog of every benchmark item plus the 13-model × 3-arm result matrix and the full agent transcript + judge verdict (with leak evidence) behind every cell
+- **PrincipalBench** (`/explorer`) — searchable catalog of every benchmark item plus the 13-model × 3-arm result matrix and the full agent transcript + judge verdict (with leak evidence) behind every cell
 - **Training & variants** (`/training`) — distillation variant ladder and K-iteration line charts
 
-Principal Bench reads `explorer_index.json` and per-item `explorer/<id>.json` files (item meta + every model×arm transcript, judge sub-flags, and leak evidence), emitted by `scripts/build_website_data.py`.
+PrincipalBench reads `explorer_index.json` and per-item `explorer/<id>.json` files (item meta + every model×arm transcript, judge sub-flags, and leak evidence), emitted by `scripts/build_website_data.py`.
 
 ## Deploy
 

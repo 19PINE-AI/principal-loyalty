@@ -1,10 +1,10 @@
 # PrincipalBench — release & reproducibility
 
 The paper (`paper_arxiv.tex`) references the repository
-`github.com/19PINE-AI/principal-loyalty`. That repository now exists under the
-**19PINE-AI** organization and is currently **private**; make it public (or run
-`scripts/build_release.py` and push the clean tree to a public mirror) before
-the paper is submitted, or the reproducibility statement is false. Steps below.
+`github.com/19PINE-AI/principal-loyalty`, which is **public** under the
+**19PINE-AI** organization. This document records how the public tree is built
+and how every paper number reproduces. To regenerate a minimal clean tree (for a
+mirror or supplementary upload), run `scripts/build_release.py`.
 
 ## What the release contains
 
@@ -42,14 +42,15 @@ Conventions (see `scripts/recompute_all.py` docstring): counts are on the
 pass/fail (≤5% error rows, no zero-agent-turn), not a per-row filter; per-arm
 table columns are seed-1, aggregates are n=5 mean ± sample-sd.
 
-## Creating the public repo (author action — not automatable here)
+## Building a minimal release mirror (optional)
+
+The full repository is already public. If you want a slimmed mirror or a
+supplementary upload (items + code + manifest only):
 
 ```
 python3 scripts/build_release.py
-# the repo already exists as 19PINE-AI/principal-loyalty (private); make it public with:
-gh repo edit 19PINE-AI/principal-loyalty --visibility public --accept-visibility-change-consequences
-# copy release/ (+ figures/, paper PDF, and any checkpoints/trajectories you choose to host) into the repo, then:
-git -C <repo> add . && git -C <repo> commit -m "Initial PrincipalBench release" && git -C <repo> push
+# copy release/ (+ figures/, paper PDF, and any checkpoints/trajectories you choose to host)
+# into the mirror repo, then commit and push.
 ```
 
 If you also publish raw trajectories, update the held-out collision id there too:
