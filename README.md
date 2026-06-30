@@ -151,7 +151,7 @@ sweep, training recipes, and figure regeneration, see the documentation below.
   year          = {2026},
   eprint        = {2606.30383},
   archivePrefix = {arXiv},
-  primaryClass  = {cs.CL},
+  primaryClass  = {cs.AI},
   note          = {PrincipalBench},
   url           = {https://arxiv.org/abs/2606.30383}
 }
