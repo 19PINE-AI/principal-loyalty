@@ -27,7 +27,7 @@ function Nav() {
             href="https://arxiv.org/abs/2606.30383"
             target="_blank"
             rel="noreferrer"
-            className="ml-1 px-3 py-2 text-sm font-medium rounded-md bg-[#b31b1b] text-white hover:bg-[#9a1717] transition-colors"
+            className="ml-1 px-3 py-2 text-sm font-medium rounded-md border border-ink/15 text-ink/70 hover:bg-ink/5 hover:text-ink transition-colors"
           >
             Paper ↗
           </a>
