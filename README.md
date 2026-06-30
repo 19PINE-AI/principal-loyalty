@@ -2,7 +2,7 @@
 
 ### Whose Side Is Your Agent On? Multi-Party Principal Loyalty in LLM Agents
 
-[![paper](https://img.shields.io/badge/paper-arXiv-b31b1b.svg)](paper_arxiv.pdf)
+[![paper](https://img.shields.io/badge/paper-arXiv%3A2606.30383-b31b1b.svg)](https://arxiv.org/abs/2606.30383)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 Most LLM agents today operate in a digital world: they call APIs, browse, and
@@ -30,7 +30,7 @@ loyalty problem**.
 | **(M2) Per-token-KL distillation** — an on-policy recipe transferring a prompted Qwen3-32B teacher into 8B Qwen3 / Llama-3.1 students | [`scripts/pertoken_kl_collect.py`](scripts/pertoken_kl_collect.py), [`scripts/run_iter4_pertoken_kl.sh`](scripts/) |
 | **Reproducibility pipeline** — every paper number regenerates from raw trajectories | [`scripts/recompute_all.py`](scripts/recompute_all.py) |
 | **Companion website** — browse items, models, runs, and sample conversations | [`website/`](website/) |
-| **Paper** | [`paper_arxiv.tex`](paper_arxiv.tex), [`paper_arxiv.pdf`](paper_arxiv.pdf) |
+| **Paper** | [arXiv:2606.30383](https://arxiv.org/abs/2606.30383) · [`paper_arxiv.tex`](paper_arxiv.tex), [`paper_arxiv.pdf`](paper_arxiv.pdf) |
 
 ---
 
@@ -146,11 +146,14 @@ sweep, training recipes, and figure regeneration, see the documentation below.
 
 ```bibtex
 @misc{principalbench2026,
-  title  = {Whose Side Is Your Agent On? Multi-Party Principal Loyalty in LLM Agents},
-  author = {Li, Bojie and Shi, Noah},
-  year   = {2026},
-  note   = {PrincipalBench},
-  url    = {https://github.com/19PINE-AI/principal-loyalty}
+  title         = {Whose Side Is Your Agent On? Multi-Party Principal Loyalty in LLM Agents},
+  author        = {Li, Bojie and Shi, Noah},
+  year          = {2026},
+  eprint        = {2606.30383},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CL},
+  note          = {PrincipalBench},
+  url           = {https://arxiv.org/abs/2606.30383}
 }
 ```
 

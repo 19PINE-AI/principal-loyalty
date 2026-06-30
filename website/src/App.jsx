@@ -40,7 +40,7 @@ function Footer() {
         <div className="text-right">
           <a href="https://github.com/19PINE-AI/principal-loyalty" target="_blank" rel="noreferrer" className="hover:text-ink">GitHub</a>
           <span className="mx-2">·</span>
-          <a href="/paper_arxiv.pdf" target="_blank" rel="noreferrer" className="hover:text-ink">Paper PDF</a>
+          <a href="https://arxiv.org/abs/2606.30383" target="_blank" rel="noreferrer" className="hover:text-ink">Paper (arXiv)</a>
         </div>
       </div>
     </footer>
