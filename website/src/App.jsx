@@ -21,8 +21,16 @@ function Nav() {
           <span className="font-bold text-lg tracking-tight">Principal Loyalty</span>
           <span className="text-xs text-ink/50 mono hidden sm:inline">multi-party loyalty</span>
         </Link>
-        <nav className="flex flex-wrap gap-1">
+        <nav className="flex flex-wrap items-center gap-1">
           {NAV.map(n => <NavLink key={n.to} to={n.to} end={n.to === '/'} className={cls}>{n.label}</NavLink>)}
+          <a
+            href="https://arxiv.org/abs/2606.30383"
+            target="_blank"
+            rel="noreferrer"
+            className="ml-1 px-3 py-2 text-sm font-medium rounded-md bg-[#b31b1b] text-white hover:bg-[#9a1717] transition-colors"
+          >
+            Paper ↗
+          </a>
         </nav>
       </div>
     </header>
