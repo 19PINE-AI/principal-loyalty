@@ -5,7 +5,7 @@ import Training from './pages/Training.jsx'
 
 const NAV = [
   { to: '/',          label: 'Overview' },
-  { to: '/explorer',  label: 'Principal Bench' },
+  { to: '/explorer',  label: 'PrincipalBench' },
   { to: '/training',  label: 'Training & variants' },
 ]
 

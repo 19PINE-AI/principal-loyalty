@@ -242,9 +242,9 @@ export default function Explorer() {
   return (
     <div className="max-w-[1500px] mx-auto px-6 py-8">
       <div className="mb-5">
-        <h1 className="text-3xl font-bold serif">Principal Bench</h1>
+        <h1 className="text-3xl font-bold serif">PrincipalBench</h1>
         <p className="text-ink/70 mt-1 max-w-3xl">
-          Browse every Principal Bench item, then inspect how each of the 13 evaluated models behaved
+          Browse every PrincipalBench item, then inspect how each of the 13 evaluated models behaved
           under all three prompt arms — the result matrix, the judge's verdict and leak evidence, and the
           full agent/counterparty transcript behind every cell.
         </p>

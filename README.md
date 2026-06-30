@@ -1,9 +1,9 @@
-# PrincipalBench
+# Principal Loyalty
 
 ### Whose Side Is Your Agent On? Multi-Party Principal Loyalty in LLM Agents
 
 [![paper](https://img.shields.io/badge/paper-arXiv-b31b1b.svg)](paper_arxiv.pdf)
-[![license](https://img.shields.io/badge/license-research-blue.svg)](#license)
+[![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 Most LLM agents today operate in a digital world: they call APIs, browse, and
 serve the user who invoked them. A rapidly growing class of deployments is
@@ -29,7 +29,7 @@ loyalty problem**.
 | **(M1) Prompt-time loyalty scaffold** — seven prioritized rules open-coded from 50+ failure trajectories | [`src/loyalty.py`](src/loyalty.py), [`src/agent.py`](src/agent.py) |
 | **(M2) Per-token-KL distillation** — an on-policy recipe transferring a prompted Qwen3-32B teacher into 8B Qwen3 / Llama-3.1 students | [`scripts/pertoken_kl_collect.py`](scripts/pertoken_kl_collect.py), [`scripts/run_iter4_pertoken_kl.sh`](scripts/) |
 | **Reproducibility pipeline** — every paper number regenerates from raw trajectories | [`scripts/recompute_all.py`](scripts/recompute_all.py) |
-| **Companion website** — browse items, subjects, runs, and sample conversations | [`website/`](website/) |
+| **Companion website** — browse items, models, runs, and sample conversations | [`website/`](website/) |
 | **Paper** | [`paper_arxiv.tex`](paper_arxiv.tex), [`paper_arxiv.pdf`](paper_arxiv.pdf) |
 
 ---
@@ -37,11 +37,11 @@ loyalty problem**.
 ## Key findings
 
 - **A calibrated / over-refuse split.** Running PrincipalBench across 13 frontier
-  subjects exposes a sharp split — **≤20% harm** for calibrated models vs.
+  models exposes a sharp split — **≤20% harm** for calibrated models vs.
   **53.6–75.3% harm** for over-refusers — that is invisible to single-turn
   safety evaluations.
 - **The scaffold works.** Under the seven-rule loyalty scaffold, Claude-Sonnet
-  reaches 21/108 (19.4%) harm, and all nine calibrated frontier subjects hold
+  reaches 21/108 (19.4%) harm, and all nine calibrated frontier models hold
   ≤20% harm.
 - **Distillation transfers.** Per-token-KL distillation is the strongest
   open-weight recipe we measure, moving an 8B student to harm 33 / leak 13.
@@ -130,7 +130,7 @@ sweep, training recipes, and figure regeneration, see the documentation below.
 ```bibtex
 @misc{principalbench2026,
   title  = {Whose Side Is Your Agent On? Multi-Party Principal Loyalty in LLM Agents},
-  author = {19Pine AI},
+  author = {Li, Bojie and Shi, Noah},
   year   = {2026},
   note   = {PrincipalBench},
   url    = {https://github.com/19PINE-AI/principal-loyalty}
@@ -139,5 +139,4 @@ sweep, training recipes, and figure regeneration, see the documentation below.
 
 ## License
 
-Research artifact released for reproducibility. Contact the maintainers before
-redistribution.
+Released under the [MIT License](LICENSE).

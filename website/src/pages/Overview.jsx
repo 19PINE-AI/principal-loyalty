@@ -44,17 +44,17 @@ export default function Overview() {
         <p className="mt-3 max-w-3xl text-ink/70">
           This site lets you browse the 75-item benchmark across 13 frontier models,
           inspect the per-token-KL distillation runs, and — in{' '}
-          <Link to="/explorer" className="text-mech1 font-medium hover:underline">Principal Bench</Link> —
+          <Link to="/explorer" className="text-mech1 font-medium hover:underline">PrincipalBench</Link> —
           open any item to read every model's transcript and the judge's verdict behind each result.
         </p>
 
-        {/* Principal Bench — the centerpiece */}
+        {/* PrincipalBench — the centerpiece */}
         <Link to="/explorer"
           className="group mt-8 block rounded-2xl border border-mech1/30 bg-gradient-to-br from-mech1/[0.07] via-white to-mech2/[0.07] p-6 hover:border-mech1/60 hover:shadow-lg transition">
           <div className="flex flex-wrap items-center justify-between gap-5">
             <div className="min-w-0">
               <div className="text-xs font-mono uppercase tracking-widest text-mech1">Start here · interactive</div>
-              <div className="text-2xl font-bold mt-1 group-hover:text-mech1 transition-colors">Open Principal Bench →</div>
+              <div className="text-2xl font-bold mt-1 group-hover:text-mech1 transition-colors">Open PrincipalBench →</div>
               <p className="text-ink/70 mt-1.5 max-w-2xl text-sm">
                 Every benchmark item, the full model × arm result matrix, and the raw agent transcript
                 with the judge's verdict and leak evidence behind every cell.
