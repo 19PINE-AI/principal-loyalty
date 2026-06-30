@@ -1,8 +1,9 @@
 # Companion website
 
-`website/` is a static React app that lets you browse the 75 benchmark items,
-compare the 13 frontier subjects, inspect the per-token-KL training runs, and
-read sample agent/counterparty conversations from the paper.
+`website/` is a static React app (titled **Principal Loyalty**) that lets you
+browse the 75 benchmark items, inspect how the 13 frontier models behave under
+each prompt arm (the **PrincipalBench** explorer), explore the per-token-KL
+training runs, and read sample agent/counterparty conversations from the paper.
 
 ## Stack
 
