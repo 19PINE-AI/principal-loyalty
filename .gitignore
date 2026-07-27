@@ -24,14 +24,14 @@ logs/
 data/verl_*_mistral.parquet
 
 # LaTeX build artifacts
-paper.aux
-paper.out
-paper.toc
-paper.bbl
-paper.blg
-paper.fdb_latexmk
-paper.fls
-paper.synctex.gz
+*.aux
+*.out
+*.toc
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.synctex.gz
 paper_arxiv.aux
 paper_arxiv.out
 paper_arxiv.toc
