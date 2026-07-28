@@ -275,24 +275,22 @@ The five-seed DAPO-style RL replication does not reproduce its single-seed impro
 
 \subsection{The $K$-iteration trajectory}
 \label{sec:kiter}
-The recipe can be repeated: re-sample student trajectories from each iteration-$K$ checkpoint, then re-distill. This traces a path \emph{along} the trade-off rather than converging to an optimum, and the two model families differ in shape (\cref{tab:kiter,fig:kiter}).
+The recipe can be repeated: re-sample student trajectories from each iteration-$K$ checkpoint, then re-distill. This traces a path \emph{along} the trade-off rather than converging to an optimum. \Cref{tab:kiter} focuses on Qwen3-8B, the primary student; \cref{fig:kiter} shows how the two model families differ in shape.
 
 \begin{table}[h]
 \centering\small
-\begin{tabular}{l r r r r @{\hskip 2.2em} r r r r}
+\begin{tabular}{@{}l r r r r@{}}
 \toprule
- & \multicolumn{4}{c}{Qwen3-8B} & \multicolumn{4}{c}{Llama-3.1-8B} \\
-\cmidrule(r){2-5}\cmidrule(l){6-9}
-iteration & harm & leak & bound & MI & harm & leak & bound & MI \\
+iteration & harm & leak & bound & MI \\
 \midrule
-1 & \textbf{33} & 13 & 3 & 32 & 27 & \textbf{3} & 2 & 25 \\
-2 & 38 & \textbf{9} & \textbf{2} & 35 & 22 & 9 & 2 & 20 \\
-3 & 41 & 15 & 4 & 40 & \textbf{17} & 7 & 3 & \textbf{15} \\
-4 & 42 & 17 & 5 & 42 & 18 & 6 & 2 & 17 \\
-5 & 32 & 19 & 6 & 32 & --- & --- & --- & --- \\
+1 & \textbf{33} & 13 & 3 & 32 \\
+2 & 38 & \textbf{9} & \textbf{2} & 35 \\
+3 & 41 & 15 & 4 & 40 \\
+4 & 42 & 17 & 5 & 42 \\
+5 & 32 & 19 & 6 & 32 \\
 \bottomrule
 \end{tabular}
-\caption{\textbf{$K$-iteration distillation trajectory} (failures per 108 cells at single seed; MI $=$ missed-instruction, the over-refusal flag; bound $=$ leaked private bound). Each iteration re-samples student trajectories from the previous checkpoint and re-distills against the same prompted teacher. Bold marks each family's per-axis best.}
+\caption{\textbf{$K$-iteration distillation trajectory for Qwen3-8B} (failures per 108 cells at single seed; MI $=$ missed-instruction, the over-refusal flag; bound $=$ leaked private bound). Each iteration re-samples student trajectories from the previous checkpoint and re-distills against the same prompted teacher. Bold marks the selected harm-minimum and leak/bound-minimum stopping points.}
 \label{tab:kiter}
 \end{table}
 
@@ -316,7 +314,7 @@ iteration & harm & leak & bound & MI & harm & leak & bound & MI \\
 
 \subsection{Transfer, teacher validation, and counterparty robustness}
 \label{sec:selfval}
-\textbf{Cross-family transfer.} We repeat the recipe on a second family: Llama-3.1-8B distilled from a Llama-3.1-70B-Instruct-AWQ teacher (same family, shared tokenizer). It descends comparably to the Qwen3 result (\cref{tab:kiter,fig:kiter}) and carries a comparable train-to-held-out gap (harm $15.7\%\to26.7\%$). The recipe is therefore not specific to a single base family.
+\textbf{Cross-family transfer.} We repeat the recipe on a second family: Llama-3.1-8B distilled from a Llama-3.1-70B-Instruct-AWQ teacher (same family, shared tokenizer). It descends comparably to the Qwen3 result (\cref{fig:kiter}) and carries a comparable train-to-held-out gap (harm $15.7\%\to26.7\%$). The recipe is therefore not specific to a single base family.
 
 \textbf{Validating the teacher.} Before trusting distillation from it, we check the open teacher (Qwen3-32B-AWQ prompted with the loyalty scaffold, audit-passing trajectories only, $n{=}31$) is actually good: it matches Claude-Sonnet's low harm and over-refusal on the scaffolded arm but leaks far more (\cref{fig:teacher_robust}a). It trades \emph{leak for harm}, which is why the per-token-KL student inherits a low-harm but leak-tolerant profile.
 

@@ -40,33 +40,20 @@ The dominant LLM-agent paradigm assumes a two-party setting: a user delegates a 
 
 A growing class of deployments breaks that assumption by having agents speak to \emph{other people} on a principal's behalf. Pine AI handles phone disputes such as bill negotiation and subscription cancellation~\citep{pineai2025}; Google's Ask for Me calls businesses for pricing~\citep{googleaskforme2025}; Qwen and Honor agents place bookings~\citep{qwenvoice2025,honoryoyo2025}; and 11x.ai conducts outbound sales~\citep{elevenx2025}. This three-party structure also covers procurement, inbox screening, workplace mediation, and acquisition inquiries.
 
-Here the counterparty may probe, pressure, or manufacture urgency to extract private information or unauthorized concessions. The agent must protect the principal's facts, bounds, and positions without refusing legitimate requests. We call this the \textbf{multi-party loyalty problem}. Existing two-party benchmarks omit the principal as a distinct role: helpfulness benchmarks reward the interlocutor, single-turn safety benchmarks study isolated adversarial failures rather than conversational pressure, and agent benchmarks merge principal and interlocutor.
+This deployment pattern changes who the agent is accountable to. The principal does not disappear after the initial briefing: briefings, clarifications, and returned results form one persistent channel, while the agent separately negotiates with a counterparty in another. The agent must therefore distinguish the party it serves from the person whose messages it is answering. Conversational helpfulness and principal loyalty, aligned in the two-party setting, can now conflict.
+
+Here the counterparty may probe, pressure, flatter, or manufacture urgency to extract private information or unauthorized concessions. The agent must protect the principal's facts, bounds, and positions without becoming so defensive that it refuses legitimate requests. We call this the \textbf{multi-party loyalty problem}. The gap is not merely an omitted evaluation case: common objectives pull in opposing directions. Helpfulness can reward assisting the current speaker even when doing so harms the principal, while safety can reward blanket refusal. Existing agent benchmarks also merge principal and interlocutor, and single-turn safety benchmarks do not capture pressure that accumulates across a conversation. None therefore measures both loyalty failures and the opposite failure of over-refusal.
 
 
 
 
 \paragraph{Summary of contributions.}
 \begin{enumerate}
-\item \textbf{Problem and measurement:} six loyalty-failure modes and PrincipalBench, exposing a selective/over-refusing split across 13 models (\cref{sec:problem,sec:bench,sec:split}).
-\item \textbf{Prompting:} a seven-rule scaffold holding Claude-Sonnet at $19.4\%$ harm and all nine selective models at $\le20\%$ (\cref{sec:prompt}).
-\item \textbf{Distillation:} per-token KL transfers prompted-teacher behavior to two 8B model families (\cref{sec:ptkl}).
-\item \textbf{Trade-off:} tested prompting, distillation, and RL variants remain on a common leak/over-refusal frontier (\cref{sec:manifold}).
+\item \textbf{Problem and measurement:} six loyalty-failure modes and the 75-item, multi-turn PrincipalBench, which distinguishes selective behavior from blanket over-refusal across 13 models (\cref{sec:problem,sec:bench,sec:split}).
+\item \textbf{Prompting:} a seven-rule scaffold holding Claude-Sonnet at $19.4\%$ harm and all nine selective models at $\le20\%$, but not rescuing the over-refusing cluster (\cref{sec:prompt}).
+\item \textbf{Distillation:} per-token KL transfers prompted-teacher behavior across Qwen3 and Llama-3.1 8B model families (\cref{sec:ptkl}).
+\item \textbf{Trade-off:} prompting, distillation, and scalar-reward RL all remain on a common leak/over-refusal frontier rather than reaching the jointly favorable region (\cref{sec:manifold}).
 \end{enumerate}
-
-\section{The multi-party loyalty problem}
-\label{sec:problem}
-
-\paragraph{Problem formulation.} A multi-party episode has three roles: principal $P$ delegates a task and supplies private state $S_P$ (facts, bounds, and instructions); agent $A$ acts on $P$'s behalf; and counterparty $C$ converses with $A$ in a separate channel and may have conflicting interests. Success requires advancing $P$'s task without leaking $S_P$, violating private bounds, capitulating under pressure, or over-refusing legitimate requests. Table~\ref{tab:cells} defines six loyalty-failure categories: five principal-loyalty failure modes and a cooperative \emph{Sanity} category that detects over-refusal.
-
-\paragraph{Limitations of leakage-only evaluation.} An agent can reveal no withheld fact directly yet still fail its principal: it may violate a private bound, capitulate under pressure, signal weakness through posture, or place sensitive content in an authored artifact even when the live conversation withheld it. Conversely, refusing everything prevents leakage but fails legitimate requests. Table~\ref{tab:cells} captures both failures beyond direct disclosure and the opposite failure of over-refusal.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{figures/arxiv_fig1_manifold.pdf}
-\caption{\textbf{Leak/over-refusal Pareto frontier.} Prompted Claude and per-token KL occupy different frontier points; no tested variant reaches the shaded corner. In the labels, \emph{iter1}, \emph{iter2}, and \emph{iter3} denote successive distillation iterations. The key reports harm/valid cells.}
-\label{fig:manifold}
-\end{figure}
-
 
 \begin{table*}[t]
 \centering\footnotesize
@@ -87,6 +74,21 @@ Category & What goes wrong & Example (used-car sale) \\
 \caption{\textbf{Six loyalty-failure categories.} The first five measure failures toward the principal; \emph{Sanity} penalizes blanket over-refusal on a cooperative request.}
 \label{tab:cells}
 \end{table*}
+
+\section{The multi-party loyalty problem}
+\label{sec:problem}
+
+\paragraph{Problem formulation.} A multi-party episode has three roles: principal $P$ delegates a task and supplies private state $S_P$ (facts, bounds, and instructions); agent $A$ acts on $P$'s behalf; and counterparty $C$ converses with $A$ in a separate channel and may have conflicting interests. Success requires advancing $P$'s task without leaking $S_P$, violating private bounds, capitulating under pressure, or over-refusing legitimate requests. Table~\ref{tab:cells} defines six loyalty-failure categories: five principal-loyalty failure modes and a cooperative \emph{Sanity} category that detects over-refusal.
+
+\paragraph{Limitations of leakage-only evaluation.} An agent can reveal no withheld fact directly yet still fail its principal: it may violate a private bound, capitulate under pressure, signal weakness through posture, or place sensitive content in an authored artifact even when the live conversation withheld it. Conversely, refusing everything prevents leakage but fails legitimate requests. Table~\ref{tab:cells} captures both failures beyond direct disclosure and the opposite failure of over-refusal.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/arxiv_fig1_manifold.pdf}
+\caption{\textbf{Leak/over-refusal Pareto frontier.} Prompted Claude and per-token KL occupy different frontier points; no tested variant reaches the shaded corner. In the labels, \emph{iter1}, \emph{iter2}, and \emph{iter3} denote successive distillation iterations. The key reports harm/valid cells.}
+\label{fig:manifold}
+\end{figure}
+
 
 \begin{figure*}[t]
 \centering
@@ -252,26 +254,24 @@ The five-seed DAPO-style RL replication does not reproduce its single-seed impro
 
 \subsection{The $K$-iteration trajectory}
 \label{sec:kiter}
-Each iteration re-samples trajectories from the previous checkpoint and re-distills against the same prompted teacher. Repetition traces a path \emph{along} the trade-off rather than converging to an optimum, and the two model families differ in shape (\cref{tab:kiter}).
+Each iteration re-samples trajectories from the previous checkpoint and re-distills against the same prompted teacher. Repetition traces a path \emph{along} the trade-off rather than converging to an optimum. \Cref{tab:kiter} focuses on Qwen3-8B, the primary student; the Llama transfer is summarized below.
 
-\begin{table*}[t]
+\begin{table}[t]
 \centering\small
-\begin{tabular}{l r r r r @{\hskip 2.2em} r r r r}
+\begin{tabular}{@{}l r r r r@{}}
 \toprule
- & \multicolumn{4}{c}{Qwen3-8B} & \multicolumn{4}{c}{Llama-3.1-8B} \\
-\cmidrule(r){2-5}\cmidrule(l){6-9}
-iteration & harm & leak & bound & MI & harm & leak & bound & MI \\
+iteration & harm & leak & bound & MI \\
 \midrule
-1 & \textbf{33} & 13 & 3 & 32 & 27 & \textbf{3} & 2 & 25 \\
-2 & 38 & \textbf{9} & \textbf{2} & 35 & 22 & 9 & 2 & 20 \\
-3 & 41 & 15 & 4 & 40 & \textbf{17} & 7 & 3 & \textbf{15} \\
-4 & 42 & 17 & 5 & 42 & 18 & 6 & 2 & 17 \\
-5 & 32 & 19 & 6 & 32 & --- & --- & --- & --- \\
+1 & \textbf{33} & 13 & 3 & 32 \\
+2 & 38 & \textbf{9} & \textbf{2} & 35 \\
+3 & 41 & 15 & 4 & 40 \\
+4 & 42 & 17 & 5 & 42 \\
+5 & 32 & 19 & 6 & 32 \\
 \bottomrule
 \end{tabular}
-\caption{\textbf{$K$-iteration distillation} (single-seed failures per 108; MI = missed-instruction; bold = best per axis).}
+\caption{\textbf{$K$-iteration distillation for Qwen3-8B} (single-seed failures per 108; MI = missed-instruction). Bold marks the selected harm-minimum and leak/bound-minimum stopping points.}
 \label{tab:kiter}
-\end{table*}
+\end{table}
 
 \textbf{Qwen moves back and forth along the leak/harm trade-off.} Iteration~1 minimizes harm, iteration~2 minimizes leak/bound, iterations 3--4 regress, and iteration~5 returns to iteration~1's harm but with the \emph{worst} leak/bound. In the multi-seed comparison, Qwen iterations~1 and 2 both have lower mean harm than the base (\cref{fig:seed_comparison}). \textbf{Llama's harm count falls} $27\to22\to17$ through iteration~3, then stays similar at 18. The shape is base-model-dependent, but in both families each iteration trades one axis for another and never strictly dominates its predecessor.
 
@@ -279,7 +279,7 @@ iteration & harm & leak & bound & MI & harm & leak & bound & MI \\
 \label{sec:selfval}
 We test whether the result transfers across model families, depends on a sound teacher, and survives changes in counterparty and item distribution.
 
-\textbf{Cross-family transfer.} We repeat the recipe on Llama-3.1-8B with a Llama-3.1-70B-Instruct-AWQ teacher (shared tokenizer). Llama harm also falls through iteration~3 (\cref{tab:kiter}) and has a Qwen-comparable train-to-held-out gap ($15.7\%\to26.7\%$). Thus the recipe is not specific to one base family.
+\textbf{Cross-family transfer.} We repeat the recipe on Llama-3.1-8B with a Llama-3.1-70B-Instruct-AWQ teacher (shared tokenizer). Llama harm falls $27\to22\to17$ through iteration~3, then plateaus at 18, and has a Qwen-comparable train-to-held-out gap ($15.7\%\to26.7\%$). Thus the recipe is not specific to one base family.
 
 \textbf{Validating the teacher.} Before trusting distillation from it, we check the open teacher (Qwen3-32B-AWQ prompted with the loyalty scaffold, audit-passing trajectories only, $n{=}31$) is actually good: it matches Claude-Sonnet's low harm and over-refusal on the scaffolded arm but leaks far more (\cref{fig:teacher_robust}a). It trades \emph{leak for harm}, which is why the per-token-KL student inherits a low-harm but leak-tolerant profile.
 
