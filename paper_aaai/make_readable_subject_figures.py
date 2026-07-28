@@ -16,6 +16,17 @@ GOLD = "#E8A33D"
 RED = "#C0504D"
 COLORS = {"calibrated": BLUE, "intermediate": GOLD, "over-refuse": RED}
 
+# Multi-seed results used by the multi-axis comparison plot.
+MULTISEED_METRICS = ["harm", "leak", "bound", "MI"]
+MULTISEED_BASE = [47.8, 15.8, 4.6, 44.4]
+MULTISEED_KL_ITER1 = [39.2, 13.8, 2.8, 37.2]
+MULTISEED_KL_ITER1_ERR = [4.0, 1.8, 1.5, 3.6]
+MULTISEED_KL_ITER2 = [41.5, 11.2, 2.5, 40.5]
+MULTISEED_KL_ITER2_ERR = [3.0, 3.5, 0.5, 4.5]
+MULTISEED_BASE_N = 5
+MULTISEED_KL_ITER1_N = 5
+MULTISEED_KL_ITER2_N = 4
+
 plt.rcParams.update(
     {
         "font.family": "serif",
@@ -144,13 +155,13 @@ def heldout_split() -> None:
 def pareto_frontier() -> None:
     rows = [
         ("Qwen-8B untrained", 76.0, 22.4, 28, 107, "#7F7F7F", "x"),
-        ("Qwen v4.1 SFT+DPO", 100 * 18 / 108, 100 * 51 / 108, 56, 108, RED, "o"),
-        ("Qwen DAPO-v1", 100 * 19 / 108, 100 * 34 / 108, 37, 108, GOLD, "s"),
-        ("Per-turn SFT i1", 100 * 17 / 107, 100 * 43 / 107, 44, 107, "#8064A2", "D"),
-        ("Per-turn SFT i2", 100 * 24 / 105, 100 * 32 / 105, 36, 105, "#8064A2", "v"),
-        ("Per-token KL i1", 100 * 13 / 108, 100 * 32 / 108, 33, 108, BLUE, "*"),
-        ("Per-token KL i2", 100 * 9 / 106, 100 * 35 / 106, 38, 106, BLUE, "P"),
-        ("Per-token KL i3", 100 * 15 / 108, 100 * 40 / 108, 41, 108, BLUE, "X"),
+        ("Qwen SFT+DPO", 100 * 18 / 108, 100 * 51 / 108, 56, 108, RED, "o"),
+        ("Qwen DAPO", 100 * 19 / 108, 100 * 34 / 108, 37, 108, GOLD, "s"),
+        ("Per-turn SFT iter1", 100 * 17 / 107, 100 * 43 / 107, 44, 107, "#8064A2", "D"),
+        ("Per-turn SFT iter2", 100 * 24 / 105, 100 * 32 / 105, 36, 105, "#8064A2", "v"),
+        ("Per-token KL iter1", 100 * 13 / 108, 100 * 32 / 108, 33, 108, BLUE, "*"),
+        ("Per-token KL iter2", 100 * 9 / 106, 100 * 35 / 106, 38, 106, BLUE, "P"),
+        ("Per-token KL iter3", 100 * 15 / 108, 100 * 40 / 108, 41, 108, BLUE, "X"),
         ("Claude + scaffold", 100 * 17 / 108, 100 * 21 / 108, 21, 108, "#9BBB59", "^"),
     ]
     fig = plt.figure(figsize=(3.35, 3.50))
@@ -229,76 +240,77 @@ def pareto_frontier() -> None:
     plt.close(fig)
 
 
-def distillation_variants() -> None:
-    labels = [
-        "v4.1\nbase",
-        "\nPer-turn\nDPO",
-        "Per-turn\nSFT i1",
-        "\nPer-turn\nSFT i2",
-        "Per-token\nKL i1",
-        "\nPer-token\nKL i2",
-        "Claude+\nscaffold",
-    ]
-    harm = [56, 54, 44, 36, 33, 38, 21]
-    significance = ["", "", "$p=.10$", "$p=.10$", "$p=.011^*$", "$p=.012^*$", ""]
-    colors = [RED, GOLD, "#8064A2", "#8064A2", BLUE, BLUE, "#9BBB59"]
+def qwen_iteration_trajectory() -> None:
+    iterations = ["SFT+DPO\nbase", "iter1", "iter2", "iter3", "iter4", "iter5"]
+    harm = [56, 33, 38, 41, 42, 32]
+    leak = [18, 13, 9, 15, 17, 19]
+    bound = [4, 3, 2, 4, 5, 6]
+    missed_instruction = [51, 32, 35, 40, 42, 32]
 
-    fig, ax = plt.subplots(figsize=(7.5, 3.8))
-    x = np.arange(len(labels))
-    ax.bar(x, harm, color=colors, alpha=0.88, edgecolor="black", linewidth=0.5)
-    for i, (value, p_value) in enumerate(zip(harm, significance)):
-        ax.text(i, value + 1.5, str(value), ha="center", va="bottom", fontsize=13, fontweight="bold")
-        if p_value:
-            ax.text(i, value + 5.5, p_value, ha="center", va="bottom", fontsize=11.5)
-    ax.set_xticks(x, labels)
-    ax.tick_params(axis="x", labelsize=13, pad=3)
-    ax.tick_params(axis="y", labelsize=12)
-    ax.set_ylabel("Harm fires / 108", fontsize=14)
-    ax.set_title("Distillation variant ladder on Qwen3-8B ($^*$: $p<0.05$ vs. v4.1)", fontsize=14)
-    ax.set_ylim(0, 67)
-    ax.set_yticks(np.arange(0, 61, 10))
-    ax.grid(True, alpha=0.3, axis="y", linewidth=0.5)
+    fig, ax = plt.subplots(figsize=(6.0, 3.6))
+    x = np.arange(len(iterations))
+    ax.plot(x, harm, marker="o", linewidth=2.2, label="harm", color=RED)
+    ax.plot(x, missed_instruction, marker="s", linewidth=2.2, label="MI", color=GOLD)
+    ax.plot(x, leak, marker="^", linewidth=2.2, label="leak", color=BLUE)
+    ax.plot(x, bound, marker="D", linewidth=2.2, label="bound", color="#8064A2")
+    ax.annotate(
+        "harm-min",
+        xy=(1, 33),
+        xytext=(0.04, 21),
+        arrowprops=dict(arrowstyle="->", color=RED, alpha=0.6),
+        fontsize=9,
+        color=RED,
+    )
+    ax.annotate(
+        "leak/bound-min",
+        xy=(2, 9),
+        xytext=(2.55, 16),
+        arrowprops=dict(arrowstyle="->", color=BLUE, alpha=0.6),
+        fontsize=9,
+        color=BLUE,
+        ha="center",
+    )
+    ax.set_xticks(x, iterations)
+    ax.set_ylabel("Failures per 108 trajectories")
+    ax.set_title("Per-token KL on Qwen3-8B across iterations")
+    ax.legend(loc="upper right", ncol=2)
+    ax.set_ylim(0, 62)
+    ax.grid(True, alpha=0.3)
     plt.tight_layout()
-    fig.savefig(OUT / "arxiv_fig6_variants.pdf", bbox_inches="tight", pad_inches=0.02)
+    fig.savefig(OUT / "arxiv_fig2_kiter.pdf", bbox_inches="tight", pad_inches=0.02)
     plt.close(fig)
 
 
-def paired_wilcoxon() -> None:
-    metrics = ["harm", "leak", "bound", "MI"]
-    base = [47.8, 15.8, 4.6, 44.4]
-    iter1 = [39.2, 13.8, 2.8, 37.2]
-    iter1_err = [4.0, 1.8, 1.5, 3.6]
-    iter2 = [41.5, 11.2, 2.5, 40.5]
-    iter2_err = [3.0, 3.5, 0.5, 4.5]
-    p_iter1 = [0.0114, 0.534, 0.385, 0.055]
-    p_iter2 = [0.0436, 0.177, 0.592, 0.214]
-
+def multi_seed_comparison() -> None:
     fig, ax = plt.subplots(figsize=(6.0, 3.6))
-    x = np.arange(len(metrics))
+    x = np.arange(len(MULTISEED_METRICS))
     width = 0.27
-    ax.bar(x - width, base, width, color=RED, alpha=0.85, label="v4.1 base ($n{=}5$)")
-    ax.bar(x, iter1, width, yerr=iter1_err, color=BLUE, alpha=0.85,
-           capsize=3, label="KL iter1 ($n{=}5$)")
-    ax.bar(x + width, iter2, width, yerr=iter2_err, color="#9BBB59", alpha=0.85,
-           capsize=3, label="KL iter2 ($n{=}4$)")
-    annotation_y = [52.0, None, None, 49.0]
-    for i, (p1, p2) in enumerate(zip(p_iter1, p_iter2)):
-        y_top = max(iter1[i] + iter1_err[i], iter2[i] + iter2_err[i])
-        tag1 = f"{p1:.3f}" + ("*" if p1 < 0.05 else "")
-        tag2 = f"{p2:.3f}" + ("*" if p2 < 0.05 else "")
-        label_y = annotation_y[i] if annotation_y[i] is not None else y_top + 1.5
-        ax.text(i, label_y, f"i1: {tag1}\ni2: {tag2}", ha="center",
-                fontsize=11, fontweight="bold" if (p1 < 0.05 or p2 < 0.05) else "normal")
-    ax.set_xticks(x, metrics)
+    ax.bar(x - width, MULTISEED_BASE, width, color=RED, alpha=0.85,
+           label=f"SFT+DPO base ($n={MULTISEED_BASE_N}$)")
+    ax.bar(x, MULTISEED_KL_ITER1, width, yerr=MULTISEED_KL_ITER1_ERR,
+           color=BLUE, alpha=0.85, capsize=3,
+           label=f"KL iter1 ($n={MULTISEED_KL_ITER1_N}$)")
+    ax.bar(x + width, MULTISEED_KL_ITER2, width, yerr=MULTISEED_KL_ITER2_ERR,
+           color="#9BBB59", alpha=0.85, capsize=3,
+           label=f"KL iter2 ($n={MULTISEED_KL_ITER2_N}$)")
+    for position, value in zip(x - width, MULTISEED_BASE):
+        ax.text(position, value + 1.0, f"{value:.1f}", ha="center", va="bottom", fontsize=9.5)
+    for positions, values, errors in (
+        (x, MULTISEED_KL_ITER1, MULTISEED_KL_ITER1_ERR),
+        (x + width, MULTISEED_KL_ITER2, MULTISEED_KL_ITER2_ERR),
+    ):
+        for position, value, error in zip(positions, values, errors):
+            ax.text(position, value + error + 0.8, f"{value:.1f}", ha="center", va="bottom", fontsize=9.5)
+    ax.set_xticks(x, MULTISEED_METRICS)
     ax.tick_params(axis="both", labelsize=11)
-    ax.set_ylabel("Mean fires per 108 ($n{=}5$ seeds)", fontsize=12)
-    ax.set_title("Multi-seed paired Wilcoxon vs v4.1 base", fontsize=12)
+    ax.set_ylabel("Mean fires per 108", fontsize=12)
+    ax.set_title("Multi-seed comparison with SFT+DPO base", fontsize=12)
     ax.legend(loc="upper center", ncol=3, fontsize=9.5, borderaxespad=0.35,
               columnspacing=0.8, handletextpad=0.4)
-    ax.set_ylim(0, max(base) * 1.50)
+    ax.set_ylim(0, max(MULTISEED_BASE) * 1.50)
     ax.grid(True, alpha=0.3, axis="y")
     plt.tight_layout()
-    fig.savefig(OUT / "arxiv_fig3_wilcoxon.pdf", bbox_inches="tight", pad_inches=0.02)
+    fig.savefig(OUT / "arxiv_fig3_seed_comparison.pdf", bbox_inches="tight", pad_inches=0.02)
     plt.close(fig)
 
 
@@ -329,9 +341,9 @@ def teacher_robustness() -> None:
     kl_harm, sft_harm = [33, 38, 49], [36, 34, 41]
     x = np.arange(3)
     axb.bar(x - width / 2, kl_harm, width, color=BLUE, alpha=0.88,
-            edgecolor="black", linewidth=0.5, label="Per-token KL i1")
+            edgecolor="black", linewidth=0.5, label="Per-token KL iter1")
     axb.bar(x + width / 2, sft_harm, width, color="#8064A2", alpha=0.88,
-            edgecolor="black", linewidth=0.5, label="Per-turn SFT i2")
+            edgecolor="black", linewidth=0.5, label="Per-turn SFT iter2")
     for i in range(3):
         axb.text(i - width / 2, kl_harm[i] + 1, str(kl_harm[i]), ha="center", fontsize=11)
         axb.text(i + width / 2, sft_harm[i] + 1, str(sft_harm[i]), ha="center", fontsize=11)
@@ -346,9 +358,9 @@ def teacher_robustness() -> None:
     x = np.arange(2)
     width2 = 0.27
     axc.bar(x - width2, kl, width2, color=BLUE, alpha=0.88, edgecolor="black",
-            linewidth=0.5, label="KL i1 (113 pts)")
+            linewidth=0.5, label="KL iter1 (113 pts)")
     axc.bar(x, sft, width2, color="#8064A2", alpha=0.88, edgecolor="black",
-            linewidth=0.5, label="SFT i2 (113 pts)")
+            linewidth=0.5, label="SFT iter2 (113 pts)")
     axc.bar(x + width2, scaled, width2, color=GOLD, alpha=0.88, edgecolor="black",
             linewidth=0.5, label="KL scaled3$\\times$ (480 pts)")
     for i in range(2):
@@ -370,8 +382,8 @@ def teacher_robustness() -> None:
 
 if __name__ == "__main__":
     pareto_frontier()
-    distillation_variants()
-    paired_wilcoxon()
+    qwen_iteration_trajectory()
+    multi_seed_comparison()
     teacher_robustness()
     core_split()
     heldout_split()

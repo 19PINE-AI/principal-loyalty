@@ -11,12 +11,6 @@ entry only after its provenance or intended interpretation has been confirmed.
   purely deterministic, hybrid, or two separately combined signals before revising
   the methods description.
 
-- **Figure 5, per-token-KL iteration 2 p-value:** the plotted `p=.012` differs from
-  the documented matched-seed result, `p=0.0436` (`n=4`), reported in the original
-  paper, `scripts/make_figs_arxiv.py`, `scripts/build_website_data.py`, and the
-  website Wilcoxon data. The plotted label is hard-coded in the original and local
-  plotting scripts, but it may come from a different test or aggregation. Identify
-  its provenance before changing it to `p=.044*`.
 - **Meaning intended by Table 3's bold values:** bold appears in selective-model
   cells even though the caption says it marks the over-refusing cluster. The values
   appear to mark
