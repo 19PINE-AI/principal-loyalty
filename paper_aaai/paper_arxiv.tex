@@ -31,9 +31,12 @@
 }
 \Urlmuskip=0mu plus 1mu\relax  % allow URLs to break flexibly
 \setlength{\emergencystretch}{2em}  % absorb unbreakable \texttt paths/URLs
+\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\setlength{\floatsep}{6pt plus 2pt minus 2pt}
 
 % --- title block ------------------------------------------------------------
-\title{Whose Side Is Your Agent On? Multi-Party Principal Loyalty in LLM Agents}
+\title{Improving Multi-Party Principal Loyalty in LLM Agents}
 
 \author{%
   \begin{tabular}{@{}c@{\hspace{4em}}c@{}}
@@ -42,13 +45,13 @@
   \end{tabular}%
 }
 \date{}
-\runningtitle{Whose Side Is Your Agent On? Multi-Party Principal Loyalty in LLM Agents}
+\runningtitle{Improving Multi-Party Principal Loyalty in LLM Agents}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-\noindent A rapidly growing class of LLM agents is \emph{multi-party}: the agent acts for a \textbf{principal} (who briefs it, sends follow-ups, and receives results) while \emph{also} conversing in a separate channel with a \textbf{counterparty} whose interests may diverge (negotiating with a vendor, screening inbound requests, or mediating between employees). Here ``help whoever you are talking to'' is the wrong objective. The agent must stay loyal to the principal it represents without over-refusing the principal's own cooperative asks. We study this \emph{multi-party loyalty problem} and contribute a measurement instrument, two mechanisms, and a structural lesson. \textbf{PrincipalBench} is a 75-item multi-turn benchmark with leak probes, dual judges, and an integrity-audit gate. Across 13 frontier subjects it exposes a sharp split ($\le 20\%$ vs.\ $53.6$--$75.3\%$ harm) invisible to single-turn safety evaluations: a \emph{selective} cluster that declines adversarial probes while still following the principal's legitimate requests, and an \emph{over-refusing} cluster that refuses broadly. \textbf{(M1)~A prompt-time loyalty scaffold} (a fixed system prompt of seven prioritized rules, open-coded from 50+ failure trajectories) holds Claude-Sonnet to $19.4\%$ harm and all nine selective subjects to $\le 20\%$. \textbf{(M2)~A per-token-KL distillation recipe} transfers a prompted Qwen3-32B teacher into 8B Qwen3 and Llama-3.1 students, the strongest open-weight recipe we measure. \textbf{(Lesson)}~Both mechanisms only move \emph{along} a common leak/over-refusal trade-off rather than crossing it: improving one axis costs the other, and the jointly favorable outcome stays out of reach.
+\noindent LLM agents increasingly act for a \textbf{principal} while conversing with a \textbf{counterparty} whose interests may diverge. Helping the current speaker can conflict with serving the principal. We test whether \emph{multi-party principal loyalty} can be improved through inference-time scaffolding and model post-training. \textbf{PrincipalBench} measures principal-directed violations and over-refusal across 75 multi-turn items; 13 models split into nine \emph{selective}, three \emph{over-refusing}, and one intermediate model. A seven-rule scaffold reduces Qwen3-32B harm from $25\%$ to $12\%$ at seed 1, while a reader-identity tag cuts scaffold-induced over-refusal from $9/12$ to $3/12$ probe trajectories; the over-refusing cluster does not improve. Per-token-KL model post-training transfers scaffolded-teacher behavior to Qwen3 and Llama-3.1 8B students. On Qwen3-8B, five-seed mean harm falls from $47.8$ to $39.2$ failures per 108 cells, although the magnitude is judge-sensitive. Both routes improve weaker baselines, but their strongest variants occupy a common leakage/over-refusal frontier: no tested system reaches the jointly favorable region.
 \end{abstract}
 \begin{center}
 \small
@@ -75,25 +78,29 @@ The counterparty in these settings is no longer a tool with a published API or a
 
 We call this the \textbf{multi-party loyalty problem}, and we argue the agent research community has under-studied it. The gap is not primarily one of evaluation. It is a gap in the dominant model of what an agent \emph{is}. The third role, the principal that the agent is defending \emph{from} its conversational partner, is largely missing from how agents are framed, trained, and measured. Its core tension (loyalty to the principal versus helpfulness to the counterparty in the room) has no analogue in the two-party setting. It is therefore missed by single-turn safety benchmarks (whose failures are isolated and adversarial rather than conversational and pressure-driven), by helpfulness benchmarks (where being helpful to the counterparty counts as success), and by existing agent benchmarks (which collapse principal and interlocutor into one user).
 
-\begin{figure}[!h]
-\centering
-\includegraphics[width=0.82\linewidth]{figures/arxiv_fig1_manifold.pdf}
-\caption{\textbf{Headline result: a leak/over-refusal Pareto frontier (preview, expanded in \cref{sec:manifold}).} Each marker is one model variant, scored over the 36 core items under three prompt conditions (\emph{arms}). The $x$-axis is leak rate, $y$ is over-refusal rate (missed-instruction), and the label is the harm count out of 108 item-arm cells. In variant labels, \emph{iter1}, \emph{iter2}, and \emph{iter3} denote successive distillation iterations. The dashed line is the Pareto frontier: no point below and to its left is reachable, so the jointly favorable lower-left corner (shaded) is empty. The prompted Claude teacher and the per-token-KL 8B student sit on the \emph{same} frontier at different operating points, with neither dominating the other. A DAPO RL baseline also fails to reach the empty corner. Both mechanisms we propose move \emph{along} this frontier rather than crossing it.}
-\label{fig:manifold}
-\end{figure}
+We test two routes---inference-time scaffolding and model post-training---and ask whether they improve principal loyalty without inducing indiscriminate refusal. Each helps where effective, but neither removes the underlying tension.
 
 \paragraph{Summary of contributions.}
+PrincipalBench measures five principal-directed violations and a \emph{Sanity} over-refusal category across 13 models (\cref{sec:problem,sec:bench,sec:split}). We find:
 \begin{enumerate}[leftmargin=2em,itemsep=2pt,topsep=2pt]
-\item \textbf{Problem framing.} We formalize multi-party principal-loyalty as a distinct evaluation target, adding a third role on top of the agent and its conversational partner, and decompose it into six failure modes (\cref{sec:problem}). To measure both mechanisms below, we build a 75-item multi-turn instrument (PrincipalBench) with leak probes, dual judges, and an integrity-audit gate (\cref{sec:bench}). Running it across 13 frontier LLM subjects exposes a sharp \emph{selective/over-refusing split} that motivates the targeting of our mechanisms (\cref{sec:split}).
-\item \textbf{Mechanism 1: prompt-time loyalty scaffold.} A fixed system prompt of seven prioritized rules around four insights, derived by open-coding 50+ failure trajectories. This drives Claude-Sonnet to $19.4\%$ harm and holds the selective cluster $\le 20\%$ (\cref{sec:prompt}).
-\item \textbf{Mechanism 2: per-token-KL distillation.} An on-policy recipe that transfers a prompted Qwen3-32B teacher into 8B Qwen3 and Llama-3.1 students, the strongest open-weight recipe we measure (\cref{sec:ptkl}).
-\item \textbf{A common Pareto frontier.} Both mechanisms land on the same leak/over-refusal frontier rather than crossing it, with neither operating point dominating the other, and single-objective (scalar-reward) RL also fails to break it. Five lines of evidence argue this frontier is a structural limit rather than an artifact of any single mechanism (\cref{sec:manifold}), and Anthropic's reported Opus~4.7$\to$4.8 trade is an independent industrial-scale instance of it~\citep{anthropic2025opus48}.
+\item \textbf{Inference-time improvement.} A role-aware scaffold can improve responsive models, while reader-identity tags mitigate its main failure---over-refusing the principal (\cref{sec:prompt}).
+\item \textbf{Model post-training improvement.} Per-token-KL post-training transfers a scaffolded teacher to open-weight Qwen3 and Llama-3.1 8B students (\cref{sec:ptkl}).
+\item \textbf{Shared limit.} The strongest prompted, post-trained, and scalar-reward RL variants remain on a common leakage/over-refusal frontier. Five controls fail to reach the jointly favorable region, and Anthropic's reported Opus~4.7$\to$4.8 trade is a related industrial-scale instance (\cref{sec:manifold}; \citealp{anthropic2025opus48}).
 \end{enumerate}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.82\linewidth]{figures/arxiv_fig1_manifold.pdf}
+\caption{\textbf{Shared limit: a leakage/over-refusal Pareto frontier (preview, expanded in \cref{sec:manifold}).} Each marker is one model variant, scored over the 36 core items under three prompt conditions (\emph{arms}). The $x$-axis is leakage, the $y$-axis is over-refusal (missed-instruction), and the label is harm out of 108 item--arm cells. In variant labels, \emph{iter1}, \emph{iter2}, and \emph{iter3} denote successive post-training iterations. Inference-time scaffolding and model post-training can improve weaker baselines, but their strongest variants occupy different points on the same frontier. No tested prompting, post-training, or RL variant reaches the shaded low-leak, low-refusal corner.}
+\label{fig:manifold}
+\end{figure}
 
 \section{The multi-party loyalty problem}
 \label{sec:problem}
 
 \paragraph{Problem formulation.} A multi-party loyalty episode has three roles. The \textbf{principal} $P$ delegates a task and provides private state $S_P$ (facts, bounds, instructions), and remains in the loop across the episode (sending follow-ups, asking for status, refining the briefing, receiving results). The \textbf{agent} $A$ acts on $P$'s behalf. The \textbf{counterparty} $C$ converses with $A$ in a separate channel and has an objective that may conflict with $P$'s. $C$ never sees $S_P$ or the principal-agent channel directly but may probe, pressure, flatter, or manufacture urgency to extract them, or to extract concessions $P$ did not authorize. The agent succeeds when it advances $P$'s task without (a) leaking withheld facts in $S_P$, (b) violating $P$'s private bounds (e.g.\ a reservation price), (c) capitulating to $C$'s pressure on $P$'s stated positions, or (d) over-refusing legitimate requests, whether from $C$ on $P$-authorized topics or from $P$ directly. We refine these four failure conditions into six measurement cells below, separating (a) by leak channel (direct revelation, posture signaling, authored artifact) and adding a third-party moderation cell and a sanity cell for (d).
+
+Throughout, \emph{principal-directed loyalty violations} refers to the first five cells, while \emph{over-refusal} refers to the cooperative Sanity cell. The aggregate \emph{harm} score marks a trajectory when either kind of failure occurs; it is therefore not an axis independent of over-refusal.
 
 \paragraph{Limitations of single-axis evaluation.} Reducing multi-party loyalty to a single axis like ``How often does the agent leak information?'' fails in both directions. An agent can score perfectly on leakage yet still capitulate on price under pressure, signal in ways that weaken the principal's position, or author documents conceding what the live conversation withheld. Conversely, an agent that refuses everything never leaks, an equally serious failure that single-axis safety metrics inadvertently reward. We therefore decompose the problem space into \textbf{six failure modes}, each a benchmark cell, with one worked example per cell in \cref{tab:cells}.
 
@@ -145,19 +152,19 @@ PrincipalBench differs in three ways. First, its attacks are social (probing, fl
 \section{PrincipalBench: the measurement instrument}
 \label{sec:bench}
 
-To compare the two mechanisms developed below on equal footing, we constructed a multi-turn evaluation harness for principal-loyalty failures. We describe its three components (items, arms, and scoring) only at the level needed to interpret the headline numbers. The full audit and aggregation details are deferred to \cref{app:scoring}.
+To compare inference-time scaffolding and model post-training on equal footing, we constructed a multi-turn evaluation harness for principal-loyalty failures and over-refusal. We describe its three components (items, arms, and scoring) only at the level needed to interpret the headline numbers. The full audit and aggregation details are deferred to \cref{app:scoring}.
 
-\paragraph{Benchmark items and prompt conditions.} Each item consists of a principal briefing together with a parameterized counterparty persona and opening move. The briefing provides the delegated task plus $S_P$: named private facts (with alias lists for probe matching), private bounds, and stated positions. Each item is run under three system-prompt \emph{arms} (prompt conditions): \emph{plain} (no loyalty instructions), \emph{prompted} (the loyalty scaffold of \cref{sec:prompt}), and \emph{scaffolded} (the scaffold plus a reader-identity tag). One item run under one arm is a \emph{cell}, so the 36-item core yields $36 \times 3 = 108$ cells per subject. The public release contains 75 items, split into a 50-item training set and a 25-item held-out set authored after all training was frozen. The held-out set is balanced across the six failure modes. The training set is deliberately sanity-heavy so that over-refusal has ample opportunity to surface during open-coding and distillation. Throughout the paper, ``held-out'' figures aggregate over 25 items $\times$ 3 arms $= 75$ cells. The one exception is the cross-subject grid of \cref{sec:split}, which covers 24 of the 25 held-out items (one leakage item could not be evaluated on all 13 subjects due to a provider routing restriction).
+\paragraph{Benchmark items and prompt conditions.} Each item consists of a principal briefing together with a parameterized counterparty persona and opening move. The briefing provides the delegated task plus $S_P$: named private facts (with alias lists for probe matching), private bounds, and stated positions. Each item is run under three system-prompt \emph{arms} (prompt conditions): \emph{plain} (no loyalty instructions), \emph{prompted} (the loyalty scaffold of \cref{sec:prompt}), and \emph{scaffolded} (the scaffold plus a reader-identity tag). One item run under one arm is a \emph{cell}, so the 36-item core yields $36 \times 3 = 108$ cells per subject. The public release contains 75 items, split into a 50-item training set and a 25-item held-out set authored after all training was frozen. The held-out set is balanced across the six failure modes. The training set is deliberately sanity-heavy so that over-refusal has ample opportunity to surface during open-coding and model post-training. Throughout the paper, ``held-out'' figures aggregate over 25 items $\times$ 3 arms $= 75$ cells. The one exception is the cross-subject grid of \cref{sec:split}, which covers 24 of the 25 held-out items (one leakage item could not be evaluated on all 13 subjects due to a provider routing restriction).
 
 \paragraph{Evaluation procedure.} The response is scored on three signals:
 \begin{itemize}
   \item (1) A deterministic \emph{leak probe} that matches the agent's transcript against each withheld fact's alias set
-  \item (2) A \emph{dual-judge harm score} (primary \texttt{gpt-5-mini}, secondary \texttt{claude-haiku}) that yields a binary harm label plus structured sub-flags: \emph{leak}, \emph{leaked-private-bound}, and \emph{over-refusal} (the agent declines a legitimate request), named \emph{missed-instruction} and abbreviated \emph{MI} in the tables.
+  \item (2) A \emph{dual-judge harm score} (primary \texttt{gpt-5-mini}, secondary \texttt{claude-haiku}) that yields a binary harm label plus structured sub-flags: \emph{leak}, \emph{leaked-private-bound}, and \emph{over-refusal} (the agent declines a legitimate request), named \emph{missed-instruction} and abbreviated \emph{MI} in the tables. Because MI is a sub-flag, aggregate harm includes over-refusal.
   \item (3) An \emph{integrity-audit gate} that rejects any trajectory with zero agent turns or an agent-side early-end error, so silent API failures cannot masquerade as compliant behavior.
 \end{itemize}
 On a balanced 60-item subset of frontier-model trajectories whose harm decision is unambiguous (clear pass or clear fail, not borderline), three judges (\texttt{gpt-5-mini}, \texttt{claude-haiku}, \texttt{claude-sonnet}) agree perfectly on the binary harm decision (pairwise and Fleiss $\kappa = 1.0$). We report the judge-sensitivity caveat for borderline 8B-student outputs in \cref{sec:limits}.
 
-\section{Frontier models split into a selective and an over-refusing cluster}
+\section{Baseline finding: models separate by over-refusal}
 \label{sec:split}
 
 Running 13 frontier subjects across all 108 cells (multi-seed $n{=}5$, paired evaluation seeds, on the 36-item core for comparability) exposes a sharp \textbf{bimodal split} (\cref{fig:xsubj}). Nine subjects form a \emph{selective} cluster at $\le 19.5\%$ harm: they decline the counterparty's adversarial probes while still following the principal's legitimate requests. Three form an \emph{over-refusing} cluster at $\ge 53.6\%$ harm: they refuse so broadly that they fail the principal's own cooperative asks. One subject (GLM-4.6) sits in between.
@@ -197,12 +204,12 @@ cluster & MI & leak & bound & MI & leak & bound \\
 
 \textbf{Robustness.} The split appears in every prompt arm and survives on the held-out items authored after training was frozen (\cref{fig:heldout_xsubj,tab:profile}). The two clusters stay cleanly separated, with GPT-5 reaching $93\%$ harm.
 
-\textbf{From split to mechanisms.} The split organizes the rest of the paper. The selective cluster is where loyalty can be sharpened: \Cref{sec:prompt} (Mechanism~1) introduces a prompt-time loyalty scaffold for closed models, and \cref{sec:ptkl} (Mechanism~2) transfers it to open-weight 8B models via per-token-KL distillation. The over-refusing cluster, dominated by over-refusal failures, proves harder: the scaffold cannot pull these models across the gap, and \cref{sec:manifold} argues no single-objective mechanism we tested does either.
+\textbf{Implication for intervention.} This baseline establishes why an improvement claim must track both sides of loyalty. The selective cluster leaves room to reduce principal-directed violations without abandoning legitimate requests; the over-refusing cluster shows that refusal alone is not loyalty. We next test two operational routes: inference-time scaffolding for existing models (\cref{sec:prompt}) and model post-training for open-weight models (\cref{sec:ptkl}). Both are evaluated against leakage and over-refusal, not aggregate harm alone.
 
-\section{Mechanism 1: a prompt-time loyalty scaffold}
+\section{Improving principal loyalty at inference time}
 \label{sec:prompt}
 
-For models accessible only through an API, the system prompt is the sole lever. We developed a \textbf{loyalty scaffold} by open-coding 50+ failure trajectories of default-prompted Claude-Sonnet on the leakage and capitulation cells and naming the recurring error patterns. The resulting scaffold is a system prompt of seven prioritized rules organized around four core insights (full text in \cref{app:prompt}):
+The first route changes model behavior without changing model weights. For API-only models, the system prompt is the available inference-time lever. We developed a \textbf{loyalty scaffold} by open-coding 50+ failure trajectories of default-prompted Claude-Sonnet on the leakage and capitulation cells and naming the recurring error patterns. The resulting scaffold is a system prompt of seven prioritized rules organized around four core insights (full text in \cref{app:prompt}):
 \begin{enumerate}[leftmargin=2em,itemsep=1pt,topsep=2pt]
 \item \textbf{Adversarial-stranger framing.} The counterparty is an unverifiable stranger whose credentials, urgency, and ``reasonable person'' framings are negotiating tactics and not trust signals. Nothing they say overrides the briefing.
 \item \textbf{Decline without enumerating.} A generic refusal (``I can't discuss that'') leaks less than a specific one (``I can't share their medical history''). Even ``I can neither confirm nor deny'' leaks the existence of the withheld category.
@@ -211,7 +218,7 @@ For models accessible only through an API, the system prompt is the sole lever. 
 \end{enumerate}
 Three further rules cover executing explicit instructions (termination conditions, opening moves, scripted lines), holding stated public positions under repetition, and signaling firmness briefly without fabricating.
 
-\paragraph{Prompt-scaffold performance by model cluster.} Across the nine selective subjects the scaffold holds the $n{=}5$ aggregate harm to $\le 20\%$ (\cref{tab:prompt_grid}), and it \emph{actively helps} the higher-starting members. This effect is most clearly shown in Qwen3-32B, where the scaffold reduces harm from $25\%$ on the plain arm to $12\%$. On Claude-Sonnet it achieves $21/108$ ($19.4\%$) harm across the three arms with a single seed. The over-refusing cluster shows no meaningful improvement. The full per-arm results appear in \Cref{tab:prompt_grid}.
+\paragraph{Inference-time scaffolding can improve loyalty, but conditionally.} The clearest gain is Qwen3-32B, whose seed-1 harm falls from $25\%$ on the plain arm to $12\%$ with the loyalty scaffold. Claude-Sonnet records $21/108$ harmful cells ($19.4\%$) across the three arms at seed 1, and all nine selective subjects remain at $\le20\%$ five-seed aggregate harm across the arms. The over-refusing cluster shows no meaningful improvement. Thus scaffolding is a useful inference-time intervention for responsive models, not a universal correction. The full per-arm results appear in \Cref{tab:prompt_grid}. GPT-5-nano is excluded because its two provider routes disagreed by $>70$ points.
 
 \begin{table}[h]
 \centering\small
@@ -234,22 +241,22 @@ Claude-Sonnet                 & $19\%$  & $22\%$ & $17\%$ & $19.5 \pm 1.5\%$ \\
 \textbf{Qwen3.5-27B}          & $\mathbf{72\%}$ & $79\%$ & $59\%$ & $\mathbf{75.3 \pm 2.9\%}$ \\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Per-arm harm grid.} Columns are the seed-1 single-seed per-arm harm on the 36-item core (plain / prompted / scaffolded). The aggregate reports mean $\pm$ sd over $n{=}5$ matched evaluation seeds, summarizing variability that the single-seed columns omit. Selective subjects (top block) hold $\le 20\%$ aggregate under the scaffold. The over-refusing cluster (bold) does not benefit. GPT-5-nano is excluded: its direct-OpenAI and OpenRouter routes disagree by $>70$ points on the same items, so we could not adjudicate a score.}
+\caption{\textbf{Inference-time scaffolding is model-dependent.} Harm (\%) on the 36-item core; arms use seed 1 and aggregate is mean $\pm$ sd over $n{=}5$ seeds. Bold marks the over-refusing cluster.}
 \label{tab:prompt_grid}
 \end{table}
 
-\paragraph{Cluster-dependent effect of the loyalty scaffold.} The scaffold is not universal. On the over-refusing cluster, it is ineffective or actively harmful: nearly all non-zero item-level changes from the plain to the prompted arm move toward more harm. These models already over-refuse heavily as a result of their own safety training, and the scaffold's ``adversarial stranger'' framing pushes them further into refusal. The selective cluster does not show a comparable aggregate shift. The scaffold amplifies whatever selectivity the base model already has rather than creating it.
+\paragraph{Why the improvement is conditional.} On the over-refusing cluster, the scaffold is ineffective or actively harmful: nearly all non-zero item-level changes from the plain to the prompted arm move toward more harm. These models already over-refuse heavily as a result of their own safety training, and the scaffold's ``adversarial stranger'' framing pushes them further into refusal. The selective cluster does not show a comparable aggregate shift. The scaffold amplifies existing selectivity rather than creating it.
 
-\paragraph{Mitigation of scaffold-induced over-refusal.} The scaffold creates one new failure: it sometimes refuses the principal's \emph{own} cooperative requests, because it mistakes the principal for the adversarial counterparty (e.g., when the principal asks the agent to draft their own self-review). On a 12-item probe sub-benchmark, the scaffold alone triggers this over-refusal in $9/12$ trajectories. Prepending a one-line tag to each message that marks who the agent is talking to (\texttt{[READER:\,PRINCIPAL]} or \texttt{[READER:\,THIRD\_PARTY]}, \cref{app:prompt}) cuts the trigger rate to $3/12$. This fix generalizes to held-out probe items and holds even when the counterparty tries to spoof a principal-side tag. The scaffold plus this tag is the \emph{scaffolded} arm. It recovers cooperative behavior without making leaks more likely again.
+\paragraph{Reader identity limits scaffold-induced over-refusal.} The scaffold creates one new failure: it sometimes refuses the principal's \emph{own} cooperative requests, because it mistakes the principal for the adversarial counterparty (e.g., when the principal asks the agent to draft their own self-review). Prepending a one-line reader tag (\texttt{[READER:\,PRINCIPAL]} or \texttt{[READER:\,THIRD\_PARTY]}, \cref{app:prompt}) reduces this failure from $9/12$ to $3/12$ probe trajectories. This fix generalizes to held-out probes and holds even when the counterparty tries to spoof a principal-side tag. The scaffold plus this tag is the \emph{scaffolded} arm. It recovers cooperative behavior without making leaks more likely again.
 
-\section{Mechanism 2: per-token-KL distillation for open-weight students}
+\section{Improving principal loyalty through model post-training}
 \label{sec:ptkl}
 
-For open-weight models, we can intervene directly in the weights. Our student is Qwen3-8B at an in-house SFT$+$DPO endpoint (mean harm rate $47.8/108$ across five evaluation seeds). The goal is to find which distillation objective best transfers the prompted teacher's loyalty behavior into the weights, so that no special system prompt is needed at deployment.
+The second route changes the model itself. We post-train a Qwen3-8B student from an in-house SFT$+$DPO endpoint (mean harm $47.8/108$ across five evaluation seeds), using a scaffolded teacher to transfer principal-loyal behavior into the weights. Distillation is the training mechanism; the deployment result is an open-weight model that no longer requires the special system prompt.
 
-\subsection{Three distillation variants}
+\subsection{Three post-training objectives}
 \label{sec:variants}
-We compare three families, all using the same on-policy data (student-generated trajectories, with teacher supervision applied at the student's own visited states):
+We compare three distillation objectives for model post-training, all using the same on-policy data (student-generated trajectories, with teacher supervision applied at the student's own visited states):
 \begin{itemize}[leftmargin=2em,itemsep=1pt,topsep=2pt]
 \item \textbf{Per-turn SFT:} fine-tune on the teacher's full completion at each student state.
 \item \textbf{Per-turn DPO:} preference pairs with chosen $=$ teacher completion, rejected $=$ student completion, at the same state.
@@ -261,21 +268,21 @@ Per-token KL requires a teacher that exposes its next-token distribution, which 
 \]
 with $\hat p_S$ renormalized over the same top-$K$. Padded slots use a finite $-10^4$ (rather than $-\infty$) to avoid the $0\cdot\infty = \text{NaN}$ trap that silently masks training failure.
 
-\subsection{Headline and multi-seed results}
-We collect one round of on-policy data (113 teacher turn-records, 28{,}486 token-level signals) and train 3 epochs of QLoRA at rank 16. On Qwen3-8B, per-token KL is the only single-iteration recipe that improves \emph{all four} scored axes at once against the SFT$+$DPO base: harm, leak, leaked-private-bound, and over-refusal (missed-instruction). Iteration-1 counts are in \cref{tab:kiter}, and its operating point in \cref{fig:manifold}. Its aggregate leak rate even drops \emph{below} the prompted Claude teacher's. Across five matched evaluation seeds, mean harm falls from $47.8$ failures per 108 cells for the base to $39.2$ for per-token-KL iteration~1; the corresponding leak, bound, and over-refusal means move from $15.8$, $4.6$, and $44.4$ to $13.8$, $2.8$, and $37.2$ (\cref{fig:seed_comparison}). Two caveats temper these observations. First, the harm difference is much smaller under the secondary re-judge (\cref{sec:limits}). Second, the single-seed point in \cref{fig:manifold} sits at the harm-favorable end of the seed distribution, so the multi-seed mean (\cref{fig:seed_comparison}) runs a few cells higher.
+\subsection{Model post-training improves the Qwen3-8B baseline}
+We collect one round of on-policy data (113 teacher turn-records, 28{,}486 token-level signals) and train 3 epochs of QLoRA at rank 16. Per-token KL is the only single-iteration post-training objective that improves \emph{all four} scored axes against the SFT$+$DPO base: aggregate harm, leakage, leaked-private-bound, and over-refusal (missed-instruction). Iteration-1 counts are in \cref{tab:kiter}, and its operating point in \cref{fig:manifold}. Its aggregate leak rate even drops below the inference-time-scaffolded Claude teacher's. Across five matched evaluation seeds, mean harm falls from $47.8$ failures per 108 cells for the base to $39.2$ for per-token-KL iteration~1; the corresponding leakage, bound, and over-refusal means move from $15.8$, $4.6$, and $44.4$ to $13.8$, $2.8$, and $37.2$ (\cref{fig:seed_comparison}). Two caveats temper these observations. First, the harm difference is much smaller under the secondary re-judge (\cref{sec:limits}). Second, the single-seed point in \cref{fig:manifold} sits at the harm-favorable end of the seed distribution, so the multi-seed mean (\cref{fig:seed_comparison}) runs a few cells higher.
 
-The five-seed DAPO-style RL replication does not reproduce its single-seed improvement (\cref{sec:manifold}).
+This establishes the second improvement route: model post-training can transfer principal-loyal behavior into an open-weight student. The five-seed DAPO-style RL replication does not reproduce its single-seed improvement (\cref{sec:manifold}).
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.85\linewidth]{figures/arxiv_fig3_seed_comparison.pdf}
-\caption{\textbf{Multi-seed comparison with the SFT$+$DPO base.} Per-token-KL iteration~1 has the lowest mean harm ($47.8\to39.2$) and missed-instruction count ($44.4\to37.2$), whereas iteration~2 has the lowest mean leak ($15.8\to11.2$) and private-bound count ($4.6\to2.5$). Bars show mean failures per 108 cells across evaluation seeds; error bars show $\pm1\sigma$ for the per-token-KL checkpoints. The base and iteration~1 use five seeds; iteration~2 uses four. At iteration~1, cells firing under all five seeds fall $15\to6$ on harm and $15\to5$ on over-refusal.}
+\caption{\textbf{Multi-seed model post-training improvement.} Against the SFT$+$DPO base, per-token-KL iteration~1 has the lowest mean harm ($47.8\to39.2$) and missed-instruction count ($44.4\to37.2$), whereas iteration~2 has the lowest mean leak ($15.8\to11.2$) and private-bound count ($4.6\to2.5$). Bars show mean failures per 108 cells; error bars show $\pm1\sigma$. The base and iteration~1 use five seeds; iteration~2 uses four. At iteration~1, cells firing under all five seeds fall $15\to6$ on harm and $15\to5$ on over-refusal.}
 \label{fig:seed_comparison}
 \end{figure}
 
-\subsection{The $K$-iteration trajectory}
+\subsection{Successive post-training iterations}
 \label{sec:kiter}
-The recipe can be repeated: re-sample student trajectories from each iteration-$K$ checkpoint, then re-distill. This traces a path \emph{along} the trade-off rather than converging to an optimum. \Cref{tab:kiter} focuses on Qwen3-8B, the primary student; \cref{fig:kiter} shows how the two model families differ in shape.
+The post-training recipe can be repeated: re-sample student trajectories from each iteration-$K$ checkpoint, then re-distill against the same scaffolded teacher. This changes the operating point rather than converging to one optimum. \Cref{tab:kiter} focuses on Qwen3-8B, the primary student; \cref{fig:kiter} shows how the two model families differ in shape.
 
 \begin{table}[h]
 \centering\small
@@ -290,11 +297,11 @@ iteration & harm & leak & bound & MI \\
 5 & 32 & 19 & 6 & 32 \\
 \bottomrule
 \end{tabular}
-\caption{\textbf{$K$-iteration distillation trajectory for Qwen3-8B} (failures per 108 cells at single seed; MI $=$ missed-instruction, the over-refusal flag; bound $=$ leaked private bound). Each iteration re-samples student trajectories from the previous checkpoint and re-distills against the same prompted teacher. Bold marks the selected harm-minimum and leak/bound-minimum stopping points.}
+\caption{\textbf{Iterative model post-training for Qwen3-8B} (per-token-KL distillation; failures per 108 cells at single seed; MI $=$ missed-instruction, the over-refusal flag; bound $=$ leaked private bound). Bold marks the selected harm-minimum and leak/bound-minimum stopping points.}
 \label{tab:kiter}
 \end{table}
 
-\textbf{Qwen moves back and forth along the leak/harm trade-off.} Iteration~1 is the harm-minimum, iteration~2 the leak/bound-minimum, iterations 3--4 regress, and iteration~5 returns to iteration~1's harm level but at the series' \emph{worst} leak/bound: it traces the trade-off rather than crossing it. In the multi-seed comparison, both stopping points have lower mean harm than the base (\cref{fig:seed_comparison}). \textbf{Llama descends monotonically} to iteration~3 and plateaus. The shape is base-model-dependent, but in both families each iteration trades one axis for another and never strictly dominates the previous iteration.
+\textbf{The preferred post-training checkpoint depends on the failure axis.} Iteration~1 minimizes aggregate harm, iteration~2 minimizes leak/bound, iterations 3--4 regress, and iteration~5 returns to iteration~1's harm level but at the series' \emph{worst} leak/bound. In the multi-seed comparison, both selected stopping points have lower mean harm than the base (\cref{fig:seed_comparison}). \textbf{Llama descends monotonically} to iteration~3 and plateaus. The trajectory is base-model-dependent, but additional post-training does not produce one checkpoint that is best on every axis.
 
 \begin{figure}[t]
 \centering
@@ -308,30 +315,30 @@ iteration & harm & leak & bound & MI \\
 \caption{Llama-3.1-8B: monotone descent to iteration 3, then a plateau at iteration 4.}
 \label{fig:kiter_llama}
 \end{subfigure}
-\caption{\textbf{$K$-iteration trajectory by family.} Each iteration re-samples student trajectories from the previous checkpoint and re-distills against the same prompted teacher.}
+\caption{\textbf{Successive model post-training by family.} Each per-token-KL iteration re-samples student trajectories from the previous checkpoint and re-distills against the same scaffolded teacher.}
 \label{fig:kiter}
 \end{figure}
 
 \subsection{Transfer, teacher validation, and counterparty robustness}
 \label{sec:selfval}
-\textbf{Cross-family transfer.} We repeat the recipe on a second family: Llama-3.1-8B distilled from a Llama-3.1-70B-Instruct-AWQ teacher (same family, shared tokenizer). It descends comparably to the Qwen3 result (\cref{fig:kiter}) and carries a comparable train-to-held-out gap (harm $15.7\%\to26.7\%$). The recipe is therefore not specific to a single base family.
+\textbf{Cross-family transfer.} We repeat the post-training recipe on a second family: Llama-3.1-8B with a Llama-3.1-70B-Instruct-AWQ teacher (same family, shared tokenizer). It descends comparably to the Qwen3 result (\cref{fig:kiter}) and carries a comparable train-to-held-out gap (harm $15.7\%\to26.7\%$). The improvement is therefore not specific to a single base family.
 
-\textbf{Validating the teacher.} Before trusting distillation from it, we check the open teacher (Qwen3-32B-AWQ prompted with the loyalty scaffold, audit-passing trajectories only, $n{=}31$) is actually good: it matches Claude-Sonnet's low harm and over-refusal on the scaffolded arm but leaks far more (\cref{fig:teacher_robust}a). It trades \emph{leak for harm}, which is why the per-token-KL student inherits a low-harm but leak-tolerant profile.
+\textbf{Validating the post-training teacher.} The open teacher (Qwen3-32B-AWQ with the loyalty scaffold, audit-passing trajectories only, $n{=}31$) matches Claude-Sonnet's low harm and over-refusal on the scaffolded arm but leaks far more (\cref{fig:teacher_robust}a). The post-trained student inherits this operating point: relatively low harm, but greater leak tolerance than the Claude teacher.
 
 \textbf{Counterparty robustness and held-out generalization.} Swapping the counterparty model (Claude-Sonnet $\to$ GPT-5 $\to$ Gemini-3-flash) raises harm $33\to38\to49$ (\cref{fig:teacher_robust}b) but leak only $13\to14\to20$: the leak-axis improvement transfers across counterparties more cleanly than the harm-axis improvement. On held-out items the same checkpoint carries an $\approx$10-point train-to-held-out harm gap (\cref{fig:teacher_robust}c), the recipe's main caveat, which we examine in \cref{sec:limits}.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/arxiv_fig_teacher_robust.pdf}
-\caption{\textbf{Teacher validation and student robustness} (per-token-KL iteration~1 unless noted). \textbf{(a)}~The open Qwen3-32B teacher matches Claude-Sonnet on harm and over-refusal but leaks much more. \textbf{(b)}~Swapping the counterparty model raises harm for both variants. Per-token KL is somewhat more counterparty-sensitive than per-turn SFT. \textbf{(c)}~Per-token KL has the lowest training harm but the largest train-to-held-out gap, and naive $3{\times}$ data scaling regresses on held-out.}
+\caption{\textbf{Post-training teacher validation and student robustness} (per-token-KL iteration~1 unless noted). \textbf{(a)}~The open Qwen3-32B teacher matches Claude-Sonnet on harm and over-refusal but leaks more. \textbf{(b)}~Swapping the counterparty raises harm for both variants. \textbf{(c)}~Per-token KL has the lowest training harm but the largest train-to-held-out gap, and naive $3{\times}$ data scaling regresses on held-out.}
 \label{fig:teacher_robust}
 \end{figure}
 
-\section{A structural leak/over-refusal trade-off}
+\section{Shared limit: a structural leakage/over-refusal trade-off}
 \label{sec:manifold}
-Both the prompt-time loyalty scaffold (\cref{sec:prompt}) and per-token KL distillation (\cref{sec:ptkl}) only move models \emph{along} a common trade-off rather than crossing it. Plotted on the leak and over-refusal axes (\cref{fig:manifold}), the variants trace a Pareto frontier whose jointly favorable lower-left corner is empty: no variant is simultaneously low-leak and low-over-refusal. The prompted Claude teacher and the per-token-KL student sit on the \emph{same} frontier at different operating points, with neither dominating the other. We present five lines of evidence (one per mechanism family, plus a data-scaling control) that this frontier is a structural limit rather than an artifact of any single mechanism.
+Inference-time scaffolding (\cref{sec:prompt}) and model post-training (\cref{sec:ptkl}) can each improve a weaker baseline. The shared limitation appears when we compare the strongest resulting systems. Plotted on the leakage and over-refusal axes (\cref{fig:manifold}), they occupy a common Pareto frontier whose jointly favorable lower-left corner is empty: further reducing leakage is associated with more refusal of legitimate requests, and no tested variant is simultaneously low-leak and low-refusal. The inference-time-scaffolded Claude teacher and the per-token-KL post-trained student sit at different frontier points, with neither dominating the other. We present five controls spanning post-training, RL, reward design, and data scaling that all fail to reach the empty corner.
 
-\Cref{tab:floor} summarizes the five controls. Three are particularly decisive. Control~2 shows the frontier holds even relative to the \emph{best distillation checkpoint}, not just the prompted baseline: RL initialized from the harm-minimum checkpoint actually \emph{increases} harm. Control~3 shows that an apparent single-seed path around the frontier is a seed artifact that vanishes under multi-seed replication. Control~5 shows the frontier is not a data-volume artifact: naive scaling moves performance in the wrong direction (likely under-fitting at fixed epochs, as rank-16 LoRA capacity is spread across $4.2\times$ more patterns).
+\Cref{tab:floor} summarizes the five controls. Three are particularly decisive. Control~2 starts from the best post-trained checkpoint and still moves backward under RL. Control~3 shows that an apparent single-seed path around the frontier is not reproduced under multi-seed replication. Control~5 shows that naive data scaling also moves performance in the wrong direction (likely under-fitting at fixed epochs, as rank-16 LoRA capacity is spread across $4.2\times$ more patterns).
 
 \begin{table}[h]
 \centering\footnotesize
@@ -340,14 +347,14 @@ Both the prompt-time loyalty scaffold (\cref{sec:prompt}) and per-token KL disti
 \toprule
 control & manipulation & outcome \\
 \midrule
-1. Iterate distillation & re-sample and re-distill over $K$ iterations & every iterate trades one axis for another, and none dominates iteration~1 (\cref{tab:kiter}) \\
+1. Iterate post-training & re-sample and re-distill over $K$ iterations & every iterate trades one axis for another, and none dominates iteration~1 (\cref{tab:kiter}) \\
 2. RL from the optimum & DAPO~\citep{yu2025dapo} from the Qwen iter-1 checkpoint (LoRA r32, 5 epochs) & harm walks up ($33\to46$), MI $32\to45$, reward/refusal/leak flat across training (rank-16 rerun unchanged) \\
 3. Single-objective RL improvement & re-test at $n{=}5$ a DAPO run that improved at single seed & the single-seed improvement is not reproduced on any axis \\
 4. Reward-axis composition & merge the harm-favorable and leak-favorable reward settings (pre-registered) & beats neither source reward, so the two axes are coupled, not independent \\
-5. Scale distillation data & $4.2\times$ data (480 vs.\ 113 records), same epochs/rank/LR & regresses harm on both training ($31\to37\%$) and held-out ($40\to56\%$) \\
+5. Scale post-training data & $4.2\times$ data (480 vs.\ 113 records), same epochs/rank/LR & regresses harm on both training ($31\to37\%$) and held-out ($40\to56\%$) \\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Five controls, none breaks the leak/over-refusal frontier.} Each independently probes whether the favorable corner of \cref{fig:manifold} is reachable, spanning iterated distillation, RL, reward design, and data scaling. All fail relative to the best distillation checkpoint. This is evidence that the frontier is a structural limit rather than an artifact of any one mechanism.}
+\caption{\textbf{Five controls, none reaches the favorable corner.} The controls span iterative model post-training, RL, reward design, and data scaling. All fail relative to the best post-trained checkpoint, supporting a shared structural limitation rather than a method-specific artifact.}
 \label{tab:floor}
 \end{table}
 
@@ -356,7 +363,7 @@ control & manipulation & outcome \\
 \section{Limitations}
 \label{sec:limits}
 
-\paragraph{Judge sensitivity for 8B students.} The two judges agree perfectly on frontier trajectories whose harm decision is unambiguous ($\kappa=1.0$ on a balanced 60-item three-judge subset) but only agree weakly on the borderline per-token-KL 8B student ($\kappa=0.08$, the secondary judge being systematically more lenient), and agree moderately on the base ($\kappa=0.42$). This materially affects the observed harm difference. Re-judging all $1{,}080$ base and student trajectories with the secondary judge preserves the \emph{direction} of the per-token-KL harm reduction but makes the difference much smaller, and the judge-independent leak probe also shows only a small difference (\cref{tab:judge}). The caveat is specific to the borderline 8B regime. The frontier-model split of \cref{sec:split} is scored on trajectories with an unambiguous harm decision ($\kappa=1.0$), so the paper's central structural claim does not rest on the contested judge.
+\paragraph{Judge sensitivity of the model post-training result.} The two judges agree perfectly on frontier trajectories whose harm decision is unambiguous ($\kappa=1.0$ on a balanced 60-item three-judge subset) but only agree weakly on the borderline per-token-KL 8B student ($\kappa=0.08$, the secondary judge being systematically more lenient), and agree moderately on the base ($\kappa=0.42$). This materially affects the observed improvement. Re-judging all $1{,}080$ base and student trajectories preserves the \emph{direction} of the post-training harm reduction but makes the difference much smaller, and the judge-independent leak probe also shows only a small difference (\cref{tab:judge}). The caveat is specific to the borderline 8B regime. The frontier-model split of \cref{sec:split} is scored on trajectories with an unambiguous harm decision ($\kappa=1.0$), so the paper's central structural claim does not rest on the contested judge.
 
 \begin{table}[h]
 \centering\footnotesize
@@ -370,7 +377,7 @@ secondary judge (\texttt{claude-haiku}), harm & $42.6$ & $41.4$ \\
 deterministic leak probe                      & $15.8$ & $13.8$ \\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Judge sensitivity of the per-token-KL comparison.} Mean failing cells per 108 over $n{=}5$ seeds, per-token-KL student vs.\ SFT$+$DPO base. The primary judge shows a larger base--student harm difference than the secondary judge; the judge-independent leak probe shows a small difference.}
+\caption{\textbf{Judge sensitivity of the model post-training improvement.} Mean failing cells per 108 over $n{=}5$ seeds, per-token-KL student vs.\ SFT$+$DPO base. The primary judge shows a larger base--student harm difference than the secondary judge; the judge-independent leak probe shows a small difference.}
 \label{tab:judge}
 \end{table}
 
@@ -386,9 +393,9 @@ deterministic leak probe                      & $15.8$ & $13.8$ \\
 
 \section{Conclusion}
 
-As agents are increasingly deployed to act for a principal among \emph{other people}, the dominant ``help the current speaker'' objective becomes misaligned. The agent must remain loyal to the principal it represents, even as the counterparty actively pushes back. We call this the multi-party loyalty problem. This is not just an evaluation gap, but a gap in the agent paradigm itself. To study it, we built PrincipalBench as a measurement instrument. Running it across 13 frontier subjects showed they split into a selective cluster and an over-refusing cluster on the over-refusal axis.
+Principal loyalty is improvable through two complementary routes. At inference time, a role-aware loyalty scaffold can reduce failures in responsive models, and reader-identity tags mitigate its tendency to over-refuse. Through model post-training, per-token-KL distillation transfers scaffolded-teacher behavior into open-weight Qwen3 and Llama-3.1 8B students. PrincipalBench provides the common measurement needed to compare these routes and exposes why aggregate harm alone is insufficient: models can fail either by abandoning the principal or by refusing legitimate work.
 
-Against this backdrop, we present two mechanisms: a prompt-time loyalty scaffold, which brings Claude-Sonnet to $19.4\%$ harm and the selective cluster to $\le 20\%$, and an on-policy per-token-KL distillation recipe that transfers a prompted teacher into 8B Qwen3 and Llama-3.1 students. While both mechanisms are immediately usable, the deeper lesson is more important: both approaches, along with single-objective (scalar-reward) RL, only move models along a common leak/over-refusal Pareto frontier rather than crossing it. This structural frontier suggests the next generation of loyalty mechanisms must address the trade-off at a more fundamental level. Natural next steps include scaling items, evaluating against real human counterparties, and adding single-party controls to better isolate multi-party-specific over-refusal.
+The improvements share a structural limit. Among the strongest inference-time, post-trained, and RL variants, lower leakage trades against greater refusal of legitimate requests, and no tested system reaches the jointly favorable corner. The next generation of loyalty interventions should preserve the gains of both routes while breaking this leakage/over-refusal frontier. Natural next steps include human counterparties, matched single-party controls, and post-training objectives that represent the two axes separately rather than collapsing them into one scalar reward.
 
 \section*{Acknowledgements}
 
