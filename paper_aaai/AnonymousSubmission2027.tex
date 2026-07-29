@@ -11,16 +11,16 @@
 \urlstyle{rm}
 \def\UrlFont{\rm}
 \frenchspacing
-\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
-\setlength{\intextsep}{8pt plus 2pt minus 2pt}
-\setlength{\floatsep}{6pt plus 2pt minus 2pt}
+\pdfinfo{
+/TemplateVersion (2027.1)
+}
 
 % Keep section numbering enabled for the submission.
 \setcounter{secnumdepth}{2}
 
 \title{Whose Side Is Your Agent On? Multi-Party Principal Loyalty in LLM Agents}
 \author{Anonymous Submission}
-\affiliations{Anonymous Institution}
+\affiliations{}
 
 \begin{document}
 \maketitle
@@ -93,13 +93,6 @@ Throughout, \emph{principal-directed loyalty violations} refers to the first fiv
 \end{figure}
 
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=0.75\textwidth]{figures/arxiv_fig0_problem.pdf}
-\caption{\textbf{Multi-party principal loyalty.} Separate principal and counterparty channels create four loyalty-failure axes, operationalized as six benchmark cells.}
-\label{fig:problem}
-\end{figure*}
-
 \paragraph{Co-occurrence of loyalty failures.} In one used-car item, the agent reveals the seller's \$12,000 minimum, accepts \$11,500 under pressure, and calls the seller motivated, simultaneously triggering leakage, bound, capitulation, and posture failures. Refusing every probe avoids those failures but fails \emph{Sanity} when the principal asks for a summary of their own notes. PrincipalBench measures this joint behavior.
 
 \section{Related work}
@@ -135,19 +128,12 @@ On a balanced 60-item subset of frontier-model trajectories whose harm decision 
 
 We run 13 frontier subjects on the 36-item core for comparability, covering all 108 cells with five paired evaluation seeds. The results expose a sharp \textbf{bimodal split} (\cref{fig:xsubj}). Nine subjects form a \emph{selective} cluster at $\le 19.5\%$ harm: they decline the counterparty's adversarial probes while still following the principal's legitimate requests. Three form an \emph{over-refusing} cluster at $\ge 53.6\%$ harm: they refuse so broadly that they fail the principal's own cooperative asks. One subject (GLM-4.6) sits in between.
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
-\includegraphics[width=\linewidth]{figures/arxiv_fig7_xsubj.pdf}
-\caption{\textbf{Selective/over-refusing split on the 36-item core.} Five-seed means ($\pm1\sigma$) reveal a 34-point gap between the two clusters.}
+\includegraphics[width=\textwidth]{figures/arxiv_fig_subject_split.pdf}
+\caption{\textbf{The selective/over-refusing split persists on held-out items.} (a) Five-seed means ($\pm1\sigma$) on the 36-item core reveal a 34-point gap. (b) Held-out rates use each subject's valid cells; labels give harmful/valid cells. Mistral-Large was unmeasurable, and Gemini-2.5-flash was not rerun.}
 \label{fig:xsubj}
-\end{figure}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{figures/arxiv_fig8_heldout_xsubj.pdf}
-\caption{\textbf{The split persists on 24 post-freeze items.} Rates use each subject's valid cells. Mistral-Large was unmeasurable; Gemini-2.5-flash was not rerun.}
-\label{fig:heldout_xsubj}
-\end{figure}
+\end{figure*}
 
 Two findings make this split interesting. First, \textbf{it is intrinsic, not prompt-induced}. The models in the over-refusing cluster already exhibit a majority of their harm on the no-instruction \texttt{plain} arm, before any loyalty scaffold is introduced. Second, \textbf{it is driven by over-refusal, not leakage}. Decomposing harm by sub-flag (\cref{tab:profile}), the over-refusing cluster fails almost entirely by over-refusal (missed-instruction), while the selective cluster carries a balanced leak/over-refusal profile. PrincipalBench therefore separates models that \emph{selectively} decline adversarial requests from models that \emph{blanket-refuse} these multi-party items, a distinction invisible to single-turn safety evaluations. The split is \textbf{release-line-specific, not vendor-wide} (it tracks individual post-training releases, not a vendor's whole lineup). For example, within Qwen, Qwen3-32B is selective while Qwen3.5-27B over-refuses.
 
@@ -250,14 +236,14 @@ This establishes the second improvement route: model post-training can transfer 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/arxiv_fig3_seed_comparison.pdf}
-\caption{\textbf{Multi-seed model post-training improvement.} Against the SFT$+$DPO base, per-token-KL iteration~1 has the lowest mean harm ($47.8\to39.2$) and missed-instruction count ($44.4\to37.2$), whereas iteration~2 has the lowest mean leak ($15.8\to11.2$) and private-bound count ($4.6\to2.5$). Bars show mean failures per 108 cells; error bars show $\pm1\sigma$. The base and iteration~1 use five seeds; iteration~2 uses four.}
+\caption{\textbf{Multi-seed model post-training comparison.} Iteration~1 minimizes mean harm and missed-instruction failures; iteration~2 minimizes leakage and private-bound failures. Error bars show $\pm1\sigma$ for the KL checkpoints (iteration~1: $n{=}5$; iteration~2: $n{=}4$); the base uses five seeds.}
 \label{fig:seed_comparison}
 \end{figure}
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/arxiv_fig_teacher_robust.pdf}
-\caption{\textbf{Post-training teacher validation and robustness} (per-token-KL iteration 1). Open and Claude teachers occupy different leakage/harm operating points; counterparty and held-out tests expose the main caveats.}
+\caption{\textbf{Post-training teacher validation and robustness.} (a) Scaffolded-arm failure rates compare Claude-Sonnet ($n{=}36$) with the Qwen3-32B teacher ($n{=}31$). (b) Harm failures across counterparties compare per-token-KL iteration~1 with per-turn-SFT iteration~2. (c) Training and held-out harm compare the 113-record KL and SFT runs with scaled KL trained on 480 records.}
 \label{fig:teacher_robust}
 \end{figure*}
 
