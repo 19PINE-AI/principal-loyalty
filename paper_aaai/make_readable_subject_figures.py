@@ -14,7 +14,11 @@ OUT = Path(__file__).resolve().parent / "figures"
 BLUE = "#4F81BD"
 GOLD = "#E8A33D"
 RED = "#C0504D"
+PURPLE = "#8064A2"
+GREEN = "#9BBB59"
+GRAY = "#7F7F7F"
 COLORS = {"calibrated": BLUE, "intermediate": GOLD, "over-refuse": RED}
+HATCHES = {"calibrated": "//", "intermediate": "..", "over-refuse": "xx"}
 
 # Multi-seed results used by the multi-axis comparison plot.
 MULTISEED_METRICS = ["harm", "leak", "bound", "MI"]
@@ -185,8 +189,10 @@ def combined_subject_split() -> None:
 
     core_means = [r[1] for r in rows]
     core_sds = [r[2] for r in rows]
-    ax_core.barh(y, core_means, xerr=core_sds, color=colors, alpha=0.88,
-                 edgecolor="black", linewidth=0.5, capsize=2)
+    core_bars = ax_core.barh(y, core_means, xerr=core_sds, color=colors,
+                            edgecolor="black", linewidth=0.5, capsize=2)
+    for bar, row in zip(core_bars, rows):
+        bar.set_hatch(HATCHES[row[6]])
     for yi, mean, sd in zip(y, core_means, core_sds):
         ax_core.text(mean + sd + 1.1, yi, f"{mean:.1f}", va="center", fontsize=9.4)
     ax_core.set_yticks(y, [r[0] for r in rows])
@@ -196,15 +202,17 @@ def combined_subject_split() -> None:
     ax_core.set_xlim(0, 92)
 
     held_rows = [(yi, r) for yi, r in zip(y, rows) if r[3] is not None]
-    ax_held.barh(
+    held_bars = ax_held.barh(
         [yi for yi, _ in held_rows], [r[3] for _, r in held_rows],
-        color=[COLORS[r[6]] for _, r in held_rows], alpha=0.88,
+        color=[COLORS[r[6]] for _, r in held_rows],
         edgecolor="black", linewidth=0.5,
     )
+    for bar, (_, row) in zip(held_bars, held_rows):
+        bar.set_hatch(HATCHES[row[6]])
     for yi, r in held_rows:
         if r[3] >= 65:
             ax_held.text(r[3] - 1.5, yi, f"{r[3]:.0f}%  ({r[4]}/{r[5]})",
-                         ha="right", va="center", fontsize=9.4, color="black")
+                         ha="right", va="center", fontsize=9.4, color="white")
         else:
             ax_held.text(r[3] + 1.2, yi, f"{r[3]:.0f}%  ({r[4]}/{r[5]})",
                          va="center", fontsize=9.4)
@@ -226,11 +234,11 @@ def combined_subject_split() -> None:
 
     fig.legend(
         handles=[
-            Patch(facecolor=BLUE, alpha=0.88, edgecolor="black", linewidth=0.5,
+            Patch(facecolor=BLUE, edgecolor="black", linewidth=0.5, hatch="//",
                   label="selective"),
-            Patch(facecolor=GOLD, alpha=0.88, edgecolor="black", linewidth=0.5,
+            Patch(facecolor=GOLD, edgecolor="black", linewidth=0.5, hatch="..",
                   label="intermediate"),
-            Patch(facecolor=RED, alpha=0.88, edgecolor="black", linewidth=0.5,
+            Patch(facecolor=RED, edgecolor="black", linewidth=0.5, hatch="xx",
                   label="over-refusing"),
         ],
         loc="upper center", bbox_to_anchor=(0.58, 0.995), ncol=3,
@@ -243,15 +251,15 @@ def combined_subject_split() -> None:
 
 def pareto_frontier() -> None:
     rows = [
-        ("Qwen-8B untrained", 76.0, 22.4, 28, 107, "#7F7F7F", "x"),
+        ("Qwen-8B untrained", 76.0, 22.4, 28, 107, GRAY, "x"),
         ("Qwen SFT+DPO", 100 * 18 / 108, 100 * 51 / 108, 56, 108, RED, "o"),
         ("Qwen DAPO", 100 * 19 / 108, 100 * 34 / 108, 37, 108, GOLD, "s"),
-        ("Per-turn SFT iter1", 100 * 17 / 107, 100 * 43 / 107, 44, 107, "#8064A2", "D"),
-        ("Per-turn SFT iter2", 100 * 24 / 105, 100 * 32 / 105, 36, 105, "#8064A2", "v"),
+        ("Per-turn SFT iter1", 100 * 17 / 107, 100 * 43 / 107, 44, 107, PURPLE, "D"),
+        ("Per-turn SFT iter2", 100 * 24 / 105, 100 * 32 / 105, 36, 105, PURPLE, "v"),
         ("Per-token KL iter1", 100 * 13 / 108, 100 * 32 / 108, 33, 108, BLUE, "*"),
         ("Per-token KL iter2", 100 * 9 / 106, 100 * 35 / 106, 38, 106, BLUE, "P"),
         ("Per-token KL iter3", 100 * 15 / 108, 100 * 40 / 108, 41, 108, BLUE, "X"),
-        ("Claude + scaffold", 100 * 17 / 108, 100 * 21 / 108, 21, 108, "#9BBB59", "^"),
+        ("Claude + scaffold", 100 * 17 / 108, 100 * 21 / 108, 21, 108, GREEN, "^"),
     ]
     fig = plt.figure(figsize=(3.35, 3.50))
     grid = fig.add_gridspec(2, 1, height_ratios=[1.8, 1.70], hspace=0.30)
@@ -289,8 +297,8 @@ def pareto_frontier() -> None:
     )
     fx = [p[0] for p in front]
     fy = [p[1] for p in front]
-    ax.plot(fx, fy, color="#3a8c3a", linestyle="--", linewidth=1.3, zorder=2)
-    ax.fill_between([0.0] + fx + [xmax], 0, [fy[0]] + fy + [fy[-1]], color="#3a8c3a", alpha=0.07)
+    ax.plot(fx, fy, color=GREEN, linestyle="--", linewidth=1.3, zorder=2)
+    ax.fill_between([0.0] + fx + [xmax], 0, [fy[0]] + fy + [fy[-1]], color=GREEN, alpha=0.07)
     ax.axhline(20, color="gray", linestyle=":", linewidth=0.5, alpha=0.5)
     ax.axvline(20, color="gray", linestyle=":", linewidth=0.5, alpha=0.5)
     ax.text(6.0, 6.4, "jointly favorable\ncorner is empty", ha="center", fontsize=9.0, style="italic", color="#2f6f2f")
@@ -341,7 +349,7 @@ def qwen_iteration_trajectory() -> None:
     ax.plot(x, harm, marker="o", linewidth=2.2, label="harm", color=RED)
     ax.plot(x, missed_instruction, marker="s", linewidth=2.2, label="MI", color=GOLD)
     ax.plot(x, leak, marker="^", linewidth=2.2, label="leak", color=BLUE)
-    ax.plot(x, bound, marker="D", linewidth=2.2, label="bound", color="#8064A2")
+    ax.plot(x, bound, marker="D", linewidth=2.2, label="bound", color=PURPLE)
     ax.annotate(
         "harm-min",
         xy=(1, 33),
@@ -374,13 +382,13 @@ def multi_seed_comparison() -> None:
     fig, ax = plt.subplots(figsize=(3.35, 2.75))
     x = np.arange(len(MULTISEED_METRICS))
     width = 0.27
-    ax.bar(x - width, MULTISEED_BASE, width, color=RED, alpha=0.85,
-           label=f"SFT+DPO base ($n={MULTISEED_BASE_N}$)")
+    ax.bar(x - width, MULTISEED_BASE, width, color=RED, edgecolor="black",
+           linewidth=0.5, hatch="xx", label=f"SFT+DPO base ($n={MULTISEED_BASE_N}$)")
     ax.bar(x, MULTISEED_KL_ITER1, width, yerr=MULTISEED_KL_ITER1_ERR,
-           color=BLUE, alpha=0.85, capsize=3,
+           color=BLUE, edgecolor="black", linewidth=0.5, hatch="//", capsize=3,
            label=f"KL iter1 ($n={MULTISEED_KL_ITER1_N}$)")
     ax.bar(x + width, MULTISEED_KL_ITER2, width, yerr=MULTISEED_KL_ITER2_ERR,
-           color="#9BBB59", alpha=0.85, capsize=3,
+           color=GREEN, edgecolor="black", linewidth=0.5, hatch="..", capsize=3,
            label=f"KL iter2 ($n={MULTISEED_KL_ITER2_N}$)")
     ax.set_xticks(x, MULTISEED_METRICS)
     ax.tick_params(axis="both", labelsize=9.2)
@@ -404,10 +412,10 @@ def teacher_robustness() -> None:
     claude = [100 * 6 / 36, 100 * 6 / 36, 100 * 1 / 36, 100 * 6 / 36]
     x = np.arange(4)
     width = 0.36
-    axa.bar(x - width / 2, claude, width, color="#9BBB59", alpha=0.88,
-            edgecolor="black", linewidth=0.5, label="Claude")
-    axa.bar(x + width / 2, qwen, width, color=BLUE, alpha=0.88,
-            edgecolor="black", linewidth=0.5, label="Qwen teacher")
+    axa.bar(x - width / 2, claude, width, color=GREEN,
+            edgecolor="black", linewidth=0.5, hatch="..", label="Claude")
+    axa.bar(x + width / 2, qwen, width, color=BLUE,
+            edgecolor="black", linewidth=0.5, hatch="//", label="Qwen teacher")
     for i, (c, q) in enumerate(zip(claude, qwen)):
         axa.text(i - width / 2, c + 2, f"{c:.0f}", ha="center", fontsize=16.75)
         axa.text(i + width / 2, q + 2, f"{q:.0f}", ha="center", fontsize=16.75)
@@ -421,10 +429,10 @@ def teacher_robustness() -> None:
     counterparties = ["Claude\n(default)", "GPT-5", "Gemini-3\nflash"]
     kl_harm, sft_harm = [33, 38, 49], [36, 34, 41]
     x = np.arange(3)
-    axb.bar(x - width / 2, kl_harm, width, color=BLUE, alpha=0.88,
-            edgecolor="black", linewidth=0.5, label="Per-token KL iter1")
-    axb.bar(x + width / 2, sft_harm, width, color="#8064A2", alpha=0.88,
-            edgecolor="black", linewidth=0.5, label="Per-turn SFT iter2")
+    axb.bar(x - width / 2, kl_harm, width, color=BLUE,
+            edgecolor="black", linewidth=0.5, hatch="//", label="Per-token KL iter1")
+    axb.bar(x + width / 2, sft_harm, width, color=PURPLE,
+            edgecolor="black", linewidth=0.5, hatch="\\\\", label="Per-turn SFT iter2")
     for i in range(3):
         axb.text(i - width / 2, kl_harm[i] + 1, str(kl_harm[i]), ha="center", fontsize=16.75)
         axb.text(i + width / 2, sft_harm[i] + 1, str(sft_harm[i]), ha="center", fontsize=16.75)
@@ -436,12 +444,12 @@ def teacher_robustness() -> None:
     kl, sft, scaled = [31, 40], [34, 35], [37, 56]
     x = np.arange(2)
     width2 = 0.27
-    axc.bar(x - width2, kl, width2, color=BLUE, alpha=0.88, edgecolor="black",
-            linewidth=0.5, label="KL iter1")
-    axc.bar(x, sft, width2, color="#8064A2", alpha=0.88, edgecolor="black",
-            linewidth=0.5, label="SFT iter2")
-    axc.bar(x + width2, scaled, width2, color=GOLD, alpha=0.88, edgecolor="black",
-            linewidth=0.5, label="Scaled KL")
+    axc.bar(x - width2, kl, width2, color=BLUE, edgecolor="black",
+            linewidth=0.5, hatch="//", label="KL iter1")
+    axc.bar(x, sft, width2, color=PURPLE, edgecolor="black",
+            linewidth=0.5, hatch="\\\\", label="SFT iter2")
+    axc.bar(x + width2, scaled, width2, color=GOLD, edgecolor="black",
+            linewidth=0.5, hatch="..", label="Scaled KL")
     for i in range(2):
         axc.text(i - width2, kl[i] + 1.2, str(kl[i]), ha="center", fontsize=16.75)
         axc.text(i, sft[i] + 1.2, str(sft[i]), ha="center", fontsize=16.75)
@@ -455,11 +463,11 @@ def teacher_robustness() -> None:
         ax.grid(True, alpha=0.3, axis="y")
     fig.legend(
         handles=[
-            Patch(facecolor=BLUE, alpha=0.88, edgecolor="black", linewidth=0.5,
+            Patch(facecolor=BLUE, edgecolor="black", linewidth=0.5, hatch="//",
                   label="KL iter1"),
-            Patch(facecolor="#8064A2", alpha=0.88, edgecolor="black", linewidth=0.5,
+            Patch(facecolor=PURPLE, edgecolor="black", linewidth=0.5, hatch="\\\\",
                   label="SFT iter2"),
-            Patch(facecolor=GOLD, alpha=0.88, edgecolor="black", linewidth=0.5,
+            Patch(facecolor=GOLD, edgecolor="black", linewidth=0.5, hatch="..",
                   label="Scaled KL"),
         ],
         loc="upper center", bbox_to_anchor=(0.68, 0.88), ncol=3,
