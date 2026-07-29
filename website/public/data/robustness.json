@@ -21,19 +21,19 @@
  ],
  "heldout": [
   {
-   "recipe": "Per-token KL i1",
+   "recipe": "Per-token KL iter1",
    "color": "#7c3aed",
    "training": 30.6,
    "heldout": 40.3
   },
   {
-   "recipe": "Per-turn SFT i2",
+   "recipe": "Per-turn SFT iter2",
    "color": "#84cc16",
    "training": 33.3,
    "heldout": 36.0
   },
   {
-   "recipe": "Llama KL i3",
+   "recipe": "Llama KL iter3",
    "color": "#0891b2",
    "training": 15.7,
    "heldout": 26.7

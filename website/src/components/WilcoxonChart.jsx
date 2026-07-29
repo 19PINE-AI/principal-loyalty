@@ -41,7 +41,7 @@ export default function WilcoxonChart() {
                 <div className="bg-white px-3 py-2 rounded shadow border border-ink/10 text-sm">
                   <div className="font-semibold">{label}</div>
                   <div className="mono text-xs mt-1 text-ink/60">base: {d.Base.toFixed(1)}</div>
-                  <div className="mono text-xs text-mech1">KL i1: {d.KLi1.toFixed(1)} ± {d.kl_sd.toFixed(1)}</div>
+                  <div className="mono text-xs text-mech1">KL iter1: {d.KLi1.toFixed(1)} ± {d.kl_sd.toFixed(1)}</div>
                   <div className="mono text-xs mt-1">Δ = {delta} · paired Wilcoxon <b>p = {d.p}</b>{d.sig}</div>
                 </div>
               )
@@ -49,7 +49,7 @@ export default function WilcoxonChart() {
           <Legend wrapperStyle={{ fontSize: 12, paddingBottom: 6 }} verticalAlign="top" iconType="rect" />
           <Bar dataKey="Base" fill="#94a3b8" radius={[3,3,0,0]}
             isAnimationActive animationDuration={900} animationEasing="ease-out" />
-          <Bar dataKey="KLi1" name="Per-token KL i1" fill="#7c3aed" radius={[3,3,0,0]}
+          <Bar dataKey="KLi1" name="Per-token KL iter1" fill="#7c3aed" radius={[3,3,0,0]}
             isAnimationActive animationDuration={900} animationEasing="ease-out" animationBegin={150}>
             <ErrorBar dataKey="kl_sd" width={6} stroke="#1a1a2e" strokeWidth={1.5} />
           </Bar>

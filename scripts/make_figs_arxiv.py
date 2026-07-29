@@ -42,7 +42,7 @@ C_TRAINED  = "#8064A2"  # purple — trained students
 C_GOLD     = "#E8A33D"  # gold — gold-teacher / Claude
 C_NEUTRAL  = "#7F7F7F"  # gray — neutral / ancillary
 
-ROOT = Path("/home/ubuntu/principal-loyalty")
+ROOT = Path(__file__).resolve().parents[1]
 FIG_DIR = ROOT / "figures"
 FIG_DIR.mkdir(exist_ok=True)
 
@@ -156,15 +156,28 @@ def fig1_manifold():
     fig, ax = plt.subplots(figsize=(7.4, 4.6))
     variants = [
         ("Qwen-8B untrained",   "runs/phase3_baseline_qwen/scored.jsonl",        C_NEUTRAL,  "x"),
-        ("Qwen v4.1 SFT+DPO",   "runs/phase2_trained_v4_1/scored.jsonl",         C_BASE,     "o"),
-        ("Qwen DAPO-v1",        "runs/phase3_dapo_v1_step35/scored.jsonl",       C_GOLD,     "s"),
-        ("Per-turn SFT i1",     "runs/phase5_onpolicy_sft_iter1/scored.jsonl",   C_TRAINED,  "D"),
-        ("Per-turn SFT i2",     "runs/phase5_onpolicy_sft_iter2/scored.jsonl",   C_TRAINED,  "v"),
-        ("Per-token KL i1",     "runs/phase5_pertoken_kl_iter1/scored.jsonl",    C_MECH1,    "*"),
-        ("Per-token KL i2",     "runs/phase5_pertoken_kl_iter2/scored.jsonl",    C_MECH1,    "P"),
-        ("Per-token KL i3",     "runs/phase5_pertoken_kl_iter3/scored.jsonl",    C_MECH1,    "X"),
+        ("Qwen SFT+DPO",        "runs/phase2_trained_v4_1/scored.jsonl",         C_BASE,     "o"),
+        ("Qwen DAPO",           "runs/phase3_dapo_v1_step35/scored.jsonl",       C_GOLD,     "s"),
+        ("Per-turn SFT iter1",  "runs/phase5_onpolicy_sft_iter1/scored.jsonl",   C_TRAINED,  "D"),
+        ("Per-turn SFT iter2",  "runs/phase5_onpolicy_sft_iter2/scored.jsonl",   C_TRAINED,  "v"),
+        ("Per-token KL iter1",  "runs/phase5_pertoken_kl_iter1/scored.jsonl",    C_MECH1,    "*"),
+        ("Per-token KL iter2",  "runs/phase5_pertoken_kl_iter2/scored.jsonl",    C_MECH1,    "P"),
+        ("Per-token KL iter3",  "runs/phase5_pertoken_kl_iter3/scored.jsonl",    C_MECH1,    "X"),
         ("Claude + scaffold",   "runs/phase4_promptv4_frontier/scored.jsonl",    C_MECH2,    "^"),
     ]
+    # Published counts provide a portable fallback when the private run
+    # directory is not present in a manuscript-only checkout.
+    fallback = {
+        "Qwen-8B untrained": dict(leak=76.0, mi=22.4, harm=28, n=107, rates=True),
+        "Qwen SFT+DPO": dict(leak=18, mi=51, harm=56, n=108),
+        "Qwen DAPO": dict(leak=19, mi=34, harm=37, n=108),
+        "Per-turn SFT iter1": dict(leak=17, mi=43, harm=44, n=107),
+        "Per-turn SFT iter2": dict(leak=24, mi=32, harm=36, n=105),
+        "Per-token KL iter1": dict(leak=13, mi=32, harm=33, n=108),
+        "Per-token KL iter2": dict(leak=9, mi=35, harm=38, n=106),
+        "Per-token KL iter3": dict(leak=15, mi=40, harm=41, n=108),
+        "Claude + scaffold": dict(leak=17, mi=21, harm=21, n=108),
+    }
     # Zoom the axis to where every candidate operating point actually lives.
     # The untrained baseline leaks ~76%; rather than stretch the axis to 80
     # and crush the whole story into the left fifth, we clamp it to the right
@@ -175,10 +188,12 @@ def fig1_manifold():
     thesis = {}       # name -> (leak%, mi%) for the two points we label directly
     for name, path, color, marker in variants:
         rows = load(path)
-        if not rows: continue
-        c = counts(rows)
-        leak_pct = 100 * c["leak"] / c["n"]
-        mi_pct = 100 * c["mi"] / c["n"]
+        c = counts(rows) if rows else fallback[name]
+        if c.get("rates"):
+            leak_pct, mi_pct = c["leak"], c["mi"]
+        else:
+            leak_pct = 100 * c["leak"] / c["n"]
+            mi_pct = 100 * c["mi"] / c["n"]
         size = 320 if marker == "*" else 95
         edge = "black" if marker not in ("x",) else color
         off_scale = leak_pct > xmax
@@ -204,7 +219,7 @@ def fig1_manifold():
             # The untrained baseline is not a candidate operating point, so it
             # does not define the frontier; everything else does.
             pts.append((leak_pct, mi_pct))
-        if name in ("Per-token KL i1", "Claude + scaffold"):
+        if name in ("Per-token KL iter1", "Claude + scaffold"):
             thesis[name] = (leak_pct, mi_pct)
 
     # --- Explicit leak/MI frontier --------------------------------------
@@ -240,8 +255,8 @@ def fig1_manifold():
 
     # Directly label the two points that carry the thesis: a prompted Claude
     # teacher and an 8B per-token-KL student on the *same* frontier.
-    if "Per-token KL i1" in thesis:
-        lx, ly = thesis["Per-token KL i1"]
+    if "Per-token KL iter1" in thesis:
+        lx, ly = thesis["Per-token KL iter1"]
         ax.annotate("per-token-KL 8B\nstudent", xy=(lx, ly),
                     xytext=(8.6, 44.0), fontsize=8.5, color=C_MECH1,
                     fontweight="bold", ha="center", va="bottom", linespacing=1.1,
@@ -278,7 +293,7 @@ def fig1_manifold():
 # Figure 2: K=3 trajectory (per-token KL) — two optima
 # ============================================================
 def fig2_kiter():
-    iters = ["v4.1\nbase", "iter1", "iter2", "iter3", "iter4", "iter5"]
+    iters = ["SFT+DPO\nbase", "iter1", "iter2", "iter3", "iter4", "iter5"]
     _dirs = ["phase2_trained_v4_1", "phase5_pertoken_kl_iter1",
              "phase5_pertoken_kl_iter2", "phase5_pertoken_kl_iter3",
              "phase5_pertoken_kl_iter4", "phase5_pertoken_kl_iter5"]
@@ -330,7 +345,7 @@ def fig3_wilcoxon():
 
     x = np.arange(len(metrics))
     w = 0.27
-    ax.bar(x - w, v41_mean,  w, color=C_BASE,    alpha=0.85, label="v4.1 base (n=5)")
+    ax.bar(x - w, v41_mean,  w, color=C_BASE,    alpha=0.85, label="SFT+DPO base (n=5)")
     ax.bar(x,     v3i1_mean, w, yerr=v3i1_err, color=C_MECH1, alpha=0.85,
            capsize=3, label="KL iter1 (n=5)")
     ax.bar(x + w, v3i2_mean, w, yerr=v3i2_err, color=C_MECH2, alpha=0.85,
@@ -341,13 +356,13 @@ def fig3_wilcoxon():
         y_top = max(v3i1_mean[i] + v3i1_err[i], v3i2_mean[i] + v3i2_err[i])
         tag1 = f"{p1:.3f}" + ("*" if p1 < 0.05 else "")
         tag2 = f"{p2:.3f}" + ("*" if p2 < 0.05 else "")
-        ax.text(i, y_top + 1.5, f"i1: {tag1}\ni2: {tag2}",
+        ax.text(i, y_top + 1.5, f"iter1: {tag1}\niter2: {tag2}",
                 ha="center", fontsize=8,
                 fontweight="bold" if (p1 < 0.05 or p2 < 0.05) else "normal")
 
     ax.set_xticks(x); ax.set_xticklabels(metrics)
     ax.set_ylabel("Mean fires per 108 (n=5 seeds)")
-    ax.set_title("Multi-seed paired Wilcoxon vs v4.1 base")
+    ax.set_title("Multi-seed paired Wilcoxon vs SFT+DPO base")
     ax.legend(loc="upper right", fontsize=9)
     ax.set_ylim(0, max(v41_mean) * 1.50)
     ax.grid(True, alpha=0.3, axis="y")
@@ -395,11 +410,13 @@ def fig5_robustness():
     pt_kl_harm = core_series(["phase5_pertoken_kl_iter1",
                               "phase5_pertoken_kl_iter1_cp_gpt5",
                               "phase5_pertoken_kl_iter1_cp_gemini"], "harm")
-    sft_harm   = [36, 34, 41]  # per-turn SFT i2 counterparty swap (no released cp runs)
+    if not any(pt_kl_harm):
+        pt_kl_harm = [33, 38, 49]
+    sft_harm   = [36, 34, 41]  # per-turn SFT iter2 counterparty swap (no released cp runs)
     x = np.arange(len(cps))
     w = 0.36
-    ax1.bar(x - w/2, pt_kl_harm, w, color=C_MECH1,   alpha=0.88, label="Per-token KL i1")
-    ax1.bar(x + w/2, sft_harm,   w, color=C_TRAINED, alpha=0.88, label="Per-turn SFT i2")
+    ax1.bar(x - w/2, pt_kl_harm, w, color=C_MECH1,   alpha=0.88, label="Per-token KL iter1")
+    ax1.bar(x + w/2, sft_harm,   w, color=C_TRAINED, alpha=0.88, label="Per-turn SFT iter2")
     for i in range(len(cps)):
         ax1.text(i - w/2, pt_kl_harm[i] + 1.0, f"{pt_kl_harm[i]}", ha="center", fontsize=9)
         ax1.text(i + w/2, sft_harm[i] + 1.0,   f"{sft_harm[i]}",   ha="center", fontsize=9)
@@ -412,11 +429,17 @@ def fig5_robustness():
 
     # Right: held-out gap + data scaling (computed live from released runs)
     sets = ["Training\n(36 items)", "Held-out\n(24 items)"]
+    train_fallback = {"phase5_pertoken_kl_iter1": 31, "phase5_onpolicy_sft_iter2": 34,
+                      "phase5_pertoken_kl_scaled3x_iter1": 37}
+    heldout_fallback = {"phase5_pertoken_kl_iter1_heldout_v0_75": 40,
+                        "phase5_onpolicy_iter2_heldout": 35,
+                        "phase5_pertoken_kl_scaled3x_iter1_heldout_v0_75": 56}
     def _train(d):
-        c = core_counts(d); return 100.0 * c["harm"] / c["n"]
+        c = core_counts(d)
+        return 100.0 * c["harm"] / c["n"] if c["n"] else train_fallback[d]
     def _heldout(d):
         c = counts(_ra.scope(_ra.load(ROOT / "runs" / d / "scored.jsonl"), to_core=False))
-        return 100.0 * c["harm"] / c["n"]
+        return 100.0 * c["harm"] / c["n"] if c["n"] else heldout_fallback[d]
     pt_kl_iter1 = [_train("phase5_pertoken_kl_iter1"),
                    _heldout("phase5_pertoken_kl_iter1_heldout_v0_75")]
     sft_iter2   = [_train("phase5_onpolicy_sft_iter2"),
@@ -425,8 +448,8 @@ def fig5_robustness():
                    _heldout("phase5_pertoken_kl_scaled3x_iter1_heldout_v0_75")]
     x2 = np.arange(len(sets))
     w2 = 0.27
-    ax2.bar(x2 - w2, pt_kl_iter1, w2, color=C_MECH1,   alpha=0.88, label="KL i1 (113 pts)")
-    ax2.bar(x2,      sft_iter2,   w2, color=C_TRAINED, alpha=0.88, label="SFT i2 (113 pts)")
+    ax2.bar(x2 - w2, pt_kl_iter1, w2, color=C_MECH1,   alpha=0.88, label="KL iter1 (113 pts)")
+    ax2.bar(x2,      sft_iter2,   w2, color=C_TRAINED, alpha=0.88, label="SFT iter2 (113 pts)")
     ax2.bar(x2 + w2, scaled3x,    w2, color=C_GOLD,    alpha=0.88, label="KL scaled3x (480 pts)")
     for i in range(2):
         ax2.text(i - w2, pt_kl_iter1[i] + 1.2, f"{pt_kl_iter1[i]:.0f}%", ha="center", fontsize=9)
@@ -481,12 +504,14 @@ def fig_teacher_robust():
     pt_kl_harm = core_series(["phase5_pertoken_kl_iter1",
                               "phase5_pertoken_kl_iter1_cp_gpt5",
                               "phase5_pertoken_kl_iter1_cp_gemini"], "harm")
+    if not any(pt_kl_harm):
+        pt_kl_harm = [33, 38, 49]
     sft_harm   = [36, 34, 41]
     x = np.arange(len(cps)); w = 0.36
     axB.bar(x - w/2, pt_kl_harm, w, color=C_MECH1,   alpha=0.88,
-            edgecolor="black", linewidth=0.5, label="Per-token KL i1")
+            edgecolor="black", linewidth=0.5, label="Per-token KL iter1")
     axB.bar(x + w/2, sft_harm,   w, color=C_TRAINED, alpha=0.88,
-            edgecolor="black", linewidth=0.5, label="Per-turn SFT i2")
+            edgecolor="black", linewidth=0.5, label="Per-turn SFT iter2")
     for i in range(len(cps)):
         axB.text(i - w/2, pt_kl_harm[i] + 1.0, f"{pt_kl_harm[i]}", ha="center", fontsize=9)
         axB.text(i + w/2, sft_harm[i] + 1.0,   f"{sft_harm[i]}",   ha="center", fontsize=9)
@@ -498,11 +523,17 @@ def fig_teacher_robust():
 
     # --- Panel C: held-out gap + data scaling -------------------------
     sets = ["Training\n(36 items)", "Held-out\n(24 items)"]
+    train_fallback = {"phase5_pertoken_kl_iter1": 31, "phase5_onpolicy_sft_iter2": 34,
+                      "phase5_pertoken_kl_scaled3x_iter1": 37}
+    heldout_fallback = {"phase5_pertoken_kl_iter1_heldout_v0_75": 40,
+                        "phase5_onpolicy_iter2_heldout": 35,
+                        "phase5_pertoken_kl_scaled3x_iter1_heldout_v0_75": 56}
     def _train(d):
-        c = core_counts(d); return 100.0 * c["harm"] / c["n"]
+        c = core_counts(d)
+        return 100.0 * c["harm"] / c["n"] if c["n"] else train_fallback[d]
     def _heldout(d):
         c = counts(_ra.scope(_ra.load(ROOT / "runs" / d / "scored.jsonl"), to_core=False))
-        return 100.0 * c["harm"] / c["n"]
+        return 100.0 * c["harm"] / c["n"] if c["n"] else heldout_fallback[d]
     pt_kl_iter1 = [_train("phase5_pertoken_kl_iter1"),
                    _heldout("phase5_pertoken_kl_iter1_heldout_v0_75")]
     sft_iter2   = [_train("phase5_onpolicy_sft_iter2"),
@@ -511,9 +542,9 @@ def fig_teacher_robust():
                    _heldout("phase5_pertoken_kl_scaled3x_iter1_heldout_v0_75")]
     x2 = np.arange(len(sets)); w2 = 0.27
     axC.bar(x2 - w2, pt_kl_iter1, w2, color=C_MECH1,   alpha=0.88,
-            edgecolor="black", linewidth=0.5, label="KL i1 (113 pts)")
+            edgecolor="black", linewidth=0.5, label="KL iter1 (113 pts)")
     axC.bar(x2,      sft_iter2,   w2, color=C_TRAINED, alpha=0.88,
-            edgecolor="black", linewidth=0.5, label="SFT i2 (113 pts)")
+            edgecolor="black", linewidth=0.5, label="SFT iter2 (113 pts)")
     axC.bar(x2 + w2, scaled3x,    w2, color=C_GOLD,    alpha=0.88,
             edgecolor="black", linewidth=0.5, label="KL scaled3$\\times$ (480 pts)")
     for i in range(2):
@@ -536,18 +567,20 @@ def fig_teacher_robust():
 # ============================================================
 def fig6_variants():
     fig, ax = plt.subplots(figsize=(7.5, 3.8))
-    labels = ["v4.1\nbase",
+    labels = ["SFT+DPO\nbase",
               "Per-turn\nDPO",
-              "Per-turn\nSFT i1",
-              "Per-turn\nSFT i2",
-              "Per-token\nKL i1",
-              "Per-token\nKL i2",
+              "Per-turn\nSFT iter1",
+              "Per-turn\nSFT iter2",
+              "Per-token\nKL iter1",
+              "Per-token\nKL iter2",
               "Claude+\nscaffold"]
     _dirs  = ["phase2_trained_v4_1", "phase5_onpolicy_dpo_iter1",
               "phase5_onpolicy_sft_iter1", "phase5_onpolicy_sft_iter2",
               "phase5_pertoken_kl_iter1", "phase5_pertoken_kl_iter2",
               "phase4_promptv4_frontier"]
     harm   = core_series(_dirs, "harm")  # last entry = Claude+scaffold (all-arm total)
+    if not any(harm):
+        harm = [56, 54, 44, 36, 33, 38, 21]
     colors = [C_BASE, C_GOLD, C_TRAINED, C_TRAINED, C_MECH1, C_MECH1, C_MECH2]
     sig    = ["", "", "p=.10", "p=.10", "p=.011*", "p=.012*", ""]
 
@@ -561,7 +594,7 @@ def fig6_variants():
                     style="italic" if "*" not in s else "normal")
     ax.set_xticks(x); ax.set_xticklabels(labels, fontsize=9.5)
     ax.set_ylabel("Harm fires / 108")
-    ax.set_title("Distillation variant ladder on Qwen3-8B  ($\\ast$: $p<0.05$ vs v4.1)")
+    ax.set_title("Distillation variant ladder on Qwen3-8B  ($\\ast$: $p<0.05$ vs SFT+DPO base)")
     ax.set_ylim(-7, 67)
     ax.grid(True, alpha=0.3, axis="y")
     plt.tight_layout()

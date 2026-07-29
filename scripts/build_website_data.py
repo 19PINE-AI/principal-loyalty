@@ -191,10 +191,10 @@ print(f"subjects: {len(subjects)} | per-arm runs: {len(subject_arms)} | held-out
 variants = [
     {"name": "Base (SFT+DPO)", "harm": 56, "color": "#94a3b8", "sig": "",        "kind": "base"},
     {"name": "Per-turn DPO",   "harm": 54, "color": "#fbbf24", "sig": "n.s.",    "kind": "variant"},
-    {"name": "Per-turn SFT i1","harm": 44, "color": "#84cc16", "sig": "p=.10",   "kind": "variant"},
-    {"name": "Per-turn SFT i2","harm": 36, "color": "#84cc16", "sig": "p=.10",   "kind": "variant"},
-    {"name": "Per-token KL i1","harm": 33, "color": "#7c3aed", "sig": "p=.011*", "kind": "mechanism"},
-    {"name": "Per-token KL i2","harm": 38, "color": "#7c3aed", "sig": "p=.044*", "kind": "mechanism"},
+    {"name": "Per-turn SFT iter1","harm": 44, "color": "#84cc16", "sig": "p=.10",   "kind": "variant"},
+    {"name": "Per-turn SFT iter2","harm": 36, "color": "#84cc16", "sig": "p=.10",   "kind": "variant"},
+    {"name": "Per-token KL iter1","harm": 33, "color": "#7c3aed", "sig": "p=.011*", "kind": "mechanism"},
+    {"name": "Per-token KL iter2","harm": 38, "color": "#7c3aed", "sig": "p=.044*", "kind": "mechanism"},
     {"name": "Claude + scaffold","harm":21,"color": "#0891b2", "sig": "",        "kind": "mechanism"},
 ]
 (OUT / "variants.json").write_text(json.dumps(variants, indent=1))
@@ -223,16 +223,16 @@ kiter = {
 # Curated set of operating points across mechanisms and variants.
 manifold = [
     {"label": "SFT+DPO base",        "leak": 16, "mi": 44, "harm": 56, "kind": "base"},
-    {"label": "Per-turn SFT i2",     "leak": 13, "mi": 30, "harm": 36, "kind": "variant"},
+    {"label": "Per-turn SFT iter2",     "leak": 13, "mi": 30, "harm": 36, "kind": "variant"},
     {"label": "Per-turn DPO",        "leak": 14, "mi": 42, "harm": 54, "kind": "variant"},
-    {"label": "Per-token KL i1",     "leak": 13, "mi": 32, "harm": 33, "kind": "mechanism"},
-    {"label": "Per-token KL i2",     "leak":  9, "mi": 35, "harm": 38, "kind": "mechanism"},
-    {"label": "Per-token KL i3",     "leak": 15, "mi": 40, "harm": 41, "kind": "mechanism"},
-    {"label": "Per-token KL i4",     "leak": 17, "mi": 42, "harm": 42, "kind": "mechanism"},
-    {"label": "Per-token KL i5",     "leak": 19, "mi": 32, "harm": 32, "kind": "mechanism"},
-    {"label": "DAPO from KL i1",     "leak": 18, "mi": 45, "harm": 46, "kind": "rl"},
+    {"label": "Per-token KL iter1",     "leak": 13, "mi": 32, "harm": 33, "kind": "mechanism"},
+    {"label": "Per-token KL iter2",     "leak":  9, "mi": 35, "harm": 38, "kind": "mechanism"},
+    {"label": "Per-token KL iter3",     "leak": 15, "mi": 40, "harm": 41, "kind": "mechanism"},
+    {"label": "Per-token KL iter4",     "leak": 17, "mi": 42, "harm": 42, "kind": "mechanism"},
+    {"label": "Per-token KL iter5",     "leak": 19, "mi": 32, "harm": 32, "kind": "mechanism"},
+    {"label": "DAPO from KL iter1",     "leak": 18, "mi": 45, "harm": 46, "kind": "rl"},
     {"label": "Claude + scaffold",   "leak": 17, "mi": 21, "harm": 21, "kind": "scaffold"},
-    {"label": "Llama KL i3",         "leak":  7, "mi": 15, "harm": 17, "kind": "mechanism"},
+    {"label": "Llama KL iter3",         "leak":  7, "mi": 15, "harm": 17, "kind": "mechanism"},
 ]
 (OUT / "manifold.json").write_text(json.dumps(manifold, indent=1))
 
@@ -353,9 +353,9 @@ robustness = {
     ],
     "heldout": [
         # Training-set vs held-out harm for each recipe (% on the 36/25 item sets)
-        {"recipe": "Per-token KL i1",  "color": "#7c3aed", "training": 30.6, "heldout": 40.3},
-        {"recipe": "Per-turn SFT i2",  "color": "#84cc16", "training": 33.3, "heldout": 36.0},
-        {"recipe": "Llama KL i3",      "color": "#0891b2", "training": 15.7, "heldout": 26.7},
+        {"recipe": "Per-token KL iter1",  "color": "#7c3aed", "training": 30.6, "heldout": 40.3},
+        {"recipe": "Per-turn SFT iter2",  "color": "#84cc16", "training": 33.3, "heldout": 36.0},
+        {"recipe": "Llama KL iter3",      "color": "#0891b2", "training": 15.7, "heldout": 26.7},
     ],
 }
 (OUT / "robustness.json").write_text(json.dumps(robustness, indent=1))

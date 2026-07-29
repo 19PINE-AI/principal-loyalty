@@ -21,8 +21,8 @@ export default function Overview() {
 
   // Points shown on the Overview frontier figure (Qwen variants + Claude teacher,
   // matching Figure 1); the dashed line traces the leak/over-refusal frontier.
-  const FRONTIER = ['Per-token KL i2', 'Per-token KL i1', 'Claude + scaffold']
-  const plotted = (manifold || []).filter(d => d.label !== 'Llama KL i3')
+  const FRONTIER = ['Per-token KL iter2', 'Per-token KL iter1', 'Claude + scaffold']
+  const plotted = (manifold || []).filter(d => d.label !== 'Llama KL iter3')
   const frontierPts = plotted.filter(d => FRONTIER.includes(d.label)).sort((a, b) => a.leak - b.leak)
 
   return (
