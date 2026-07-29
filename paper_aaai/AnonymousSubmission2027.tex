@@ -11,9 +11,6 @@
 \urlstyle{rm}
 \def\UrlFont{\rm}
 \frenchspacing
-\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
-\setlength{\dbltextfloatsep}{8pt plus 2pt minus 2pt}
-\setlength{\abovecaptionskip}{4pt}
 \pdfinfo{
 /TemplateVersion (2027.1)
 }
@@ -132,7 +129,7 @@ We run 13 frontier subjects on the 36-item core for comparability, covering all 
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.96\textwidth]{figures/arxiv_fig_subject_split.pdf}
+\includegraphics[width=\textwidth]{figures/arxiv_fig_subject_split.pdf}
 \caption{The selective/over-refusing split persists on held-out items. (a) Five-seed means ($\pm1\sigma$) on the 36-item core reveal a 34-point gap. (b) Held-out rates use each subject's valid cells; labels give harmful/valid cells.}
 \label{fig:xsubj}
 \end{figure*}
@@ -236,7 +233,7 @@ This establishes the second improvement route: model post-training can transfer 
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.92\linewidth]{figures/arxiv_fig3_seed_comparison.pdf}
+\includegraphics[width=\linewidth]{figures/arxiv_fig3_seed_comparison.pdf}
 \caption{Multi-seed model post-training comparison. Iteration~1 minimizes mean harm and missed-instruction failures; iteration~2 minimizes leakage and private-bound failures. Error bars show $\pm1\sigma$ for the KL checkpoints (iteration~1: $n{=}5$; iteration~2: $n{=}4$); the base uses five seeds.}
 \label{fig:seed_comparison}
 \end{figure}
@@ -244,7 +241,7 @@ This establishes the second improvement route: model post-training can transfer 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/arxiv_fig_teacher_robust.pdf}
-\caption{Post-training teacher validation and robustness. (a) Scaffolded-arm failure rates compare Claude-Sonnet ($n{=}36$) with the Qwen3-32B teacher ($n{=}31$). (b) Harm failures across counterparties compare per-token-KL iteration~1 with per-turn-SFT iteration~2. (c) Training and held-out harm compare the 113-record KL and SFT runs with scaled KL trained on 480 records.}
+\caption{Post-training validation and robustness. (a) Scaffolded-arm failures for Claude-Sonnet ($n{=}36$) and the Qwen3-32B teacher ($n{=}31$). (b) Harm across counterparties for per-token-KL iteration~1 and per-turn-SFT iteration~2. (c) Training and held-out harm for the 113-record runs and 480-record scaled-KL run.}
 \label{fig:teacher_robust}
 \end{figure*}
 
@@ -285,7 +282,7 @@ We test whether the result transfers across model families, depends on a sound t
 \label{sec:manifold}
 Inference-time scaffolding (\cref{sec:prompt}) and model post-training (\cref{sec:ptkl}) can each improve a weaker baseline. The shared limitation appears when we compare the strongest resulting systems. Plotted on the leakage and over-refusal axes (\cref{fig:manifold}), they occupy a common Pareto frontier whose jointly favorable lower-left corner is empty: further reducing leakage is associated with more refusal of legitimate requests, and no tested variant is simultaneously low-leak and low-refusal. The inference-time-scaffolded Claude teacher and the per-token-KL post-trained student sit at different frontier points, with neither dominating the other.
 
-None of the five controls in \cref{tab:floor} reaches the empty corner, evidence for a structural limit. Control~2 starts from the best post-trained checkpoint and still moves backward under RL. Control~3 shows that an apparent single-seed path around the frontier is not reproduced under multi-seed replication. Control~5 shows that naive data scaling also moves performance in the wrong direction (likely under-fitting at fixed epochs, as rank-16 LoRA capacity is spread across $4.2\times$ more patterns).
+None of the five controls in \cref{tab:floor} reaches the empty corner, evidence for a structural limit. RL from the best post-trained checkpoint moves backward, an apparent single-seed path around the frontier disappears under multi-seed replication, and naive data scaling also worsens performance.
 
 \paragraph{Compute.} DAPO training used one NVIDIA RTX Pro 6000 Blackwell; rank-32 LoRA peaked at approximately 64~GB of GPU memory, whereas a full-parameter actor exceeded 94~GB and did not fit.
 
@@ -307,7 +304,7 @@ control & manipulation and outcome \\
 \label{tab:floor}
 \end{table}
 
-\paragraph{Evidence from an industrial-scale system.} The Claude Opus 4.8 system card~\citep{anthropic2025opus48} reports the same trade-off at production scale. Opus 4.7's training included a regimen on ``business skills and robustness against adversarial agents'' that Anthropic found ``inadvertently contributed to misaligned behavior including dishonesty''. Removing it for Opus 4.8 recovered honesty but left the model ``more susceptible to scammers and\ldots\ less able to negotiate good deals.'' Pushing the loyalty/robustness axis cost truthfulness. Scaling it back cost negotiation. The axes differ from ours in detail (truthfulness vs.\ over-refusal, robustness vs.\ leakage), but the same trade-off surfaces independently at far larger scale, evidence that the frontier is a property of the objective, not of any one pipeline.
+\paragraph{Evidence from an industrial-scale system.} The Claude Opus 4.8 system card~\citep{anthropic2025opus48} reports a related production-scale trade-off. A business-skills and adversarial-robustness regimen used for Opus 4.7 contributed to dishonesty; removing it for Opus 4.8 recovered honesty but weakened scam resistance and negotiation. Although its axes differ from ours (truthfulness vs.\ over-refusal, robustness vs.\ leakage), the trade-off recurs at far larger scale, suggesting it is not specific to one pipeline.
 
 \section{Limitations}
 \label{sec:limits}
@@ -330,13 +327,13 @@ leak probe     & $15.8$ & $13.8$ \\
 \label{tab:judge}
 \end{table}
 
-\paragraph{Generalization across counterparties and data splits.} Per-token KL is more counterparty-sensitive than per-turn SFT and carries an $\approx$10-point train-to-held-out harm gap that per-turn SFT nearly closes (\cref{fig:teacher_robust}b--c). Moreover, all counterparties are LLMs; human adversaries may use rapport, off-distribution framing, and grounded pressure that they miss. The effect sizes measured against LLM counterparties may therefore overstate what would hold against human adversaries.
+\paragraph{Generalization across counterparties and data splits.} Per-token KL is more counterparty-sensitive than per-turn SFT and carries an $\approx$10-point train-to-held-out harm gap that per-turn SFT nearly closes (\cref{fig:teacher_robust}b--c). Because all counterparties are LLMs, the measured effects may overstate what would hold against human adversaries using rapport, off-distribution framing, and grounded pressure.
 
-\paragraph{Construct validity and sample size.} Multi-seed aggregates use a 36-item core, so rare posture and moderation cells have wider uncertainty; the 25-item held-out set supports aggregate, not per-cell, claims. Without a matched single-party helpfulness control, we also cannot fully separate multi-party-triggered over-refusal from general post-training cautiousness.
+\paragraph{Construct validity and sample size.} Multi-seed aggregates use a 36-item core, leaving rare posture and moderation cells more uncertain; the 25-item held-out set supports only aggregate claims. Without a matched single-party helpfulness control, we cannot fully separate multi-party-triggered over-refusal from general post-training cautiousness.
 
 \section{Conclusion}
 
-Principal loyalty requires an agent to serve the principal it represents despite conflicting pressure from the counterparty it is speaking with. Principal loyalty improves through two complementary routes. At test time, a role-aware scaffold reduces failures in responsive models, while reader-identity tags mitigate over-refusal. In model post-training, per-token-KL distillation transfers scaffolded-teacher behavior to open-weight Qwen3 and Llama-3.1 8B students. PrincipalBench reveals a shared limitation: among the strongest prompted, post-trained, and RL variants, lower leakage trades against greater refusal of legitimate requests, leaving the jointly favorable corner empty. Future work should break this frontier using human counterparties and matched single-party controls.
+Principal loyalty requires serving a principal despite conflicting counterparty pressure. At test time, a role-aware scaffold reduces failures in responsive models, while reader-identity tags mitigate over-refusal; in model post-training, per-token-KL distillation transfers scaffolded-teacher behavior to open-weight Qwen3 and Llama-3.1 8B students. Across the strongest prompted, post-trained, and RL variants, PrincipalBench reveals a shared limitation: lower leakage trades against greater refusal of legitimate requests, leaving the jointly favorable corner empty. Future work should break this frontier using human counterparties and matched single-party controls.
 
 \paragraph{Responsible AI Use.} Generative AI aided planning, coding, experiments, editing, and formatting; the authors verified all work and remain responsible.
 
