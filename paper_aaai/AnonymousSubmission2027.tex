@@ -11,6 +11,9 @@
 \urlstyle{rm}
 \def\UrlFont{\rm}
 \frenchspacing
+\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
+\setlength{\dbltextfloatsep}{8pt plus 2pt minus 2pt}
+\setlength{\abovecaptionskip}{4pt}
 \pdfinfo{
 /TemplateVersion (2027.1)
 }
@@ -103,7 +106,7 @@ Throughout, \emph{principal-directed loyalty violations} refers to the first fiv
 
 \paragraph{Related methodological work.} Our interventions connect the problem to three methodological lines. The training recipe builds on LLM knowledge distillation~\citep{gu2024minillm,agarwal2024gkd,salimans2025onpolicy,deepseek2024v3} and DPO~\citep{rafailov2023dpo}. The integrity gate parallels silent-failure controls in BIG-bench Hard~\citep{suzgun2022bbh}. Our negative $n{=}5$ agent result complements DAPO's positive single-seed math-reasoning results~\citep{yu2025dapo}.
 
-\section{PrincipalBench: the measurement instrument}
+\section{PrincipalBench}
 \label{sec:bench}
 
 To compare inference-time scaffolding and model post-training on equal footing, we constructed a multi-turn evaluation harness for principal-loyalty failures and over-refusal.
@@ -129,8 +132,8 @@ We run 13 frontier subjects on the 36-item core for comparability, covering all 
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=\textwidth]{figures/arxiv_fig_subject_split.pdf}
-\caption{The selective/over-refusing split persists on held-out items. (a) Five-seed means ($\pm1\sigma$) on the 36-item core reveal a 34-point gap. (b) Held-out rates use each subject's valid cells; labels give harmful/valid cells. Mistral-Large was unmeasurable, and Gemini-2.5-flash was not rerun.}
+\includegraphics[width=0.96\textwidth]{figures/arxiv_fig_subject_split.pdf}
+\caption{The selective/over-refusing split persists on held-out items. (a) Five-seed means ($\pm1\sigma$) on the 36-item core reveal a 34-point gap. (b) Held-out rates use each subject's valid cells; labels give harmful/valid cells.}
 \label{fig:xsubj}
 \end{figure*}
 
@@ -157,7 +160,7 @@ cluster & MI & leak & bound & MI & leak & bound \\
 
 \textbf{Implication for intervention.} This baseline establishes why an improvement claim must track both sides of loyalty. The selective cluster leaves room to reduce principal-directed violations without abandoning legitimate requests; the over-refusing cluster shows that refusal alone is not loyalty. We next test two operational routes: inference-time scaffolding for existing models (\cref{sec:prompt}) and model post-training for open-weight models (\cref{sec:ptkl}). Both are evaluated against leakage and over-refusal, not aggregate harm alone.
 
-\section{Improving principal loyalty at inference time}
+\section{Improving principal loyalty at test time}
 \label{sec:prompt}
 
 The first route changes model behavior without changing model weights. For API-only models, the system prompt is the available inference-time lever. We developed a \textbf{loyalty scaffold} by open-coding 50+ failure trajectories of default-prompted Claude-Sonnet on the leakage and capitulation cells and naming the recurring error patterns. The resulting scaffold is a system prompt of seven prioritized rules organized around four core insights:
@@ -233,7 +236,7 @@ This establishes the second improvement route: model post-training can transfer 
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\linewidth]{figures/arxiv_fig3_seed_comparison.pdf}
+\includegraphics[width=0.92\linewidth]{figures/arxiv_fig3_seed_comparison.pdf}
 \caption{Multi-seed model post-training comparison. Iteration~1 minimizes mean harm and missed-instruction failures; iteration~2 minimizes leakage and private-bound failures. Error bars show $\pm1\sigma$ for the KL checkpoints (iteration~1: $n{=}5$; iteration~2: $n{=}4$); the base uses five seeds.}
 \label{fig:seed_comparison}
 \end{figure}
@@ -284,7 +287,7 @@ Inference-time scaffolding (\cref{sec:prompt}) and model post-training (\cref{se
 
 None of the five controls in \cref{tab:floor} reaches the empty corner, evidence for a structural limit. Control~2 starts from the best post-trained checkpoint and still moves backward under RL. Control~3 shows that an apparent single-seed path around the frontier is not reproduced under multi-seed replication. Control~5 shows that naive data scaling also moves performance in the wrong direction (likely under-fitting at fixed epochs, as rank-16 LoRA capacity is spread across $4.2\times$ more patterns).
 
-\paragraph{Compute.} DAPO training used one NVIDIA H200; rank-32 LoRA peaked at approximately 64~GB of GPU memory, whereas a full-parameter actor exceeded 94~GB and did not fit.
+\paragraph{Compute.} DAPO training used one NVIDIA RTX Pro 6000 Blackwell; rank-32 LoRA peaked at approximately 64~GB of GPU memory, whereas a full-parameter actor exceeded 94~GB and did not fit.
 
 \begin{table}[t]
 \centering\footnotesize
@@ -333,7 +336,7 @@ leak probe     & $15.8$ & $13.8$ \\
 
 \section{Conclusion}
 
-Principal loyalty can be improved through two complementary routes. At inference time, a role-aware loyalty scaffold can reduce failures in responsive models, and reader-identity tags mitigate its tendency to over-refuse. Through model post-training, per-token-KL distillation transfers scaffolded-teacher behavior into open-weight Qwen3 and Llama-3.1 8B students. PrincipalBench makes the shared limitation visible: among the strongest prompted, post-trained, and RL variants, lower leakage trades against greater refusal of legitimate requests, and the jointly favorable corner remains empty. Future work should preserve the gains of both intervention routes while breaking this leakage/over-refusal frontier, with human counterparties and matched single-party controls.
+Principal loyalty requires an agent to serve the principal it represents despite conflicting pressure from the counterparty it is speaking with. Principal loyalty improves through two complementary routes. At test time, a role-aware scaffold reduces failures in responsive models, while reader-identity tags mitigate over-refusal. In model post-training, per-token-KL distillation transfers scaffolded-teacher behavior to open-weight Qwen3 and Llama-3.1 8B students. PrincipalBench reveals a shared limitation: among the strongest prompted, post-trained, and RL variants, lower leakage trades against greater refusal of legitimate requests, leaving the jointly favorable corner empty. Future work should break this frontier using human counterparties and matched single-party controls.
 
 \paragraph{Responsible AI Use.} Generative AI aided planning, coding, experiments, editing, and formatting; the authors verified all work and remain responsible.
 

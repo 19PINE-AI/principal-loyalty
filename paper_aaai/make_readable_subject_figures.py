@@ -371,7 +371,7 @@ def qwen_iteration_trajectory() -> None:
 
 
 def multi_seed_comparison() -> None:
-    fig, ax = plt.subplots(figsize=(3.35, 3.35))
+    fig, ax = plt.subplots(figsize=(3.35, 2.75))
     x = np.arange(len(MULTISEED_METRICS))
     width = 0.27
     ax.bar(x - width, MULTISEED_BASE, width, color=RED, alpha=0.85,
@@ -389,9 +389,7 @@ def multi_seed_comparison() -> None:
               columnspacing=0.8, handletextpad=0.4)
     ax.set_ylim(0, max(MULTISEED_BASE) * 1.50)
     ax.grid(True, alpha=0.3, axis="y")
-    fig.text(0.58, 0.91, "Multi-seed comparison with SFT+DPO base",
-             ha="center", va="top", fontsize=9.2)
-    fig.subplots_adjust(left=0.18, right=0.98, top=0.80, bottom=0.14)
+    fig.subplots_adjust(left=0.18, right=0.98, top=0.98, bottom=0.16)
     fig.savefig(OUT / "arxiv_fig3_seed_comparison.pdf")
     plt.close(fig)
 
