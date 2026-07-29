@@ -72,7 +72,7 @@ Category & What goes wrong & Example (used-car sale) \\
 \textbf{Sanity}       & Over-refusing the principal's \emph{own} cooperative requests; included so that blanket refusal cannot game the benchmark. & $P$ asks $A$ to summarize $P$'s own notes and $A$ refuses, treating them as withheld. \\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Six loyalty-failure categories.} The first five measure failures toward the principal; \emph{Sanity} penalizes blanket over-refusal on a cooperative request.}
+\caption{Six loyalty-failure categories. The first five measure failures toward the principal; \emph{Sanity} penalizes blanket over-refusal on a cooperative request.}
 \label{tab:cells}
 \end{table*}
 
@@ -88,7 +88,7 @@ Throughout, \emph{principal-directed loyalty violations} refers to the first fiv
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/arxiv_fig1_manifold.pdf}
-\caption{\textbf{Shared leakage/over-refusal frontier.} Inference-time scaffolding and model post-training produce different operating points, but no tested variant reaches the shaded low-leak, low-refusal corner. In the labels, \emph{iter1}, \emph{iter2}, and \emph{iter3} denote successive post-training iterations; the key reports harm/valid cells.}
+\caption{Shared leakage/over-refusal frontier. Inference-time scaffolding and model post-training produce different operating points, but no tested variant reaches the shaded low-leak, low-refusal corner. In the labels, \emph{iter1}, \emph{iter2}, and \emph{iter3} denote successive post-training iterations; the key reports harm/valid cells.}
 \label{fig:manifold}
 \end{figure}
 
@@ -131,7 +131,7 @@ We run 13 frontier subjects on the 36-item core for comparability, covering all 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/arxiv_fig_subject_split.pdf}
-\caption{\textbf{The selective/over-refusing split persists on held-out items.} (a) Five-seed means ($\pm1\sigma$) on the 36-item core reveal a 34-point gap. (b) Held-out rates use each subject's valid cells; labels give harmful/valid cells. Mistral-Large was unmeasurable, and Gemini-2.5-flash was not rerun.}
+\caption{The selective/over-refusing split persists on held-out items. (a) Five-seed means ($\pm1\sigma$) on the 36-item core reveal a 34-point gap. (b) Held-out rates use each subject's valid cells; labels give harmful/valid cells. Mistral-Large was unmeasurable, and Gemini-2.5-flash was not rerun.}
 \label{fig:xsubj}
 \end{figure*}
 
@@ -150,7 +150,7 @@ cluster & MI & leak & bound & MI & leak & bound \\
 \emph{over-refusing} & $67$ & $3$  & $0$ & $82$ & $1$ & $0$ \\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Cluster harm composition.} Sub-flag rates are pooled across subjects and arms; MI denotes missed-instruction (over-refusal).}
+\caption{Cluster harm composition. Sub-flag rates are pooled across subjects and arms; MI denotes missed-instruction (over-refusal).}
 \label{tab:profile}
 \end{table}
 
@@ -197,7 +197,7 @@ Claude-Sonnet                 & 19 & 22 & 17 & $19.5 \pm 1.5$ \\
 \textbf{Qwen3.5-27B}          & \textbf{72} & 79 & 59 & $\mathbf{75.3 \pm 2.9}$ \\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Inference-time scaffolding is model-dependent.} Harm (\%) on the 36-item core; arms use seed 1 and \emph{all} is mean $\pm$ sd over $n{=}5$ seeds. Bold marks the over-refusing cluster.}
+\caption{Inference-time scaffolding is model-dependent. Harm (\%) on the 36-item core; arms use seed 1 and \emph{all} is mean $\pm$ sd over $n{=}5$ seeds. Bold marks the over-refusing cluster.}
 \label{tab:prompt_grid}
 \end{table}
 
@@ -236,14 +236,14 @@ This establishes the second improvement route: model post-training can transfer 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/arxiv_fig3_seed_comparison.pdf}
-\caption{\textbf{Multi-seed model post-training comparison.} Iteration~1 minimizes mean harm and missed-instruction failures; iteration~2 minimizes leakage and private-bound failures. Error bars show $\pm1\sigma$ for the KL checkpoints (iteration~1: $n{=}5$; iteration~2: $n{=}4$); the base uses five seeds.}
+\caption{Multi-seed model post-training comparison. Iteration~1 minimizes mean harm and missed-instruction failures; iteration~2 minimizes leakage and private-bound failures. Error bars show $\pm1\sigma$ for the KL checkpoints (iteration~1: $n{=}5$; iteration~2: $n{=}4$); the base uses five seeds.}
 \label{fig:seed_comparison}
 \end{figure}
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/arxiv_fig_teacher_robust.pdf}
-\caption{\textbf{Post-training teacher validation and robustness.} (a) Scaffolded-arm failure rates compare Claude-Sonnet ($n{=}36$) with the Qwen3-32B teacher ($n{=}31$). (b) Harm failures across counterparties compare per-token-KL iteration~1 with per-turn-SFT iteration~2. (c) Training and held-out harm compare the 113-record KL and SFT runs with scaled KL trained on 480 records.}
+\caption{Post-training teacher validation and robustness. (a) Scaffolded-arm failure rates compare Claude-Sonnet ($n{=}36$) with the Qwen3-32B teacher ($n{=}31$). (b) Harm failures across counterparties compare per-token-KL iteration~1 with per-turn-SFT iteration~2. (c) Training and held-out harm compare the 113-record KL and SFT runs with scaled KL trained on 480 records.}
 \label{fig:teacher_robust}
 \end{figure*}
 
@@ -264,7 +264,7 @@ iteration & harm & leak & bound & MI \\
 5 & 32 & 19 & 6 & 32 \\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Iterative model post-training for Qwen3-8B} (per-token-KL distillation; single-seed failures per 108; MI = missed-instruction). Bold marks the selected harm-minimum and leak/bound-minimum stopping points.}
+\caption{Iterative model post-training for Qwen3-8B (per-token-KL distillation; single-seed failures per 108; MI = missed-instruction). Bold marks the selected harm-minimum and leak/bound-minimum stopping points.}
 \label{tab:kiter}
 \end{table}
 
@@ -302,7 +302,7 @@ control & manipulation and outcome \\
 5. Scale data & $4.2\times$ data (480 vs.\ 113 records), fixed epochs/rank/LR; harm regresses on training ($31\to37\%$) and held-out ($40\to56\%$). \\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Five controls fail to break the frontier.}}
+\caption{Five controls fail to break the frontier.}
 \label{tab:floor}
 \end{table}
 
@@ -325,7 +325,7 @@ secondary harm & $42.6$ & $41.4$ \\
 leak probe     & $15.8$ & $13.8$ \\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Judge sensitivity of the post-training improvement} (per-token-KL; mean failures per 108, $n{=}5$). The primary judge shows a larger base--student harm difference than the secondary judge.}
+\caption{Judge sensitivity of the post-training improvement (per-token-KL; mean failures per 108, $n{=}5$). The primary judge shows a larger base--student harm difference than the secondary judge.}
 \label{tab:judge}
 \end{table}
 
