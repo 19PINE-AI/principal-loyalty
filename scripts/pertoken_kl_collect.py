@@ -1,5 +1,6 @@
-"""Collect per-token teacher top-K logprob distributions for the canonical
-Thinking Machines / DeepSeek-V4 on-policy distillation algorithm.
+"""Collect per-token teacher top-K logprob distributions for the method in
+Improving principal loyalty through model post-training (sec:ptkl), using the
+canonical Thinking Machines / DeepSeek-V4 on-policy distillation algorithm.
 
 Algorithm:
   For each agent turn N in each student trajectory T_i:

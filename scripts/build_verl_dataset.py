@@ -1,4 +1,5 @@
-"""Convert principal-loyalty items to verl parquet for DAPO rollout training.
+"""Convert PrincipalBench items to verl parquet for the DAPO controls in
+Shared limit: a structural leakage/over-refusal trade-off (sec:manifold).
 
 verl expects a parquet with at least:
   - prompt: list of chat messages [{"role": "...", "content": "..."}]

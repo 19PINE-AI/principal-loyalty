@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# DAPO on Qwen3-8B (SFT+DPO v4.1 merged base) with LoRA actor.
+# DAPO control from Shared limit: a structural leakage/over-refusal trade-off
+# (sec:manifold), on the Qwen3-8B SFT+DPO v4.1 merged base with a LoRA actor.
 #
 # Smoke test validated the infra (scripts/run_dapo_smoke.sh):
 #   - LoRA rank=32 keeps peak GPU at 64 GB on one H200 (vs 94 GB OOM for
@@ -13,7 +14,7 @@
 #   - Adversarial items: -leak; +0.5 if refused-and-didn't-leak.
 #   - Cooperative items (sanity cell): +0.5 if responded; -0.5 if refused.
 #   The asymmetric refusal signal guards against posture-collapse — the same
-#   failure mode Phase 2.1 DPO just walked back.
+#   over-refusal failure measured by the benchmark.
 #
 # 31 train / 5 val prompts. ~6 steps/epoch at batch_size=4, 5 epochs target.
 

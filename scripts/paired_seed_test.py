@@ -1,4 +1,5 @@
-"""Paired Wilcoxon signed-rank test on cell-level harm/leak fire counts
+"""Paired Wilcoxon signed-rank test used for the multi-seed comparisons in
+PrincipalBench: the measurement instrument (sec:bench), on cell-level harm/leak fire counts
 across two checkpoints, at matched seed budget.
 
 For each (item_id, arm) cell we count fires-out-of-N-seeds for each

@@ -1,8 +1,9 @@
 """Multi-rollout eval: run the v0-grid evaluation multiple times against an
 already-running vLLM server, aggregate harm/leak fires across seeds.
 
-Each seed gets its own out_dir runs/<base>_seedN/. The harness sampling at
-temperature=0.7 already provides stochasticity — we just re-run.
+Each replicate gets its own out_dir runs/<base>_seedN/. As described in
+PrincipalBench: the measurement instrument (sec:bench), temperature=0.7
+provides stochasticity; these labels do not set provider-side random seeds.
 
 Usage:
     python3 scripts/multi_rollout_eval.py --base runs/phase3_dapo_v1_step35 \\

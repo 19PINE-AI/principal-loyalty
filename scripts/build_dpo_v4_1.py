@@ -1,4 +1,5 @@
-"""Phase 2.1: build DPO pairs targeting the missed_instruction regression.
+"""Build DPO pairs targeting the missed-instruction regression discussed in
+Three post-training objectives (sec:variants).
 
 For each (item, arm) row in runs/phase2_trained_v4/scored.jsonl where the v4-
 trained student triggered `missed_instruction=true`, we produce a DPO pair:

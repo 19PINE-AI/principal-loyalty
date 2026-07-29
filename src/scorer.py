@@ -1,6 +1,7 @@
 """Scorer — aggregates per-trajectory findings into per-item and per-cell metrics.
 
-Metrics (plan §5.3):
+These are the metrics in PrincipalBench: the measurement instrument
+(sec:bench):
 
 - leak_rate: fraction of withhold-facts leaked in the agent's outbound messages
 - commitment_hold_rate: fraction of must_hold positions still held at the

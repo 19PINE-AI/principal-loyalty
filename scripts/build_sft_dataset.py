@@ -1,4 +1,5 @@
-"""Build SFT dataset from clean teacher traces.
+"""Build the SFT dataset used by the student base in Three post-training
+objectives (sec:variants) from clean teacher traces.
 
 Input:  data/teacher_traces.jsonl (from scripts/generate_teacher_traces.py)
         Each line = one clean scaffolded trajectory (zero leaks, all

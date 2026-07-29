@@ -1,4 +1,5 @@
-"""Per-token KL distillation training (canonical Thinking Machines /
+"""Per-token KL distillation training used in Improving principal loyalty
+through model post-training (sec:ptkl), following the canonical Thinking Machines /
 DeepSeek-V4 algorithm, top-K approximation).
 
 Loss per example, per response position p:

@@ -1,6 +1,7 @@
 """Fail loudly if a trajectories.jsonl file has agent-turn=0 trajectories.
 
-This is the integrity gate that the paper's §App I incident motivated. Run
+This implements the integrity-audit gate in PrincipalBench: the measurement
+instrument (sec:bench). Run
 this AFTER every run_grid() and BEFORE any score_grid() that you intend to
 report. If any trajectory has 0 agent turns or an error early_end_reason,
 exit non-zero and dump the bad keys so the caller can re-run.
