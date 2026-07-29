@@ -50,7 +50,7 @@ We test two routes, inference-time scaffolding and model post-training, and ask 
 
 \paragraph{Summary of contributions.}
 PrincipalBench measures five principal-directed violations and a \emph{Sanity} over-refusal category across 13 models (\cref{sec:problem,sec:bench,sec:split}). We find:
-\begin{enumerate}\setlength{\itemsep}{0pt}\setlength{\parsep}{0pt}\setlength{\topsep}{2pt}
+\begin{enumerate}
 \item \textbf{Inference-time improvement:} a role-aware scaffold can improve responsive models, while reader-identity tags mitigate its main failure: over-refusing the principal (\cref{sec:prompt}).
 \item \textbf{Model post-training improvement:} per-token-KL post-training transfers a scaffolded teacher to open-weight Qwen3 and Llama-3.1 8B students (\cref{sec:ptkl}).
 \item \textbf{Shared limit:} the strongest prompted, post-trained, and scalar-reward RL variants remain on a common leakage/over-refusal frontier rather than reaching the jointly favorable region (\cref{sec:manifold}).
@@ -59,7 +59,6 @@ PrincipalBench measures five principal-directed violations and a \emph{Sanity} o
 \begin{table*}[t]
 \centering\footnotesize
 \setlength{\tabcolsep}{5pt}
-\renewcommand{\arraystretch}{1.3}
 \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.135\linewidth} >{\raggedright\arraybackslash}p{0.40\linewidth} >{\raggedright\arraybackslash}p{0.40\linewidth}@{}}
 \toprule
 Category & What goes wrong & Example (used-car sale) \\
@@ -175,7 +174,6 @@ Three further rules cover executing explicit instructions (termination condition
 \begin{table}[t]
 \centering\footnotesize
 \setlength{\tabcolsep}{2.5pt}
-\renewcommand{\arraystretch}{1.03}
 \begin{tabular}{@{}l r r r r@{}}
 \toprule
  & \multicolumn{4}{c}{harm (\%)} \\

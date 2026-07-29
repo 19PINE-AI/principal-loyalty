@@ -204,7 +204,7 @@ def combined_subject_split() -> None:
     for yi, r in held_rows:
         if r[3] >= 65:
             ax_held.text(r[3] - 1.5, yi, f"{r[3]:.0f}%  ({r[4]}/{r[5]})",
-                         ha="right", va="center", fontsize=9.4, color="white")
+                         ha="right", va="center", fontsize=9.4, color="black")
         else:
             ax_held.text(r[3] + 1.2, yi, f"{r[3]:.0f}%  ({r[4]}/{r[5]})",
                          va="center", fontsize=9.4)
