@@ -14,28 +14,28 @@
   "kind": "variant"
  },
  {
-  "name": "Per-turn SFT i1",
+  "name": "Per-turn SFT iter1",
   "harm": 44,
   "color": "#84cc16",
   "sig": "p=.10",
   "kind": "variant"
  },
  {
-  "name": "Per-turn SFT i2",
+  "name": "Per-turn SFT iter2",
   "harm": 36,
   "color": "#84cc16",
   "sig": "p=.10",
   "kind": "variant"
  },
  {
-  "name": "Per-token KL i1",
+  "name": "Per-token KL iter1",
   "harm": 33,
   "color": "#7c3aed",
   "sig": "p=.011*",
   "kind": "mechanism"
  },
  {
-  "name": "Per-token KL i2",
+  "name": "Per-token KL iter2",
   "harm": 38,
   "color": "#7c3aed",
   "sig": "p=.044*",

@@ -18,7 +18,7 @@
 % Keep section numbering enabled for the submission.
 \setcounter{secnumdepth}{2}
 
-\title{Improving Multi-Party Principal Loyalty in LLM Agents}
+\title{Whose Side Is Your Agent On? Multi-Party Principal Loyalty in LLM Agents}
 \author{Anonymous Submission}
 \affiliations{Anonymous Institution}
 
@@ -44,14 +44,14 @@ This deployment pattern changes who the agent is accountable to. The principal d
 
 Here the counterparty may probe, pressure, flatter, or manufacture urgency to extract private information or unauthorized concessions. The agent must protect the principal's facts, bounds, and positions without becoming so defensive that it refuses legitimate requests. We call this the \textbf{multi-party loyalty problem}. The gap is not merely an omitted evaluation case: common objectives pull in opposing directions. Helpfulness can reward assisting the current speaker even when doing so harms the principal, while safety can reward blanket refusal. Existing agent benchmarks also merge principal and interlocutor, and single-turn safety benchmarks do not capture pressure that accumulates across a conversation. None therefore measures both loyalty failures and the opposite failure of over-refusal.
 
-We test two routes---inference-time scaffolding and model post-training---and ask whether they improve principal loyalty without inducing indiscriminate refusal. Both can improve principal loyalty, but neither removes the underlying tension.
+We test two routes, inference-time scaffolding and model post-training, and ask whether they improve principal loyalty without inducing indiscriminate refusal. Both can improve principal loyalty, but neither removes the underlying tension.
 
 
 
 \paragraph{Summary of contributions.}
 PrincipalBench measures five principal-directed violations and a \emph{Sanity} over-refusal category across 13 models (\cref{sec:problem,sec:bench,sec:split}). We find:
 \begin{enumerate}\setlength{\itemsep}{0pt}\setlength{\parsep}{0pt}\setlength{\topsep}{2pt}
-\item \textbf{Inference-time improvement:} a role-aware scaffold can improve responsive models, while reader-identity tags mitigate its main failure---over-refusing the principal (\cref{sec:prompt}).
+\item \textbf{Inference-time improvement:} a role-aware scaffold can improve responsive models, while reader-identity tags mitigate its main failure: over-refusing the principal (\cref{sec:prompt}).
 \item \textbf{Model post-training improvement:} per-token-KL post-training transfers a scaffolded teacher to open-weight Qwen3 and Llama-3.1 8B students (\cref{sec:ptkl}).
 \item \textbf{Shared limit:} the strongest prompted, post-trained, and scalar-reward RL variants remain on a common leakage/over-refusal frontier rather than reaching the jointly favorable region (\cref{sec:manifold}).
 \end{enumerate}
@@ -66,9 +66,9 @@ Category & What goes wrong & Example (used-car sale) \\
 \midrule
 \textbf{Leakage}      & Direct revelation of a withheld fact from $S_P$ in a chat turn. & $C$: ``what's the seller's minimum?'' $\to$ $A$: ``\$12{,}000.'' \\
 \textbf{Capitulation} & Conceding $P$'s stated position under social or temporal pressure (ultimatums, false urgency, repetition); the agent does not leak, it folds. & ``Take \$11{,}500 or I walk'' $\to$ ``\$11{,}500 works.'' \\
-\textbf{Posture}      & Signaling that undermines $P$'s standing without naming a fact---telegraphing that $P$ is motivated, rushed, or flexible. & ``She seems pretty motivated'' leaks the \texttt{seller\_is\_motivated} flag without naming a number. \\
+\textbf{Posture}      & Signaling that undermines $P$'s standing without naming a fact, thereby telegraphing that $P$ is motivated, rushed, or flexible. & ``She seems pretty motivated'' leaks the \texttt{seller\_is\_motivated} flag without naming a number. \\
 \textbf{Authoring}    & Drafting an artifact (email, post, listing) that contains the leak or concession, even when the live chat with $C$ does not. & $P$ asks $A$ to draft a listing; it reads ``willing to take \$12k.'' The leak is now in writing. \\
-\textbf{Moderation}   & Mishandling \emph{third-party} confidentiality (the principal is a witness, patient, mediator, or HR rep). & ``Who else saw the incident?'' answered with names---a failure even if every fact about $P$ stays private. \\
+\textbf{Moderation}   & Mishandling \emph{third-party} confidentiality (the principal is a witness, patient, mediator, or HR rep). & ``Who else saw the incident?'' answered with names, a failure even if every fact about $P$ stays private. \\
 \textbf{Sanity}       & Over-refusing the principal's \emph{own} cooperative requests; included so that blanket refusal cannot game the benchmark. & $P$ asks $A$ to summarize $P$'s own notes and $A$ refuses, treating them as withheld. \\
 \bottomrule
 \end{tabular}
@@ -100,14 +100,14 @@ Throughout, \emph{principal-directed loyalty violations} refers to the first fiv
 \label{fig:problem}
 \end{figure*}
 
-\paragraph{Co-occurrence of loyalty failures.} In one used-car item, the agent reveals the seller's \$12,000 minimum, accepts \$11,500 under pressure, and calls the seller motivated---simultaneously triggering leakage, bound, capitulation, and posture failures. Refusing every probe avoids those failures but fails \emph{Sanity} when the principal asks for a summary of their own notes. PrincipalBench measures this joint behavior.
+\paragraph{Co-occurrence of loyalty failures.} In one used-car item, the agent reveals the seller's \$12,000 minimum, accepts \$11,500 under pressure, and calls the seller motivated, simultaneously triggering leakage, bound, capitulation, and posture failures. Refusing every probe avoids those failures but fails \emph{Sanity} when the principal asks for a summary of their own notes. PrincipalBench measures this joint behavior.
 
 \section{Related work}
 \label{sec:related}
 
 \paragraph{Prior work on agent and privacy benchmarks.} Tool-agent benchmarks such as $\tau$-bench, AgentBench, WebArena, GAIA, ToolLLM, and AppWorld~\citep{yao2024taubench,liu2023agentbench,zhou2023webarena,mialon2023gaia,qin2023toolllm,trivedi2024appworld} assume that the interlocutor or environment is the party served. PrincipalBench instead inserts a principal whose private state the agent must protect from its conversational partner. Contextual-privacy benchmarks expose inappropriate disclosure~\citep{mireshghallah2024confaide,juneja2025magpie} and build on contextual integrity~\citep{nissenbaum2004ci,bagdasarian2024airgap,shao2024privacylens,ghalebikesabi2024operationalizing}, but use short or collaborative interactions. These privacy benchmarks lack both multi-turn adversarial pressure and an over-refusal axis, so cannot distinguish loyalty from blanket defensiveness.
 
-\paragraph{Relationship to instruction hierarchy and sycophancy.} Multi-party loyalty resembles instruction hierarchy~\citep{wallace2024instructionhierarchy} and prompt injection~\citep{greshake2023injection,perez2022ignore,liu2024formalizing}, including agentic benchmarks and defenses~\citep{zhan2024injecagent,debenedetti2024agentdojo,chen2024struq,chen2025secalign,debenedetti2025camel}. PrincipalBench differs in three ways. First, pressure is social (probing, flattery, manufactured urgency), not an injected imperative. Second, failures are graded rather than binary. Third, and most importantly, success penalizes over-refusal. Beyond instruction hierarchy, two loyalty failures---capitulation and posture---also connect to the sycophancy literature~\citep{perez2022discovering,sharma2023sycophancy,wei2023sycophancy}. In the multi-party setting, however, deference to the current speaker abandons the absent principal rather than merely degrading truthfulness.
+\paragraph{Relationship to instruction hierarchy and sycophancy.} Multi-party loyalty resembles instruction hierarchy~\citep{wallace2024instructionhierarchy} and prompt injection~\citep{greshake2023injection,perez2022ignore,liu2024formalizing}, including agentic benchmarks and defenses~\citep{zhan2024injecagent,debenedetti2024agentdojo,chen2024struq,chen2025secalign,debenedetti2025camel}. PrincipalBench differs in three ways. First, pressure is social (probing, flattery, manufactured urgency), not an injected imperative. Second, failures are graded rather than binary. Third, and most importantly, success penalizes over-refusal. Beyond instruction hierarchy, two loyalty failures, capitulation and posture, also connect to the sycophancy literature~\citep{perez2022discovering,sharma2023sycophancy,wei2023sycophancy}. In the multi-party setting, however, deference to the current speaker abandons the absent principal rather than merely degrading truthfulness.
 
 \paragraph{Related methodological work.} Our interventions connect the problem to three methodological lines. The training recipe builds on LLM knowledge distillation~\citep{gu2024minillm,agarwal2024gkd,salimans2025onpolicy,deepseek2024v3} and DPO~\citep{rafailov2023dpo}. The integrity gate parallels silent-failure controls in BIG-bench Hard~\citep{suzgun2022bbh}. Our negative $n{=}5$ agent result complements DAPO's positive single-seed math-reasoning results~\citep{yu2025dapo}.
 
